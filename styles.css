@@ -110,6 +110,7 @@ table.proj th,table.proj td{text-align:right;padding:6px 4px;border-bottom:1px s
 table.proj th:first-child,table.proj td:first-child{text-align:left}
 table.proj th{color:var(--muted);font-weight:500}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.filters #tx-cat{grid-column:1 / -1}
 .sel{padding:9px 10px;font-size:14px;min-width:0}
 .tx{cursor:pointer}
 .tx .t3{display:none;font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4;word-break:break-word}

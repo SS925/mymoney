@@ -18,7 +18,7 @@ const state = {
   pending: LS.get('pending', []),    // [{id, sha, entry}] in GitHub inbox, not yet in Excel data
   outbox: LS.get('outbox', []),      // entries saved offline, not uploaded yet
   tab: 'home', lastError: null, syncing: false,
-  tx: { q: '', type: 'All', month: 'All', cat: 'All', limit: 100 },
+  tx: { q: '', type: 'All', year: 'All', month: 'All', cat: 'All', limit: 100 },
   add: null,
 };
 
@@ -327,12 +327,16 @@ function allTx() {
 }
 function viewTx() {
   const f = state.tx, all = allTx();
-  const months = [...new Set(all.map(t => String(t.Date).slice(0, 7)))].filter(Boolean).sort().reverse();
+  const years = [...new Set(all.map(t => String(t.Date).slice(0, 4)))].filter(y => /^\d{4}$/.test(y)).sort().reverse();
+  if (f.year !== 'All' && !years.includes(f.year)) f.year = 'All';
+  const inYear = all.filter(t => f.year === 'All' || String(t.Date).startsWith(f.year));
+  const monthsHere = new Set(inYear.map(t => String(t.Date).slice(5, 7)));
   const cats = [...new Set(all.filter(t => f.type === 'All' || t.Type === f.type).map(t => t.Category).filter(Boolean))].sort();
   if (f.cat !== 'All' && !cats.includes(f.cat)) f.cat = 'All';
   const q = f.q.trim().toLowerCase();
   const list = all.filter(t => (f.type === 'All' || t.Type === f.type) &&
-    (f.month === 'All' || String(t.Date).startsWith(f.month)) &&
+    (f.year === 'All' || String(t.Date).startsWith(f.year)) &&
+    (f.month === 'All' || String(t.Date).slice(5, 7) === f.month) &&
     (f.cat === 'All' || t.Category === f.cat) &&
     (!q || `${t.Details} ${t.Category} ${t.Source} ${Math.round(Math.abs(n(t.Amount)))}`.toLowerCase().includes(q)));
   let tot = { Income: 0, Expenses: 0 };
@@ -340,7 +344,9 @@ function viewTx() {
   let html = `<input class="search" id="tx-q" type="search" placeholder="Search merchant, category or amount" value="${esc(f.q)}" autocomplete="off">
     <div class="chips" id="tx-types">${['All', 'Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button class="chip ${f.type === t ? 'on' : ''}" data-type="${t}">${t}</button>`).join('')}</div>
     <div class="filters">
-      <select class="inp sel" id="tx-month" aria-label="Month"><option value="All">All months</option>${months.map(m => `<option value="${m}" ${f.month === m ? 'selected' : ''}>${fMon(pDate(m + '-01'))}</option>`).join('')}</select>
+      <select class="inp sel" id="tx-year" aria-label="Year"><option value="All">All years</option>${years.map(y => `<option ${f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select>
+      <select class="inp sel" id="tx-month" aria-label="Month"><option value="All">All months</option>${MON.map((m, i) => { const v = String(i + 1).padStart(2, '0');
+        return `<option value="${v}" ${f.month === v ? 'selected' : ''} ${monthsHere.has(v) ? '' : 'disabled'}>${f.year === 'All' ? m + ' (every year)' : m + ' ' + f.year}</option>`; }).join('')}</select>
       <select class="inp sel" id="tx-cat" aria-label="Category"><option value="All">All categories</option>${cats.map(c => `<option ${f.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
     <div class="small muted num" style="margin:8px 2px 0">${list.length.toLocaleString('en-IN')} transactions · in ${inr(tot.Income)} · out ${inr(tot.Expenses)}</div>`;
   if (!list.length) return html + `<div class="empty">Nothing matches.</div>`;
@@ -374,6 +380,7 @@ function bindTx() {
   const q = document.getElementById('tx-q');
   q.addEventListener('input', () => { state.tx.q = q.value; state.tx.limit = 100; const pos = q.selectionStart; render(); const nq = document.getElementById('tx-q'); nq.focus(); nq.setSelectionRange(pos, pos); });
   document.querySelectorAll('#tx-types .chip').forEach(b => b.onclick = () => { state.tx.type = b.dataset.type; state.tx.limit = 100; render(); });
+  document.getElementById('tx-year').onchange = e => { state.tx.year = e.target.value; state.tx.limit = 100; render(); };
   document.getElementById('tx-month').onchange = e => { state.tx.month = e.target.value; state.tx.limit = 100; render(); };
   document.getElementById('tx-cat').onchange = e => { state.tx.cat = e.target.value; state.tx.limit = 100; render(); };
   const more = document.getElementById('tx-more'); if (more) more.onclick = () => { const y = window.scrollY; state.tx.limit += 200; render(); window.scrollTo(0, y); };
@@ -648,7 +655,7 @@ function bindAdd() {
       state.outbox.push(entry); LS.set('outbox', state.outbox);
       toast(e instanceof AppError && !/offline/i.test(e.message) && navigator.onLine !== false ? e.message + ' Kept on this phone.' : 'Saved on this phone · uploads when you’re online');
     }
-    state.add = newAdd(); state.tab = 'tx'; state.tx = { q: '', type: 'All', month: 'All', cat: 'All', limit: 100 }; render();
+    state.add = newAdd(); state.tab = 'tx'; state.tx = { q: '', type: 'All', year: 'All', month: 'All', cat: 'All', limit: 100 }; render();
   };
 }
 
