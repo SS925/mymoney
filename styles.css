@@ -133,3 +133,18 @@ table.xl td.span>div{position:sticky;left:0;width:min(330px,calc(100vw - 56px));
 table.xl td.span.b>div{font-size:14px}
 table.xl tr:last-child td{border-bottom:none}
 .xl-link{background:none;border:none;color:#b9a8ff;padding:0;font-size:13px;cursor:pointer;text-align:left}
+.seg2{grid-template-columns:1fr 1fr;margin-bottom:12px}
+.sc-h{margin:0 0 8px;font-size:16px;letter-spacing:-.01em}
+.sc-note{margin:2px 0 8px;line-height:1.4}
+.sc-item{padding:10px 0;border-top:1px solid var(--line)}
+.sc-h+.sc-item,.sc-h+.sc-note+.sc-item{border-top:none}
+.sc-item .row{align-items:flex-start}
+.sc-l{font-size:14.5px;min-width:0}
+.sc-v{font-weight:650;white-space:nowrap;text-align:right}
+.sc-sub{margin-top:4px;line-height:1.5}
+.sc-sub b{color:var(--text);font-weight:600}
+.sc-item .bar{margin-top:2px}
+.sc-item>.row.small{margin-top:7px}
+.kvb,.kvb .sc-l{font-weight:650}
+.kv .sc-v{max-width:60%;white-space:normal}
+.sc-tiles{margin:4px 0 8px}
