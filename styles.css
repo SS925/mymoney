@@ -109,3 +109,27 @@ table.proj{width:100%;border-collapse:collapse;font-size:13px}
 table.proj th,table.proj td{text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
 table.proj th:first-child,table.proj td:first-child{text-align:left}
 table.proj th{color:var(--muted);font-weight:500}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.sel{padding:9px 10px;font-size:14px;min-width:0}
+.tx{cursor:pointer}
+.tx .t3{display:none;font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4;word-break:break-word}
+.tx.open .t3{display:block}
+.tx.open .t1{white-space:normal}
+.navrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 2px;border:none;border-top:1px solid var(--line);background:none;cursor:pointer}
+.card h2+.navrow{border-top:none}
+.navrow .ni{flex:none;width:36px;height:36px;border-radius:11px;background:#2c2944;display:grid;place-items:center;font-size:16px}
+.navrow .nt{flex:1;min-width:0;font-size:15px}
+.navrow .chev{color:var(--muted);font-size:22px}
+.back{width:auto;margin:0;padding:11px 14px;white-space:nowrap}
+.xl-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);max-height:calc(100vh - 230px);-webkit-overflow-scrolling:touch}
+table.xl{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+table.xl td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+table.xl td.long{white-space:normal;min-width:220px;max-width:300px}
+table.xl td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.xl td.b{font-weight:650;color:#fff}
+table.xl td:first-child{position:sticky;left:0;background:var(--card);z-index:1;max-width:150px;min-width:110px;white-space:normal;box-shadow:1px 0 0 var(--line)}
+table.xl td.span{white-space:normal;max-width:none;box-shadow:none;position:static;padding:0}
+table.xl td.span>div{position:sticky;left:0;width:min(330px,calc(100vw - 56px));padding:8px 10px}
+table.xl td.span.b>div{font-size:14px}
+table.xl tr:last-child td{border-bottom:none}
+.xl-link{background:none;border:none;color:#b9a8ff;padding:0;font-size:13px;cursor:pointer;text-align:left}

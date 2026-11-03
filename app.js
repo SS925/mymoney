@@ -12,10 +12,12 @@ const state = {
   cfg: LS.get('cfg', null),          // {owner, repo, token, branch}
   data: LS.get('data', null),        // snapshot from Excel
   fetchedAt: LS.get('fetchedAt', null),
+  sheets: LS.get('sheets', null),   // every sheet as Excel shows it
+  sheet: null, sheetQ: '',
   pending: LS.get('pending', []),    // [{id, sha, entry}] in GitHub inbox, not yet in Excel data
   outbox: LS.get('outbox', []),      // entries saved offline, not uploaded yet
   tab: 'home', lastError: null, syncing: false,
-  tx: { q: '', type: 'All', month: 'All', limit: 60 },
+  tx: { q: '', type: 'All', month: 'All', cat: 'All', limit: 100 },
   add: null,
 };
 
@@ -41,6 +43,12 @@ const GH = {
   async getData() {
     const r = await this.call('GET', 'data.json', { raw: true });
     if (r.status === 404) throw new AppError('No data yet. In Excel, press Alt+F8 and run AppLinkNow once.');
+    if (!r.ok) throw httpError(r.status);
+    return r.json();
+  },
+  async getSheets() {
+    const r = await this.call('GET', 'sheets.json', { raw: true });
+    if (r.status === 404) return null;
     if (!r.ok) throw httpError(r.status);
     return r.json();
   },
@@ -156,6 +164,7 @@ async function sync(opts = {}) {
     const data = await GH.getData();
     state.data = data; state.fetchedAt = new Date().toISOString(); state.lastError = null;
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
+    try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
     await refreshPending();
     if (opts.toast) toast('Up to date');
   } catch (e) {
@@ -199,11 +208,12 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', tx: 'Activity', add: 'Add entry', budget: 'Budget', future: 'Retirement', settings: 'Settings' };
+const TITLES = { home: 'MyMoney', tx: 'Activity', add: 'Add entry', budget: 'Budget', future: 'Retirement', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { future: 'more', sheet: 'more' };
 function render() {
   const v = document.getElementById('view');
-  document.getElementById('screen-title').textContent = TITLES[state.tab];
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+  document.getElementById('screen-title').textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab];
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === (NAV_OF[state.tab] || state.tab)));
   renderFreshness();
   if (!state.cfg && state.tab !== 'settings') state.tab = 'settings';
   if (state.tab === 'settings') { v.innerHTML = viewSettings(); bindSettings(); return; }
@@ -212,8 +222,9 @@ function render() {
       <button class="secondary" onclick="sync({toast:true})">Try again</button></div>`;
     return;
   }
-  const views = { home: viewHome, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture };
+  const views = { home: viewHome, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet };
   v.innerHTML = views[state.tab]();
+  if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
 }
@@ -316,17 +327,21 @@ function allTx() {
 function viewTx() {
   const f = state.tx, all = allTx();
   const months = [...new Set(all.map(t => String(t.Date).slice(0, 7)))].filter(Boolean).sort().reverse();
+  const cats = [...new Set(all.filter(t => f.type === 'All' || t.Type === f.type).map(t => t.Category).filter(Boolean))].sort();
+  if (f.cat !== 'All' && !cats.includes(f.cat)) f.cat = 'All';
   const q = f.q.trim().toLowerCase();
   const list = all.filter(t => (f.type === 'All' || t.Type === f.type) &&
     (f.month === 'All' || String(t.Date).startsWith(f.month)) &&
+    (f.cat === 'All' || t.Category === f.cat) &&
     (!q || `${t.Details} ${t.Category} ${t.Source} ${Math.round(Math.abs(n(t.Amount)))}`.toLowerCase().includes(q)));
   let tot = { Income: 0, Expenses: 0 };
   list.forEach(t => { if (t.Type in tot) tot[t.Type] += n(t.Amount) || 0; });
   let html = `<input class="search" id="tx-q" type="search" placeholder="Search merchant, category or amount" value="${esc(f.q)}" autocomplete="off">
     <div class="chips" id="tx-types">${['All', 'Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button class="chip ${f.type === t ? 'on' : ''}" data-type="${t}">${t}</button>`).join('')}</div>
-    <div class="row" style="margin:4px 0 2px">
-      <select class="inp" id="tx-month" style="width:auto;padding:8px 12px;font-size:14px"><option value="All">All months</option>${months.map(m => `<option value="${m}" ${f.month === m ? 'selected' : ''}>${fMon(pDate(m + '-01'))}</option>`).join('')}</select>
-      <span class="small muted num">${list.length} items · in ${inr(tot.Income)} · out ${inr(tot.Expenses)}</span></div>`;
+    <div class="filters">
+      <select class="inp sel" id="tx-month" aria-label="Month"><option value="All">All months</option>${months.map(m => `<option value="${m}" ${f.month === m ? 'selected' : ''}>${fMon(pDate(m + '-01'))}</option>`).join('')}</select>
+      <select class="inp sel" id="tx-cat" aria-label="Category"><option value="All">All categories</option>${cats.map(c => `<option ${f.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="small muted num" style="margin:8px 2px 0">${list.length.toLocaleString('en-IN')} transactions · in ${inr(tot.Income)} · out ${inr(tot.Expenses)}</div>`;
   if (!list.length) return html + `<div class="empty">Nothing matches.</div>`;
   let lastDay = '';
   list.slice(0, f.limit).forEach(t => {
@@ -338,26 +353,36 @@ function viewTx() {
     html += `<div class="tx ${t._pending ? 'pending' : ''}"><div class="ic">${TYPE_ICON[t.Type] || '•'}</div>
       <div class="mid"><div class="t1">${esc(d.title)}${t._pending ? `<span class="badge">${t._pending === 'outbox' ? 'Not uploaded' : 'Waiting for Excel'}</span>` : ''}</div>
       <div class="t2">${esc(t.Category)} · ${esc(d.src)}</div>
+      <div class="t3">${esc(fullDetails(t))}<br>${esc(t.Type)} · ${esc(t.Source)} · ${fDay(pDate(t.Date))}</div>
       ${t._pending === 'pending' ? `<button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
       ${t._pending === 'outbox' ? `<button class="link-btn" data-delout="${esc(t._id)}">Remove</button>` : ''}</div>
       <div class="amt num ${cls}">${sign}${inr(Math.abs(a))}</div></div>`;
   });
-  if (list.length > f.limit) html += `<button class="more" id="tx-more">Show more (${list.length - f.limit} left)</button>`;
-  else html += `<p class="small muted" style="text-align:center;margin-top:14px">The app holds your latest ${tbl('AppRecent').length} transactions. Older ones are in Excel.</p>`;
+  if (list.length > f.limit) html += `<button class="more" id="tx-more">Show ${Math.min(200, list.length - f.limit)} more (${(list.length - f.limit).toLocaleString('en-IN')} left)</button>`;
+  else html += `<p class="small muted" style="text-align:center;margin-top:14px">End of list · all ${tbl('AppRecent').length.toLocaleString('en-IN')} transactions from Excel${oldest()}</p>`;
   return html;
+}
+function fullDetails(t) {
+  return String(t.Details || '').replace(/^bank:\s*\{[^}]*\}\s*/i, '').replace(/\s*app#[A-Za-z0-9-]+\s*$/, '') || t.Category;
+}
+function oldest() {
+  const r = tbl('AppRecent'); const d = r.length ? pDate(r[r.length - 1].Date) : null;
+  return d ? ` (since ${fMon(d)})` : '';
 }
 function bindTx() {
   const q = document.getElementById('tx-q');
-  q.addEventListener('input', () => { state.tx.q = q.value; state.tx.limit = 60; const pos = q.selectionStart; render(); const nq = document.getElementById('tx-q'); nq.focus(); nq.setSelectionRange(pos, pos); });
-  document.querySelectorAll('#tx-types .chip').forEach(b => b.onclick = () => { state.tx.type = b.dataset.type; state.tx.limit = 60; render(); });
-  document.getElementById('tx-month').onchange = e => { state.tx.month = e.target.value; state.tx.limit = 60; render(); };
-  const more = document.getElementById('tx-more'); if (more) more.onclick = () => { state.tx.limit += 100; render(); };
+  q.addEventListener('input', () => { state.tx.q = q.value; state.tx.limit = 100; const pos = q.selectionStart; render(); const nq = document.getElementById('tx-q'); nq.focus(); nq.setSelectionRange(pos, pos); });
+  document.querySelectorAll('#tx-types .chip').forEach(b => b.onclick = () => { state.tx.type = b.dataset.type; state.tx.limit = 100; render(); });
+  document.getElementById('tx-month').onchange = e => { state.tx.month = e.target.value; state.tx.limit = 100; render(); };
+  document.getElementById('tx-cat').onchange = e => { state.tx.cat = e.target.value; state.tx.limit = 100; render(); };
+  const more = document.getElementById('tx-more'); if (more) more.onclick = () => { const y = window.scrollY; state.tx.limit += 200; render(); window.scrollTo(0, y); };
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (!confirmInline(b)) return;
     try { await GH.deleteEntry(b.dataset.del, b.dataset.sha); state.pending = state.pending.filter(p => p.id !== b.dataset.del); LS.set('pending', state.pending); toast('Removed'); }
     catch (e) { toast(e.message || 'Couldn’t remove – try again'); }
     render();
   });
+  document.querySelectorAll('.tx').forEach(el => el.onclick = e => { if (!e.target.closest('button')) el.classList.toggle('open'); });
   document.querySelectorAll('[data-delout]').forEach(b => b.onclick = () => {
     if (!confirmInline(b)) return;
     state.outbox = state.outbox.filter(e => e.id !== b.dataset.delout); LS.set('outbox', state.outbox); toast('Removed'); render();
@@ -424,6 +449,64 @@ function viewFuture() {
     <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included).</p></section>`;
 }
 
+/* ---------------- More: every Excel sheet ---------------- */
+const SHEET_ICON = { Home: '⌂', Insights: '📊', 'Monthly Compare': '📅', Goals: '🎯', Loans: '🏦', LIC: '🛡', 'Stocks & MF': '📈',
+  'Yearly Calendar': '🗓', 'Side Income': '💼', 'Goal Planner': '🧭', 'NW Projection': '🚀', 'Savings Schemes': '🏛', 'Big Expenses': '💸',
+  Trends: '〰', 'Yearly Summary': '📆', 'Budget Planning': '📝', Balances: '💰', Salary: '🧾', Payslips: '📄' };
+function sheetList() { return (state.sheets && state.sheets.sheets) || []; }
+function viewMore() {
+  const list = sheetList(), at = state.sheets && state.sheets.exportedAt ? new Date(state.sheets.exportedAt) : null;
+  return `<section class="card"><h2>App screens</h2>
+      <button class="navrow" data-go="future"><span class="ni">↗</span><span class="nt">Retirement<br><span class="small muted">Net worth at 60, earliest retirement, path to 60</span></span><span class="chev">›</span></button></section>
+    <section class="card"><h2>Your Excel sheets${at ? ` · sent ${fDay(at).replace(/ \d{4}$/, '')}, ${at.toTimeString().slice(0, 5)}` : ''}</h2>
+    ${list.length ? list.map(s => `<button class="navrow" data-sheet="${esc(s.name)}"><span class="ni">${SHEET_ICON[s.name] || '▦'}</span>
+        <span class="nt">${esc(s.name)}${s.hidden ? ' <span class="badge">hidden in Excel</span>' : ''}<br><span class="small muted">${sheetHint(s)}</span></span><span class="chev">›</span></button>`).join('')
+      : `<p class="small muted" style="margin:0">No sheets yet. Update the AppLink macro in Excel (see the update notes), run <b>AppLinkNow</b>, then tap ⟳.</p>`}
+    </section>
+    <p class="small muted" style="text-align:center">Sheets show exactly what Excel shows. Charts aren’t included – the app draws its own.</p>`;
+}
+function sheetHint(s) {
+  const first = (s.rows || []).slice(0, 3).map(r => r.c.find(x => x)).filter(Boolean);
+  const t = first.find((x, i) => i > 0 && x.length > 8) || first[1] || first[0] || '';
+  return esc(t.length > 60 ? t.slice(0, 58) + '…' : t);
+}
+const NUMISH = /^[-−+▲▼(]?\s?₹?\s?-?[\d,]+(\.\d+)?\)?\s?(%|×|Cr|L|mo|yrs)?$/;
+function viewSheet() {
+  const sh = sheetList().find(s => s.name === state.sheet);
+  if (!sh) { state.tab = 'more'; return viewMore(); }
+  const names = new Set(sheetList().map(s => s.name));
+  const q = state.sheetQ.trim().toLowerCase();
+  const rows = (sh.rows || []).filter(r => !q || r.c.join(' ').toLowerCase().includes(q));
+  const width = Math.max(1, ...(sh.rows || []).map(r => r.c.length));
+  const cell = (t, bold) => {
+    if (!t) return '<td></td>';
+    const m = t.match(/^→\s*(.+?)(\s+for details)?$/);
+    if (m && names.has(m[1].trim())) return `<td><button class="xl-link" data-sheet="${esc(m[1].trim())}">→ ${esc(m[1].trim())}</button></td>`;
+    const cls = [NUMISH.test(t) ? 'n' : '', tone(t), bold ? 'b' : '', t.length > 38 ? 'long' : ''].filter(Boolean).join(' ');
+    return `<td${cls ? ` class="${cls}"` : ''}>${esc(t)}</td>`;
+  };
+  return `<div class="row" style="gap:8px;margin-bottom:10px"><button class="secondary back" data-go="more">‹ Sheets</button>
+      <input class="search" id="sheet-q" type="search" placeholder="Find in ${esc(sh.name)}" value="${esc(state.sheetQ)}" autocomplete="off" style="flex:1"></div>
+    ${sh.hidden ? '<p class="small muted" style="margin:0 0 8px">This sheet is hidden in Excel.</p>' : ''}
+    <div class="xl-wrap"><table class="xl"><tbody>${rows.map(r => {
+      const b = new Set(r.b || []);
+      const c = r.c.concat(Array(width - r.c.length).fill(''));
+      let run = 1; while (run < width && !c[run]) run++;           // empty cells right of the first one
+      if (c[0] && c[0].length > 24 && run > 1) {                   // titles & notes stretch across them
+        const first = `<td colspan="${run}" class="span ${b.has(0) ? 'b' : ''} ${tone(c[0])}"><div>${esc(c[0])}</div></td>`;
+        return `<tr>${first}${c.slice(run).map((t, i) => cell(t, b.has(i + run))).join('')}</tr>`;
+      }
+      return `<tr>${c.map((t, i) => cell(t, b.has(i))).join('')}</tr>`; }).join('')}</tbody></table></div>
+    ${!rows.length ? '<div class="empty">Nothing matches.</div>' : ''}
+    <p class="small muted" style="margin:10px 2px 0">Swipe sideways for more columns. Read-only – change things in Excel.</p>`;
+}
+function bindSheets() {
+  document.querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheet; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { state.tab = b.dataset.go; window.scrollTo(0, 0); render(); });
+  const q = document.getElementById('sheet-q');
+  if (q) q.addEventListener('input', () => { state.sheetQ = q.value; const pos = q.selectionStart; render(); const nq = document.getElementById('sheet-q'); nq.focus(); nq.setSelectionRange(pos, pos); });
+}
+
 /* ---------------- add entry ---------------- */
 function catsFor(type) {
   return tbl('AppLists').map(r => r[type]).filter(c => c && !/^Enter /i.test(c));
@@ -474,7 +557,7 @@ function bindAdd() {
       state.outbox.push(entry); LS.set('outbox', state.outbox);
       toast(e instanceof AppError && !/offline/i.test(e.message) && navigator.onLine !== false ? e.message + ' Kept on this phone.' : 'Saved on this phone · uploads when you’re online');
     }
-    state.add = newAdd(); state.tab = 'tx'; state.tx = { q: '', type: 'All', month: 'All', limit: 60 }; render();
+    state.add = newAdd(); state.tab = 'tx'; state.tx = { q: '', type: 'All', month: 'All', cat: 'All', limit: 100 }; render();
   };
 }
 
@@ -510,7 +593,7 @@ function bindSettings() {
   const back = document.getElementById('s-back'); if (back) back.onclick = () => { state.tab = 'home'; render(); };
   const forget = document.getElementById('s-forget');
   if (forget) forget.onclick = () => { if (!confirmInline(forget)) { forget.textContent = 'Tap again to forget this phone'; return; }
-    ['cfg', 'data', 'fetchedAt', 'pending', 'outbox'].forEach(LS.del); location.reload(); };
+    ['cfg', 'data', 'fetchedAt', 'pending', 'outbox', 'sheets'].forEach(LS.del); location.reload(); };
 }
 
 /* ---------------- shell ---------------- */
