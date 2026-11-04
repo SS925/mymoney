@@ -1,1 +1,153 @@
+# MyMoney phone notifications.
+# Put this file in your PRIVATE data repo (mymoney-data) at:  .github/workflows/notify.yml
+# It checks your figures every morning at 8:30 am IST and whenever Excel sends new data,
+# and notifies your phone when something is new, still unresolved after a week, or a month has finished.
+name: Phone notifications
+
+on:
+  schedule:
+    - cron: '0 3 * * *'        # 03:00 UTC = 08:30 IST, every day
+  workflow_dispatch:            # "Run workflow" button for a manual check
+  push:
+    paths: ['data.json', 'push/**']
+
+permissions:
+  contents: write              # to save which alerts were already sent (push/state.json)
+
+concurrency:
+  group: phone-notifications
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install web-push
+        run: npm install --no-save --no-package-lock --silent web-push@3.6.7
+      - name: Check alerts and notify
+        run: |
+          cat > notify.mjs <<'JS'
+          // MyMoney phone notifications. Runs in the private data repo (GitHub Actions).
+          // Reads data.json (sent by Excel) and sends a notification to every phone in push/subs/
+          // when an alert is new, still unresolved after a week, or a month has finished.
+          import fs from 'fs';
+          import path from 'path';
+          import webpush from 'web-push';
+
+          const EVENT = process.env.GITHUB_EVENT_NAME || 'manual';
+          const NOW = new Date(process.env.MM_NOW || Date.now());
+          const IST_HOUR = ((NOW.getUTCHours() * 60 + NOW.getUTCMinutes() + 330) / 60) % 24;
+          const QUIET = EVENT === 'push' && (IST_HOUR < 8 || IST_HOUR >= 22);   // no alerts at night after an Excel save
+          const REMIND_DAYS = 7;
+
+          const readJSON = (p, d) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return d; } };
+          const writeJSON = (p, o) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, JSON.stringify(o, null, 1)); };
+          const days = (a, b) => (b - new Date(a)) / 864e5;
+          const inr = v => (v < 0 ? '-' : '') + '₹' + Math.round(Math.abs(v)).toLocaleString('en-IN');
+          const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+          const vapid = readJSON('push/vapid.json', null);
+          if (!vapid) { console.log('No push/vapid.json yet - turn on notifications in the app first.'); process.exit(0); }
+          webpush.setVapidDetails('mailto:mymoney@users.noreply.github.com', vapid.publicKey, vapid.privateKey);
+          const APP_URL = vapid.appUrl || './';
+
+          const subDir = 'push/subs';
+          const subs = fs.existsSync(subDir) ? fs.readdirSync(subDir).filter(f => f.endsWith('.json'))
+            .map(f => ({ file: path.join(subDir, f), ...readJSON(path.join(subDir, f), {}) })).filter(s => s.subscription) : [];
+          if (!subs.length) { console.log('No phones registered.'); process.exit(0); }
+
+          const state = readJSON('push/state.json', { active: {}, known: [], lastMonth: '' });
+          const data = readJSON('data.json', null);
+
+          async function send(list, msg) {
+            const payload = JSON.stringify({ tag: 'mymoney', url: APP_URL, ...msg });
+            for (const s of list) {
+              try {
+                await webpush.sendNotification(s.subscription, payload, { TTL: 24 * 3600, urgency: 'normal' });
+                console.log(`sent to ${s.device || s.file}: ${msg.title}`);
+              } catch (e) {
+                if (e.statusCode === 404 || e.statusCode === 410) {        // phone unsubscribed or app removed
+                  console.log(`removing expired phone ${s.file}`); fs.rmSync(s.file, { force: true });
+                  s.gone = true;
+                } else console.log(`could not send to ${s.device || s.file}: ${e.statusCode || ''} ${e.body || e.message}`);
+              }
+            }
+          }
+
+          // 1. Welcome message for a newly registered phone, and test requests from the app
+          const fresh = subs.filter(s => !state.known.includes(path.basename(s.file)));
+          if (fresh.length) await send(fresh, { title: 'MyMoney notifications are on ✓', body: 'You’ll get alerts for premiums due, budget overruns, stale data and a monthly summary.' });
+          state.known = subs.filter(s => !s.gone).map(s => path.basename(s.file));
+          if (fs.existsSync('push/test-request.json')) {
+            await send(subs.filter(s => !s.gone), { title: 'MyMoney test ✓', body: 'Notifications reach this phone. Tap to open the app.' });
+            fs.rmSync('push/test-request.json');
+          }
+
+          // 2. Alerts from the workbook
+          if (data && !QUIET) {
+            const t = n => { const x = data.tables && data.tables[n]; return x ? x.rows.map(r => Object.fromEntries(x.cols.map((c, i) => [c, r[i]]))) : []; };
+            const k = Object.fromEntries(t('AppKPIs').map(r => [r.Key, r.Value]));
+            const alerts = [];
+            for (const r of t('AppAlerts')) {
+              const s = String(r.Alert || '').trim();
+              if (/^⚠/.test(s)) alerts.push({ level: 'warn', text: s.replace(/^⚠\s*/, '') });
+              else if (/^ℹ/.test(s)) alerts.push({ level: 'info', text: s.replace(/^ℹ\s*/, '') });
+            }
+            const sentAgo = data.pushedAt ? days(data.pushedAt, NOW) : 0;
+            if (sentAgo >= 3) alerts.push({ level: 'warn', text: `Excel hasn’t sent figures for ${Math.floor(sentAgo)} days – open the workbook to sync`, key: 'stale-excel' });
+            const keyOf = a => a.key || a.text.replace(/[\d.,₹]+/g, '#').replace(/\s+/g, ' ').toLowerCase();
+
+            const due = [], active = {};
+            for (const a of alerts) {
+              const key = keyOf(a), prev = state.active[key];
+              if (!prev) due.push(a);
+              else if (a.level === 'warn' && days(prev.lastSent, NOW) >= REMIND_DAYS) due.push({ ...a, again: true });
+              active[key] = prev && !due.some(d => keyOf(d) === key) ? prev : { first: prev ? prev.first : NOW.toISOString(), lastSent: NOW.toISOString() };
+            }
+            state.active = active;
+            if (due.length) {
+              due.sort((a, b) => (a.level === 'warn' ? 0 : 1) - (b.level === 'warn' ? 0 : 1));
+              const lines = due.slice(0, 4).map(a => (a.level === 'warn' ? '⚠ ' : 'ℹ ') + a.text);
+              if (due.length > 4) lines.push(`…and ${due.length - 4} more`);
+              const nWarn = due.filter(a => a.level === 'warn').length;
+              await send(subs.filter(s => !s.gone), {
+                title: due.length === 1 ? (nWarn ? 'MyMoney: needs attention' : 'MyMoney reminder') : `MyMoney: ${due.length} things to check`,
+                body: lines.join('\n'), tag: 'mymoney-alerts', url: APP_URL + '#home' });
+            }
+
+            // 3. Monthly summary once the data moves into a new month
+            const month = String(k.month || '').slice(0, 7);
+            if (month && state.lastMonth && month !== state.lastMonth) {
+              const m = t('AppMonthly').find(r => String(r.Month).startsWith(state.lastMonth));
+              if (m) {
+                const [y, mm] = state.lastMonth.split('-').map(Number);
+                await send(subs.filter(s => !s.gone), {
+                  title: `MyMoney · ${MON[mm - 1]} ${y} summary`,
+                  body: `Income ${inr(m.Income)} · Spent ${inr(m.Spending)} · Saved ${inr(m.Saved)}\nLeft over ${inr(m.LeftOver)} · Net worth ${inr(k.net_worth)}`,
+                  tag: 'mymoney-month', url: APP_URL + '#home' });
+              }
+            }
+            if (month) state.lastMonth = month;
+          } else if (QUIET) console.log('Quiet hours (10 pm – 8 am IST): alerts wait for the morning check.');
+
+          state.checkedAt = NOW.toISOString();
+          writeJSON('push/state.json', state);
+          console.log('done');
+
+          JS
+          node notify.mjs
+      - name: Save what was sent
+        run: |
+          git config user.name "MyMoney notifications"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A push
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Notification state"
+            git pull -q --rebase origin "${GITHUB_REF_NAME}" && git push -q
+          fi
 
