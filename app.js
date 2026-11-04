@@ -78,6 +78,23 @@ const GH = {
       message: `Phone entry removed ${id}`, branch: state.cfg.branch || 'main', sha } });
     if (!r.ok && r.status !== 404) throw httpError(r.status);
   },
+  async sha(path) {
+    const r = await this.call('GET', path);
+    if (r.status === 404) return null;
+    if (!r.ok) throw httpError(r.status);
+    const j = await r.json(); return j.sha;
+  },
+  async putJson(path, obj, message) {
+    const sha = await this.sha(path);
+    const r = await this.call('PUT', path, { body: { message, branch: state.cfg.branch || 'main', content: b64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) } });
+    if (!r.ok) throw httpError(r.status);
+  },
+  async remove(path, message) {
+    const sha = await this.sha(path); if (!sha) return;
+    const r = await this.call('DELETE', path, { body: { message, branch: state.cfg.branch || 'main', sha } });
+    if (!r.ok && r.status !== 404) throw httpError(r.status);
+  },
+  async exists(path) { const r = await this.call('GET', path); return r.ok; },
   async testRepo() {
     const c = state.cfg;
     const r = await fetch(`https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}`,
@@ -465,7 +482,8 @@ function sheetList() { return (state.sheets && state.sheets.sheets) || []; }
 function viewMore() {
   const list = sheetList(), at = state.sheets && state.sheets.exportedAt ? new Date(state.sheets.exportedAt) : null;
   return `<section class="card"><h2>App screens</h2>
-      <button class="navrow" data-go="future"><span class="ni">↗</span><span class="nt">Retirement<br><span class="small muted">Net worth at 60, earliest retirement, path to 60</span></span><span class="chev">›</span></button></section>
+      <button class="navrow" data-go="future"><span class="ni">↗</span><span class="nt">Retirement<br><span class="small muted">Net worth at 60, earliest retirement, path to 60</span></span><span class="chev">›</span></button>
+      <button class="navrow" data-go="settings"><span class="ni">🔔</span><span class="nt">Phone notifications<br><span class="small muted">${pushStatus() === 'on' ? 'On for this phone' : 'Premiums due, budget alerts, monthly summary'}</span></span><span class="chev">›</span></button></section>
     <section class="card"><h2>Your Excel sheets${at ? ` · sent ${fDay(at).replace(/ \d{4}$/, '')}, ${at.toTimeString().slice(0, 5)}` : ''}</h2>
     ${list.length ? list.map(s => `<button class="navrow" data-sheet="${esc(s.name)}"><span class="ni">${SHEET_ICON[s.name] || '▦'}</span>
         <span class="nt">${esc(s.name)}${s.hidden ? ' <span class="badge">hidden in Excel</span>' : ''}<br><span class="small muted">${sheetHint(s)}</span></span><span class="chev">›</span></button>`).join('')
@@ -709,7 +727,7 @@ function bindAdd() {
 /* ---------------- settings ---------------- */
 function viewSettings() {
   const c = state.cfg || { owner: '', repo: 'mymoney-data', token: '', branch: 'main' };
-  return `<section class="card">
+  return `${state.cfg ? viewNotif() : ''}<section class="card">
     <h2>${state.cfg ? 'GitHub link' : 'Connect to your data'}</h2>
     <p class="small muted" style="margin:0 0 4px">Same details you put in the AppLink macro. The token is kept only on this phone.</p>
     <label class="f" for="s-owner">GitHub username</label><input class="inp" id="s-owner" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(c.owner)}">
@@ -722,7 +740,84 @@ function viewSettings() {
   </section>
   <p class="small muted" style="text-align:center">MyMoney · reads figures your Excel workbook sends to GitHub.</p>`;
 }
+/* ---------------- phone notifications ---------------- */
+const b64url = bytes => btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), ch => ch.charCodeAt(0));
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const standalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+function pushStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window))
+    return isIOS() && !standalone() ? 'homescreen' : 'unsupported';
+  if (isIOS() && !standalone()) return 'homescreen';
+  if (Notification.permission === 'denied') return 'blocked';
+  if (LS.get('pushId', null) && Notification.permission === 'granted') return 'on';
+  return 'off';
+}
+function deviceName() { const u = navigator.userAgent; return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android phone' : 'Browser'; }
+function viewNotif() {
+  const st = pushStatus();
+  const body = {
+    on: `<p class="small good" style="margin:0 0 4px">✓ On for this ${esc(deviceName())}</p>
+         <p class="small muted" style="margin:0">Checked every morning at 8:30 and when Excel sends new figures. You’re told about new alerts, ⚠ warnings still open after a week, and a summary when a month ends.</p>
+         <button class="secondary" id="n-test">Send a test notification</button><button class="secondary" id="n-off">Turn off on this phone</button>`,
+    off: `<p class="small muted" style="margin:0">Get alerts on this phone for premiums due, spending over budget, out-of-date data, FDs maturing and a monthly summary.</p>
+         <button class="primary" id="n-on">Turn on notifications</button>`,
+    blocked: `<p class="small warn" style="margin:0">Notifications are blocked for this app. Allow them in your phone’s settings (Settings → Notifications → MyMoney, or the site settings in Chrome), then come back here.</p>`,
+    homescreen: `<p class="small warn" style="margin:0">On iPhone, notifications only work when MyMoney is opened from the Home Screen. In Safari tap Share → Add to Home Screen, open MyMoney from there, then come back to ⚙.</p>`,
+    unsupported: `<p class="small muted" style="margin:0">This browser can’t receive notifications. Use Chrome on Android, or Safari on iPhone (iOS 16.4 or later) with MyMoney added to the Home Screen.</p>`,
+  }[st];
+  return `<section class="card"><h2>Phone notifications</h2>${body}<p class="small" id="n-msg" style="margin:10px 0 0"></p><p class="small warn" id="n-wf" style="margin:6px 0 0" hidden></p></section>`;
+}
+async function ensureVapid() {
+  const r = await GH.call('GET', 'push/vapid.json', { raw: true });
+  if (r.ok) return r.json();
+  if (r.status !== 404) throw httpError(r.status);
+  // first phone: create the signing keys for notifications and keep them in the private data repo
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  const v = { publicKey: b64url(pub), privateKey: jwk.d, appUrl: location.origin + location.pathname.replace(/index\.html$/, ''), createdAt: new Date().toISOString() };
+  await GH.putJson('push/vapid.json', v, 'Notification keys');
+  return v;
+}
+async function pushOn() {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new AppError('Notifications weren’t allowed. Tap Turn on again and choose Allow.');
+  const reg = await navigator.serviceWorker.ready;
+  const v = await ensureVapid();
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && sub.options && sub.options.applicationServerKey &&
+      b64url(new Uint8Array(sub.options.applicationServerKey)) !== v.publicKey) { await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(v.publicKey) });
+  const id = LS.get('pushId', null) || ('phone-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+  await GH.putJson(`push/subs/${id}.json`, { device: deviceName(), subscription: sub.toJSON(), createdAt: new Date().toISOString() }, 'Phone notifications on');
+  LS.set('pushId', id);
+}
+async function pushOff() {
+  const id = LS.get('pushId', null);
+  try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (e) {}
+  if (id) await GH.remove(`push/subs/${id}.json`, 'Phone notifications off');
+  LS.del('pushId');
+}
+function bindNotif() {
+  const msg = document.getElementById('n-msg'); if (!msg) return;
+  const busy = (b, t) => { b.disabled = true; b.textContent = t; };
+  const fail = e => { render(); const m = document.getElementById('n-msg'); if (m) { m.className = 'small bad'; m.textContent = (e && e.message) || 'Something went wrong – try again.'; } };
+  const on = document.getElementById('n-on');
+  if (on) on.onclick = async () => { busy(on, 'Turning on…'); try { await pushOn(); render(); const m = document.getElementById('n-msg');
+    m.className = 'small good'; m.textContent = 'Done. A “notifications are on” message should arrive within a few minutes.'; } catch (e) { fail(e); } };
+  const test = document.getElementById('n-test');
+  if (test) test.onclick = async () => { busy(test, 'Sending…'); try { await GH.putJson('push/test-request.json', { at: new Date().toISOString(), from: LS.get('pushId', '') }, 'Test notification');
+    test.textContent = 'Test requested ✓'; msg.className = 'small muted'; msg.textContent = 'It should arrive within 1–3 minutes (GitHub has to start the checker).'; } catch (e) { fail(e); } };
+  const off = document.getElementById('n-off');
+  if (off) off.onclick = async () => { busy(off, 'Turning off…'); try { await pushOff(); render(); toast('Notifications off on this phone'); } catch (e) { fail(e); } };
+  const wf = document.getElementById('n-wf');
+  if (wf && pushStatus() === 'on') GH.exists('.github/workflows/notify.yml').then(ok => {
+    if (!ok && wf.isConnected) { wf.hidden = false; wf.textContent = '⚠ The notification checker isn’t in your data repo yet. Upload notify.yml to mymoney-data/.github/workflows/ (see the update notes) – until then nothing is sent.'; }
+  }).catch(() => {});
+}
 function bindSettings() {
+  bindNotif();
   const msg = document.getElementById('s-msg');
   document.getElementById('s-save').onclick = async () => {
     const cfg = { owner: document.getElementById('s-owner').value.trim(), repo: document.getElementById('s-repo').value.trim(),
@@ -751,6 +846,7 @@ window.addEventListener('online', () => sync());
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
+{ const h = location.hash.slice(1); if (['home', 'tx', 'budget', 'more', 'add', 'settings'].includes(h) && state.cfg) state.tab = h; }
 render();
 if (state.cfg) sync();
