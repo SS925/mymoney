@@ -14,7 +14,7 @@ const state = {
   fetchedAt: LS.get('fetchedAt', null),
   sheets: LS.get('sheets', null),   // every sheet as Excel shows it
   sheet: null, sheetQ: '', choice: {},   // choice[sheet] = {label, v}
-  sheetMode: LS.get('sheetMode', 'cards'),
+  sheetMode: ['fold', 'tiles', 'table'].includes(LS.get('sheetMode2', 'fold')) ? LS.get('sheetMode2', 'fold') : 'fold', fold: {},
   pending: LS.get('pending', []),    // [{id, sha, entry}] in GitHub inbox, not yet in Excel data
   outbox: LS.get('outbox', []),      // entries saved offline, not uploaded yet
   tab: 'home', lastError: null, syncing: false,
@@ -507,8 +507,8 @@ function viewSheet() {
   };
   const top = `<div class="row" style="gap:8px;margin-bottom:10px"><button class="secondary back" data-go="more">‹ Sheets</button>
       <input class="search" id="sheet-q" type="search" placeholder="Find in ${esc(sh.name)}" value="${esc(state.sheetQ)}" autocomplete="off" style="flex:1"></div>
-    <div class="seg seg2" id="sheet-mode"><button data-m="cards" class="${state.sheetMode === 'cards' ? 'on' : ''}">Cards</button><button data-m="table" class="${state.sheetMode === 'table' ? 'on' : ''}">Table</button></div>`;
-  if (state.sheetMode === 'cards') return top + chips + sheetCards(sh, rows, names);
+    <div class="chips" id="sheet-mode" style="padding-top:0">${Object.entries(SHEET_VIEWS).map(([k, v]) => `<button class="chip ${state.sheetMode === k ? 'on' : ''}" data-m="${k}">${v[0]}</button>`).join('')}<button class="chip ${state.sheetMode === 'table' ? 'on' : ''}" data-m="table">Excel grid</button></div>`;
+  if (state.sheetMode !== 'table') return top + chips + sheetBody(sh, rows, names);
   return top + chips + `${sh.hidden ? '<p class="small muted" style="margin:0 0 8px">This sheet is hidden in Excel.</p>' : ''}
     <div class="xl-wrap"><table class="xl"><tbody>${rows.map(r => {
       const b = new Set(r.b || []);
@@ -522,83 +522,130 @@ function viewSheet() {
     ${!rows.length ? '<div class="empty">Nothing matches.</div>' : ''}
     <p class="small muted" style="margin:10px 2px 0">Swipe sideways for more columns. Read-only – change things in Excel.</p>`;
 }
-/* Turn a sheet into app-style cards: bold one-cell rows start a card, bold multi-cell rows are column
-   headers, label + value rows become tidy rows, table rows become items, notes become small text. */
 const PRIMARY_HDR = /(used|now|owed|current|value|total|balance|net|amount|spent|left|corpus|worth)/i;
 const isNum = t => NUMISH.test(String(t || '').trim());
 const isStatus = t => /^[✓✅⚠ℹ🟡🔴]/.test(String(t || '').trim());
-function barHtml(t) {
-  const m = String(t).match(/^[█░]+\s+(-?\d+)%/);
-  if (!m) return null;
-  const p = Number(m[1]);
-  return `<div class="row small" style="gap:8px;width:100%"><div class="bar ${p > 100 ? 'over' : ''}" style="flex:1"><i style="width:${Math.min(100, Math.max(0, p))}%"></i></div><span class="num">${p}%</span></div>`;
-}
-function valHtml(t, names) {
-  const m = String(t).match(/^→\s*(.+?)(\s+for details)?$/);
-  if (m && names.has(m[1].trim())) return `<button class="xl-link" data-sheet="${esc(m[1].trim())}">→ ${esc(m[1].trim())}</button>`;
-  return `<span class="${tone(t)}">${esc(t)}</span>`;
-}
-function sheetCards(sh, rows, names) {
+/* Parse a sheet into sections, then draw it in one of several views. */
+function parseSheet(rows) {
   const out = [];
-  let card = null, headers = null, lastTiles = null;
-  const open = (title, bold) => { card = { title, items: [] }; out.push(card); headers = null; lastTiles = null; };
-  const add = html => { if (!card) open(''); card.items.push(html); };
+  let sec = null, headers = null, lastTiles = null;
+  const open = title => { sec = { title, headers: null, items: [] }; out.push(sec); headers = null; lastTiles = null; };
+  const add = it => { if (!sec) open(''); sec.items.push(it); };
   rows.forEach((r, ri) => {
     const c = r.c, b = new Set(r.b || []);
     const f = c.map((t, i) => t ? i : -1).filter(i => i >= 0);
     if (!f.length) return;
     const first = c[f[0]], allBold = f.every(i => b.has(i));
-    // continuation line under stat tiles (e.g. "Cash & bank, all accounts")
     if (lastTiles && lastTiles.n < 2 && (!allBold || lastTiles.n === 0) && f.every(i => lastTiles.pos.includes(i)) &&
         !f.some(i => isNum(c[i]) || /^→/.test(c[i]))) {
-      const subs = lastTiles.el.sub || (lastTiles.el.sub = lastTiles.pos.map(() => []));
-      f.forEach(i => subs[lastTiles.pos.indexOf(i)].push(c[i])); lastTiles.n++; return;     // lines under each figure
+      f.forEach(i => lastTiles.el.tiles[lastTiles.pos.indexOf(i)].sub.push(c[i])); lastTiles.n++; return;
     }
     lastTiles = null;
-    if (ri === 0 && b.has(f[0])) {                                  // sheet title
+    if (ri === 0 && b.has(f[0])) {
       open(first); const rest = f.slice(1).map(i => c[i]);
-      if (rest.length) add(`<p class="small muted sc-note">${esc(rest.join(' '))}</p>`); return;
+      if (rest.length) add({ type: 'note', t: rest.join(' ') }); return;
     }
     if (f.length === 1) {
       if (b.has(f[0]) && first.length < 70 && !isNum(first)) { open(first); return; }
-      if (first.length > 30 || !b.has(f[0])) { add(`<p class="small muted sc-note ${tone(first)}">${valHtml(first, names)}</p>`); return; }
+      if (first.length > 30 || !b.has(f[0])) { add({ type: 'note', t: first }); return; }
     }
     const nonFirstNum = f.slice(1).filter(i => isNum(c[i])).length;
-    if (allBold && f.length >= 2 && nonFirstNum === 0 && !isNum(first)) {   // header row
-      if (!(card && card.items.length === 0 && card.title)) open(first);
-      headers = {}; f.forEach(i => { headers[i] = c[i]; }); return;
+    if (allBold && f.length >= 2 && nonFirstNum === 0 && !isNum(first)) {
+      if (!(sec && sec.items.length === 0 && sec.title)) open(first);
+      headers = {}; f.forEach(i => { headers[i] = c[i]; }); sec.headers = headers; sec.headCols = f; return;
     }
-    if (headers && isNum(first) && f.length >= 2) {                 // a row of figures under headers -> tiles
-      const tiles = { tiles: f.map(i => [headers[i] || '', c[i], b.has(i)]), sub: null };
-      add(tiles); lastTiles = { el: tiles, pos: f, n: 0 }; return;
+    if (headers && isNum(first) && f.length >= 2) {
+      const el = { type: 'tiles', tiles: f.map(i => ({ h: headers[i] || '', v: c[i], sub: [] })) };
+      add(el); lastTiles = { el, pos: f, n: 0 }; return;
     }
-    if (f.length === 2 && !headers) {                               // label : value
-      add(`<div class="kv ${b.has(f[0]) ? 'kvb' : ''}"><span>${valHtml(first, names)}</span><span class="num sc-v">${barHtml(c[f[1]]) || valHtml(c[f[1]], names)}</span></div>`); return;
-    }
-    // item with several values
     let vals = f.slice(1).map(i => ({ h: headers ? (headers[i] || '') : '', v: c[i], i }));
-    if (vals.some(x => barHtml(x.v))) vals = vals.filter(x => x.h || !isNum(x.v));   // drop helper numbers next to progress bars
+    if (vals.some(x => barPct(x.v) != null)) vals = vals.filter(x => x.h || !isNum(x.v));
     const nums = vals.filter(x => isNum(x.v));
     const prim = nums.find(x => /\b(used|now|owed|current|balance|spent)\b/i.test(x.h) && !/%/.test(x.h))
-      || nums.find(x => PRIMARY_HDR.test(x.h) && !/%/.test(x.h)) || nums.find(x => !/%/.test(x.h)) || nums[0] || null;
-    const rest = vals.filter(x => x !== prim);
-    const bars = rest.filter(x => barHtml(x.v)), statuses = rest.filter(x => !barHtml(x.v) && isStatus(x.v)), others = rest.filter(x => !barHtml(x.v) && !isStatus(x.v));
-    add(`<div class="sc-item ${b.has(f[0]) ? 'kvb' : ''}">
-      <div class="row"><span class="sc-l">${valHtml(first, names)}</span>${prim ? `<span class="num sc-v">${esc(prim.v)}</span>` : ''}</div>
-      ${bars.map(x => barHtml(x.v)).join('')}
-      ${others.length ? `<div class="small muted sc-sub">${others.map(x => x.h ? `${esc(x.h)} <b class="num">${esc(x.v)}</b>` : `<span class="${tone(x.v)}">${esc(x.v)}</span>`).join(' · ')}</div>` : ''}
-      ${statuses.map(x => `<div class="small ${tone(x.v)}">${esc(x.v)}</div>`).join('')}
-    </div>`);
+      || nums.find(x => PRIMARY_HDR.test(x.h) && !/%/.test(x.h)) || nums.find(x => !/%/.test(x.h)) || nums[0]
+      || (f.length === 2 && !headers ? vals[0] : null);
+    add({ type: 'row', label: first, bold: b.has(f[0]), prim, cells: c, cols: f,
+          vals: vals.filter(x => x !== prim) });
   });
-  if (!out.length) return '<div class="empty">Nothing matches.</div>';
-  return out.filter(cd => cd.items.length || cd.title).map(cd => `<section class="card">${cd.title ? `<h3 class="sc-h">${esc(cd.title)}</h3>` : ''}
-    ${cd.items.map(it => typeof it === 'string' ? it : `<div class="grid2 sc-tiles">${it.tiles.map(([h, v, bb], k) =>
-      `<div class="stat"><div class="l">${esc(h)}</div><div class="v num ${tone(v)} ${String(v).startsWith('-') ? 'bad' : ''}">${esc(v)}</div>${it.sub && it.sub[k] ? it.sub[k].map(x => `<div class="s">${esc(x)}</div>`).join('') : ''}</div>`).join('')}</div>`).join('')}</section>`).join('')
-    + `<p class="small muted" style="text-align:center">Read-only – change things in Excel. Switch to Table to see the exact grid.</p>`;
+  return out.filter(s => s.items.length || s.title);
 }
+function barPct(t) { const m = String(t).match(/^[█░]+\s+(-?\d+)%/); return m ? Number(m[1]) : null; }
+function barEl(p) { return `<div class="row small" style="gap:8px;width:100%"><div class="bar ${p > 100 ? 'over' : ''}" style="flex:1"><i style="width:${Math.min(100, Math.max(0, p))}%"></i></div><span class="num">${p}%</span></div>`; }
+function vText(t, names) {
+  const m = String(t).match(/^→\s*(.+?)(\s+for details)?$/);
+  if (m && names.has(m[1].trim())) return `<button class="xl-link" data-sheet="${esc(m[1].trim())}">→ ${esc(m[1].trim())}</button>`;
+  const p = barPct(t); if (p != null) return `${p}%`;
+  return `<span class="${tone(t)}">${esc(t)}</span>`;
+}
+function subLine(vals) {
+  const plain = vals.filter(x => barPct(x.v) == null && !isStatus(x.v));
+  return plain.map(x => x.h ? `${esc(x.h)} <b class="num">${esc(x.v)}</b>` : `<span class="${tone(x.v)}">${esc(x.v)}</span>`).join(' · ');
+}
+function sectionTotal(s) {
+  const rows = s.items.filter(it => it.type === 'row' && it.prim && isNum(it.prim.v));
+  const tot = rows.filter(r => r.bold).pop() || (rows.length === 1 ? rows[0] : null);
+  return tot ? tot.prim.v : '';
+}
+const tileHtml = t => `<div class="stat"><div class="l">${esc(t.h)}</div><div class="v num ${tone(t.v)} ${String(t.v).startsWith('-') ? 'bad' : ''}">${esc(t.v)}</div>${t.sub.map(x => `<div class="s">${esc(x)}</div>`).join('')}</div>`;
+
+
+/* Rows inside an opened section: one line per row, tap for the rest */
+function viewList(secs, names) {
+  return `<div class="vlist">${secs.map(s => `${s.title ? `<div class="vl-h">${esc(s.title)}</div>` : ''}${s.items.map(it => {
+    if (it.type === 'note') return `<div class="vl-note ${tone(it.t)}">${vText(it.t, names)}</div>`;
+    if (it.type === 'tiles') return it.tiles.map(t => `<div class="vl-row"><span class="vl-l">${esc(t.h)}</span><span class="vl-v num ${tone(t.v)}">${esc(t.v)}</span></div>`).join('');
+    const p = it.vals.map(x => barPct(x.v)).find(x => x != null);
+    const st = it.vals.find(x => isStatus(x.v)), sub = subLine(it.vals);
+    const more = sub || st;
+    return `<div class="vl-row ${it.bold ? 'b' : ''} ${more ? 'tap' : ''}"><span class="vl-l">${vText(it.label, names)}</span>
+      <span class="vl-v num">${it.prim ? vText(it.prim.v, names) : ''}${p != null ? ` <span class="muted">${p}%</span>` : ''}${st ? ` <span class="${tone(st.v)}">${st.v.trim().charAt(0)}</span>` : ''}${more ? '<span class="chev2">›</span>' : ''}</span>
+      ${more ? `<div class="vl-more">${sub}${st ? `<div class="${tone(st.v)}">${esc(st.v)}</div>` : ''}</div>` : ''}</div>`;
+  }).join('')}`).join('')}</div>`;
+}
+
+
+/* Collapsible sections: titles + totals, tap to open (opened ones use the compact list) */
+function viewFold(secs, names, sheet) {
+  const openSet = state.fold[sheet] || (state.fold[sheet] = new Set());
+  const allOpen = secs.every((s, k) => openSet.has(k));
+  return `<div class="row small" style="justify-content:flex-end;margin:-4px 2px 6px"><button class="link-btn" style="color:#b9a8ff" data-foldall="${allOpen ? 0 : 1}">${allOpen ? 'Close all' : 'Open all'}</button></div><div class="vlist">${secs.map((s, k) => {
+    const isOpen = openSet.has(k), tot = sectionTotal(s);
+    return `<div class="fold ${isOpen ? 'open' : ''}"><button class="fold-h" data-fold="${k}"><span class="fold-c">${isOpen ? '▾' : '▸'}</span><span class="vl-l">${esc(s.title || 'Section')}</span><span class="vl-v num">${esc(tot)}</span></button>
+      ${isOpen ? viewList([{ ...s, title: '' }], names).replace('<div class="vlist">', '<div>') : ''}</div>`;
+  }).join('')}</div>`;
+}
+
+/* Dense tiles: every main figure as a small tile, 3 per row */
+function viewTiles(secs, names) {
+  return secs.map(s => {
+    const tiles = [];
+    s.items.forEach(it => {
+      if (it.type === 'tiles') it.tiles.forEach(t => tiles.push({ h: t.h, v: t.v, sub: [] }));
+      if (it.type === 'row' && it.prim) tiles.push({ h: it.label, v: it.prim.v, sub: [], bold: it.bold });
+    });
+    const texts = s.items.filter(it => it.type === 'row' && !it.prim);
+    if (!tiles.length && !texts.length) return '';
+    return `<div class="vl-h">${esc(s.title || '')}</div>
+      ${tiles.length ? `<div class="grid3 dtiles">${tiles.map(t => `<div class="stat ${t.bold ? 'tb' : ''}"><div class="l">${esc(t.h)}</div><div class="v num ${tone(t.v)} ${String(t.v).startsWith('-') ? 'bad' : ''}">${esc(t.v)}</div></div>`).join('')}</div>` : ''}
+      ${texts.map(it => `<div class="vl-row"><span class="vl-l">${vText(it.label, names)}</span><span class="vl-v small muted">${subLine(it.vals)}</span></div>`).join('')}`;
+  }).join('');
+}
+
+const SHEET_VIEWS = { fold: ['Sections', viewFold], tiles: ['Tiles', viewTiles] };
+function sheetBody(sh, rows, names) {
+  const secs = parseSheet(rows);
+  if (!secs.length) return '<div class="empty">Nothing matches.</div>';
+  const v = SHEET_VIEWS[state.sheetMode] || SHEET_VIEWS.fold;
+  return v[1](secs, names, sh.name) + `<p class="small muted" style="text-align:center;margin-top:12px">Read-only – change things in Excel.</p>`;
+}
+
 function bindSheets() {
   document.querySelectorAll('[data-chl]').forEach(b => b.onclick = () => { state.choice[state.sheet] = { label: b.dataset.chl, v: b.dataset.chv }; render(); });
-  document.querySelectorAll('#sheet-mode button').forEach(b => b.onclick = () => { state.sheetMode = b.dataset.m; LS.set('sheetMode', state.sheetMode); render(); });
+  document.querySelectorAll('#sheet-mode button').forEach(b => b.onclick = () => { state.sheetMode = b.dataset.m; LS.set('sheetMode2', state.sheetMode); render(); });
+  document.querySelectorAll('[data-fold]').forEach(b => b.onclick = () => { const s = state.fold[state.sheet], k = Number(b.dataset.fold); s.has(k) ? s.delete(k) : s.add(k); render(); });
+  document.querySelectorAll('[data-foldall]').forEach(b => b.onclick = () => { const n = document.querySelectorAll('[data-fold]').length;
+    state.fold[state.sheet] = new Set(b.dataset.foldall === '1' ? [...Array(n).keys()] : []); render(); });
+  document.querySelectorAll('.vl-row.tap').forEach(el => el.onclick = e => { if (!e.target.closest('button')) el.classList.toggle('open'); });
   document.querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheet; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { state.tab = b.dataset.go; window.scrollTo(0, 0); render(); });
   const q = document.getElementById('sheet-q');
