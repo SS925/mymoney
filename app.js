@@ -12,7 +12,9 @@ const state = {
   cfg: LS.get('cfg', null),          // {owner, repo, token, branch}
   data: LS.get('data', null),        // snapshot from Excel
   fetchedAt: LS.get('fetchedAt', null),
-  sheets: LS.get('sheets', null),   // every sheet as Excel shows it
+  sheets: LS.get('sheets', null),
+  plan: LS.get('plan', null),          // net-pay plan {savings, limits:{cat:amt}}
+  budgetMode: LS.get('budgetMode', 'plan'), planEdit: null,   // every sheet as Excel shows it
   sheet: null, sheetQ: '', choice: {},   // choice[sheet] = {label, v}
   sheetMode: ['fold', 'tiles', 'table'].includes(LS.get('sheetMode2', 'fold')) ? LS.get('sheetMode2', 'fold') : 'fold', fold: {},
   pending: LS.get('pending', []),    // [{id, sha, entry}] in GitHub inbox, not yet in Excel data
@@ -183,6 +185,7 @@ async function sync(opts = {}) {
     state.data = data; state.fetchedAt = new Date().toISOString(); state.lastError = null;
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
+    try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
     await refreshPending();
     if (opts.toast) toast('Up to date');
   } catch (e) {
@@ -245,6 +248,8 @@ function render() {
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
+  if (state.tab === 'budget') bindBudget();
+  document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
 }
 function renderFreshness() {
   const f = document.getElementById('freshness'), b = document.getElementById('banner');
@@ -290,6 +295,55 @@ function monthlyChart(rows) {
     <div class="legend"><span><i style="background:var(--teal)"></i>Income</span><span><i style="background:var(--amber)"></i>Spending</span></div>`;
 }
 
+/* ---------------- net-pay limit ---------------- */
+const SUGGEST = { 'Housing': 30000, 'Loans/EMI': 15000, 'Credit Card Bills': 24000, 'UPI – Other': 9000, 'Family & Transfers': 8000,
+  'Insurance': 4000, 'Subscriptions': 3000, 'Groceries': 2500, 'Food Online': 1000, 'Paytm': 1000, 'Utilities': 600, 'Medical': 1000,
+  'Shopping': 1000, 'Travel': 500, 'Donation': 500, 'Amazon': 300, 'Bank Charges': 0, 'Cash': 0 };
+const FIXED = new Set(['Housing', 'Loans/EMI', 'Insurance']);
+function netPay() {
+  const m = String(kpis().salary_line || '').match(/\/\s*₹\s*([\d,]+)/);
+  return m ? Number(m[1].replace(/,/g, '')) : NaN;
+}
+function budgetCats() { return tbl('AppBudget').map(r => r.Category).filter(Boolean); }
+function suggestedPlan() {
+  const net = netPay(), savings = 15000, avail = Math.max(0, net - savings);
+  const limits = {}; budgetCats().forEach(c => { limits[c] = SUGGEST[c] != null ? SUGGEST[c] : 0; });
+  const total = Object.values(limits).reduce((s, v) => s + v, 0);
+  if (isFinite(avail) && total > avail) {                    // shrink flexible categories to fit a smaller net pay
+    const fixed = Object.entries(limits).filter(([c]) => FIXED.has(c)).reduce((s, [, v]) => s + v, 0);
+    const f = Math.max(0, (avail - fixed) / (total - fixed));
+    Object.keys(limits).forEach(c => { if (!FIXED.has(c)) limits[c] = Math.floor(limits[c] * f / 100) * 100; });
+  }
+  return { savings, limits, suggested: true };
+}
+function activePlan() { return state.plan || suggestedPlan(); }
+function planTotal(p) { return Object.values(p.limits || {}).reduce((s, v) => s + (Number(v) || 0), 0); }
+function monthProgress() {                                   // how far through the data month we are
+  const k = kpis(), m = pDate(k.month), asOf = pDate(k.as_of);
+  if (!m) return { done: 1, left: 0, dim: 30 };
+  const dim = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  const today = new Date(), sameMonth = today.getFullYear() === m.getFullYear() && today.getMonth() === m.getMonth();
+  const day = sameMonth ? today.getDate() : (asOf && asOf.getMonth() === m.getMonth() ? asOf.getDate() : dim);
+  return { done: Math.min(1, day / dim), left: sameMonth ? dim - day + 1 : 0, dim, day, complete: !sameMonth && day >= dim };
+}
+function netPayCard() {
+  const k = kpis(), net = netPay(); if (!isFinite(net)) return '';
+  const p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0;
+  const used = limit > 0 ? spent / limit : 0, left = limit - spent, mp = monthProgress();
+  const pace = !mp.complete && mp.done > 0 ? spent / mp.done : spent;
+  let line;
+  if (left < 0) line = `<span class="bad">Over your limit by ${inr(-left)}</span>`;
+  else if (mp.left > 0) line = `<span class="good">${inr(left)} left</span> · about <b class="num">${inr(left / mp.left)}</b> a day for ${mp.left} days`;
+  else line = `<span class="good">${inr(left)} under your limit</span>`;
+  return `<section class="card">
+    <h2>${esc(fMon(pDate(k.month)))} · within net pay</h2>
+    <div class="row"><span style="font-size:24px;font-weight:700" class="num ${left < 0 ? 'bad' : ''}">${inr(spent)}</span><span class="muted small num">of ${inr(limit)} limit · ${Math.round(used * 100)}%</span></div>
+    <div class="bar ${used > 1 ? 'over' : ''}" style="margin-top:8px"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
+    <p class="small" style="margin:8px 0 0">${line}</p>
+    ${!mp.complete && mp.done < 1 ? `<p class="small ${pace > limit ? 'warn' : 'muted'}" style="margin:4px 0 0">At this pace: ${inr(pace)} by month end</p>` : ''}
+    <p class="small muted" style="margin:6px 0 0">Limit = net pay ${inr(net)} − saving ${inr(p.savings || 0)}${state.plan ? '' : ' (suggested)'} · <button class="link-btn" style="color:#b9a8ff;padding:0" data-gotab="budget">Plan ›</button></p>
+  </section>`;
+}
 function viewHome() {
   const k = kpis(), month = pDate(k.month);
   const spent = n(k.spending_month), budget = n(k.budget_month), used = budget > 0 ? spent / budget : 0;
@@ -308,7 +362,8 @@ function viewHome() {
     <div class="stat"><div class="l">Loans still owed</div><div class="v num">${inr(k.loans_owed)}</div><div class="s">Across all loans</div></div>
     <div class="stat"><div class="l">Savings rate this year</div><div class="v num ${n(k.savings_rate) >= n(k.savings_target) ? 'good' : 'warn'}">${pct(k.savings_rate)}</div><div class="s">Target ${pct(k.savings_target)}</div></div>
   </div>
-  <section class="card" style="margin-top:12px">
+  <div style="margin-top:12px">${netPayCard()}</div>
+  <section class="card">
     <h2>${esc(fMon(month))} so far</h2>
     <div class="kv"><span>Income</span><span class="num good">${inr(k.income_month)}</span></div>
     <div class="kv"><span>Spending</span><span class="num">${inr(spent)}</span></div>
@@ -419,7 +474,7 @@ function confirmInline(b) {           // first tap arms, second tap confirms (no
   return false;
 }
 
-function viewBudget() {
+function viewBudgetExcel() {
   const k = kpis(), rows = tbl('AppBudget').filter(r => r.Category);
   const tT = rows.reduce((s, r) => s + (n(r.Target) || 0), 0), tS = rows.reduce((s, r) => s + (n(r.Spent) || 0), 0);
   const over = rows.filter(r => n(r.Spent) > n(r.Target));
@@ -434,7 +489,71 @@ function viewBudget() {
       return `<div class="bud"><div class="row"><span>${esc(r.Category)}</span><span class="num ${s > t ? 'bad' : ''}">${inr(s)} <span class="muted small">/ ${inr(t)}</span></span></div>
       <div class="bar ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div>
       <div class="s ${tone(r.Status)}">${esc(r.Status)}${s <= t && t > 0 ? ` · ${inr(n(r.Left))} left` : ''}</div></div>`; }).join('')}
-    <p class="small muted" style="margin:12px 0 0">Targets come from Budget Planning in Excel.</p></section>`;
+    <p class="small muted" style="margin:12px 0 0">Targets come from Budget Planning in Excel – they add up to ${inr(tT)}${isFinite(netPay()) ? `, ${Math.round(tT / netPay() * 100)}% of your net pay` : ''}.</p></section>`;
+}
+
+function viewBudget() {
+  const seg = `<div class="seg seg2" id="bud-mode"><button data-b="plan" class="${state.budgetMode === 'plan' ? 'on' : ''}">Net-pay plan</button><button data-b="excel" class="${state.budgetMode === 'excel' ? 'on' : ''}">Excel targets</button></div>`;
+  if (state.budgetMode === 'excel') return seg + viewBudgetExcel();
+  if (state.planEdit) return seg + viewPlanEdit();
+  const k = kpis(), net = netPay(), p = activePlan(), rows = tbl('AppBudget').filter(r => r.Category);
+  const limit = net - (Number(p.savings) || 0);
+  const spentBy = Object.fromEntries(rows.map(r => [r.Category, n(r.Spent) || 0]));
+  const cats = Object.keys(p.limits || {}).filter(c => p.limits[c] > 0 || spentBy[c] > 0);
+  rows.forEach(r => { if (!cats.includes(r.Category) && spentBy[r.Category] > 0) cats.push(r.Category); });
+  const over = cats.filter(c => spentBy[c] > (Number(p.limits[c]) || 0));
+  return seg + netPayCard() + `
+  <section class="card"><h2>Limits by category · ${over.length} over</h2>
+    ${state.plan ? '' : `<p class="small warn" style="margin:0 0 8px">These are suggested limits that fit your net pay. Tap “Edit plan” to make them yours.</p>`}
+    ${cats.map(c => { const t = Number(p.limits[c]) || 0, s = spentBy[c] || 0, u = t > 0 ? s / t : (s > 0 ? 1.01 : 0);
+      return `<div class="bud"><div class="row"><span>${esc(c)}</span><span class="num ${s > t ? 'bad' : ''}">${inr(s)} <span class="muted small">/ ${inr(t)}</span></span></div>
+      <div class="bar ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div>
+      <div class="s ${s > t ? 'bad' : 'muted'}">${s > t ? `Over by ${inr(s - t)}` : `${inr(t - s)} left`}</div></div>`; }).join('')}
+    <div class="kv" style="margin-top:8px"><span>Saving first</span><span class="num">${inr(p.savings || 0)}</span></div>
+    <div class="kv"><span>Limits total</span><span class="num">${inr(planTotal(p))} <span class="muted small">of ${inr(limit)}</span></span></div>
+    <button class="secondary" id="plan-edit">Edit plan</button>
+  </section>`;
+}
+function viewPlanEdit() {
+  const e = state.planEdit, net = netPay(), avail = net - (Number(e.savings) || 0), tot = planTotal(e), ok = tot <= avail;
+  const cats = budgetCats();
+  return `<section class="card"><h2>Net-pay plan · ${inr(net)} net pay</h2>
+    <p class="small muted" style="margin:0 0 6px">Your latest net pay from payslips. Save first, then split the rest. Limits can’t add up to more than what’s left.</p>
+    <label class="f" for="pe-sav">Save / invest every month</label>
+    <input class="inp num" id="pe-sav" inputmode="numeric" value="${esc(e.savings)}">
+    ${cats.map(c => `<div class="pe-row"><label for="pe-${esc(c)}">${esc(c)}${FIXED.has(c) ? ' <span class="muted small">fixed</span>' : ''}</label>
+      <input class="inp num pe-inp" data-cat="${esc(c)}" id="pe-${esc(c)}" inputmode="numeric" value="${esc(e.limits[c] || 0)}"></div>`).join('')}
+    <div class="kv" style="margin-top:10px"><span>Allocated</span><span class="num ${ok ? 'good' : 'bad'}" id="pe-tot">${inr(tot)} of ${inr(avail)}</span></div>
+    <p class="small ${ok ? 'muted' : 'bad'}" id="pe-msg" style="margin:4px 0 0">${ok ? `${inr(avail - tot)} not allocated – a buffer for surprises.` : `${inr(tot - avail)} over your net pay – lower some limits or the saving amount.`}</p>
+    <button class="primary" id="pe-save" ${ok ? '' : 'disabled'}>Save plan</button>
+    <button class="secondary" id="pe-reset">Reset to suggested</button>
+    <button class="secondary" id="pe-cancel">Cancel</button></section>`;
+}
+function bindBudget() {
+  document.querySelectorAll('#bud-mode button').forEach(b => b.onclick = () => { state.budgetMode = b.dataset.b; LS.set('budgetMode', state.budgetMode); state.planEdit = null; render(); });
+  const ed = document.getElementById('plan-edit');
+  if (ed) ed.onclick = () => { const p = activePlan(); state.planEdit = { savings: p.savings || 0, limits: { ...p.limits } }; render(); window.scrollTo(0, 0); };
+  if (!state.planEdit) return;
+  const e = state.planEdit, num = v => Math.max(0, Math.round(Number(String(v).replace(/[^\d.]/g, '')) || 0));
+  const refresh = () => {
+    const avail = netPay() - e.savings, tot = planTotal(e), ok = tot <= avail;
+    const t = document.getElementById('pe-tot'); t.textContent = `${inr(tot)} of ${inr(avail)}`; t.className = 'num ' + (ok ? 'good' : 'bad');
+    const m = document.getElementById('pe-msg'); m.className = 'small ' + (ok ? 'muted' : 'bad');
+    m.textContent = ok ? `${inr(avail - tot)} not allocated – a buffer for surprises.` : `${inr(tot - avail)} over your net pay – lower some limits or the saving amount.`;
+    document.getElementById('pe-save').disabled = !ok;
+  };
+  document.getElementById('pe-sav').oninput = ev => { e.savings = num(ev.target.value); refresh(); };
+  document.querySelectorAll('.pe-inp').forEach(inp => inp.oninput = () => { e.limits[inp.dataset.cat] = num(inp.value); refresh(); });
+  document.getElementById('pe-reset').onclick = () => { const s = suggestedPlan(); state.planEdit = { savings: s.savings, limits: s.limits }; render(); };
+  document.getElementById('pe-cancel').onclick = () => { state.planEdit = null; render(); };
+  document.getElementById('pe-save').onclick = async () => {
+    const b = document.getElementById('pe-save'); b.disabled = true; b.textContent = 'Saving…';
+    const plan = { savings: e.savings, limits: e.limits, netPay: netPay(), updatedAt: new Date().toISOString() };
+    state.plan = plan; LS.set('plan', plan); state.planEdit = null;
+    try { await GH.putJson('plan.json', plan, 'Net-pay plan'); toast('Plan saved'); }
+    catch (err) { toast('Saved on this phone – couldn’t reach GitHub, alerts use it after the next save'); }
+    render();
+  };
 }
 
 function projChart(rows) {
@@ -833,7 +952,7 @@ function bindSettings() {
   const back = document.getElementById('s-back'); if (back) back.onclick = () => { state.tab = 'home'; render(); };
   const forget = document.getElementById('s-forget');
   if (forget) forget.onclick = () => { if (!confirmInline(forget)) { forget.textContent = 'Tap again to forget this phone'; return; }
-    ['cfg', 'data', 'fetchedAt', 'pending', 'outbox', 'sheets'].forEach(LS.del); location.reload(); };
+    ['cfg', 'data', 'fetchedAt', 'pending', 'outbox', 'sheets', 'plan', 'pushId'].forEach(LS.del); location.reload(); };
 }
 
 /* ---------------- shell ---------------- */
