@@ -368,3 +368,19 @@ details.sms .secondary{margin-top:8px}
 .sc span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .sc-i{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--surface);font-size:22px}
 .back-btn{font-size:30px!important;line-height:1;margin-left:-8px}
+
+/* round 4 */
+.sugg-n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--raised);font-weight:600;font-size:13px;margin-right:4px}
+.sortrow{padding:12px 0;border-bottom:1px solid var(--hair)} .sortrow:last-child{border-bottom:none}
+.sortrow select{flex:1;min-width:0;margin:0}
+.voice{margin-top:0} .voice.on{color:var(--bad);border-color:var(--bad)}
+label.tick{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:15px}
+label.tick input{width:20px;height:20px;accent-color:var(--blue2)}
+ol.steps{padding-left:20px;margin:0} ol.steps li{margin:0 0 12px;line-height:1.45}
+code.linkbox{display:block;margin:6px 0;padding:10px;border-radius:12px;background:var(--raised);font-size:12px;overflow-wrap:anywhere}
+body.viewer .fab, body.viewer .qas, body.viewer [data-doc-add], body.viewer .link-btn, body.viewer .linkbtn, body.viewer #add-voice,
+body.viewer [data-gotab="add"], body.viewer [data-gotab="trade"], body.viewer [data-gotab="pfedit"], body.viewer [data-gotab="import"] {display:none!important}
+body.viewer .rowbtn{pointer-events:none}
+.tab[hidden]{display:none}
+body.viewer .tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
+body.viewer .tabs a.tab{display:none}

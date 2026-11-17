@@ -27,9 +27,9 @@
   ],
   "shortcuts": [
     {
-      "name": "New receipt",
-      "short_name": "Receipt",
-      "url": "receipts.html",
+      "name": "Add an expense",
+      "short_name": "Add",
+      "url": "./#add",
       "icons": [
         {
           "src": "icon-192.png",
@@ -38,9 +38,31 @@
       ]
     },
     {
-      "name": "Add entry",
-      "short_name": "Add",
-      "url": "./#add",
+      "name": "Say an expense",
+      "short_name": "Voice",
+      "url": "./#voice",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "All transactions",
+      "short_name": "Transactions",
+      "url": "./#tx",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "New receipt",
+      "short_name": "Receipt",
+      "url": "receipts.html",
       "icons": [
         {
           "src": "icon-192.png",
