@@ -352,3 +352,8 @@ html[data-theme=light] .lk-logo{color:#fff}
 html[data-theme=light] .top{background:rgba(244,246,249,.85)}
 html[data-theme=light] .tabs{background:rgba(255,255,255,.92)}
 #lock[hidden]{display:none}
+.warnbox{border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
+.warnbox h3{color:var(--warn)}
+details.sms{margin:0 0 12px;background:var(--surface);border-radius:16px;padding:12px 14px}
+details.sms summary{cursor:pointer;font-size:14px;color:var(--blue1)}
+details.sms .secondary{margin-top:8px}
