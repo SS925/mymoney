@@ -41,6 +41,7 @@ const GH = {
       (withRef ? `?ref=${encodeURIComponent(c.branch || 'main')}` : '');
   },
   async call(method, path, { body, raw } = {}) {
+    if (method !== 'GET' && state.cfg && state.cfg.viewOnly) throw new AppError('This phone is view-only – changes are made on the owner’s phone.');
     const res = await fetch(this.url(path, method === 'GET'), {
       method, cache: 'no-store',
       headers: {
@@ -246,8 +247,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -258,6 +259,7 @@ function render() {
     av.hidden = false; av.textContent = nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   } else { t.textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab]; av.hidden = true; }
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === (NAV_OF[state.tab] || state.tab)));
+  document.querySelectorAll('.tab[data-tab]').forEach(b => { b.hidden = isViewer() && !famAllowed().includes(b.dataset.tab); });
   if (state.lastTab !== state.tab) { if (!state.goingBack && !MAIN_TABS.includes(state.tab)) state.stack.push(state.lastTab); if (MAIN_TABS.includes(state.tab)) state.stack = []; state.stack = state.stack.slice(-20); state.lastTab = state.tab; }
   state.goingBack = false;
   const bb = document.getElementById('btn-back'); if (bb) bb.hidden = MAIN_TABS.includes(state.tab) || state.tab === 'settings' && !state.cfg;
@@ -270,8 +272,10 @@ function render() {
     return;
   }
   if (state.docEdit && state.docEdit.kind !== state.tab) state.docEdit = null;
+  document.body.classList.toggle('viewer', isViewer());
+  if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover };
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -290,6 +294,10 @@ function render() {
   if (state.tab === 'recat') bindRecat();
   if (state.tab === 'loans') bindLoans();
   if (state.tab === 'cover') bindCover();
+  if (state.tab === 'sort') bindSort();
+  if (state.tab === 'shared') bindShared();
+  if (state.tab === 'year') bindYear();
+  if (state.tab === 'family') bindFamily();
   if (state.tab === 'coaching') bindCoachingMoney();
   document.querySelectorAll('[data-sheet-open]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheetOpen; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   if (state.tab === 'future') {
@@ -323,21 +331,24 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['tx', 'Transactions'], ['bills', 'Bills'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
+  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['tax', 'Tax'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance']],
 };
+const VIEW_SUBS = new Set(['tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
+function viewerMay(t) { const a = famAllowed(); return a.includes(t) || (VIEW_SUBS.has(t) && (a.includes(groupOf(t)) || ['family', 'lockset', 'settings', 'more'].includes(t))); }
 function groupOf(tab) { return MAIN_TABS.includes(tab) ? tab : (NAV_OF[tab] || 'home'); }
 function subnav() {
   const g = groupOf(state.tab), list = SUBNAV[g]; if (!list) return '';
-  return `<div class="subnav" role="tablist">${list.map(([t, l]) => `<button class="sn ${state.tab === t ? 'on' : ''}" data-gotab="${t}" role="tab" aria-selected="${state.tab === t}">${l}</button>`).join('')}</div>`;
+  return `<div class="subnav" role="tablist">${list.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, l]) => `<button class="sn ${state.tab === t ? 'on' : ''}" data-gotab="${t}" role="tab" aria-selected="${state.tab === t}">${l}</button>`).join('')}</div>`;
 }
 const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['trade', '📈', 'Buy / sell'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax'], ['pfedit', '🏛', 'PF / PPF'],
-  ['report', '📄', 'Report'], ['coaching', '🎓', 'Coaching'], ['cover', '🛡', 'Insurance'], ['more', '⋯', 'More']];
+  ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
+  ['coaching', '🎓', 'Coaching'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family'], ['more', '⋯', 'More']];
 function viewShortcuts() {
   return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
-    ${SHORTCUTS.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
+    ${SHORTCUTS.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
 }
 function goBack() {
   let t = state.stack.pop();
@@ -923,6 +934,7 @@ function viewMoney() {
         ${isFinite(net) ? `<div class="meter ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
         <p class="hero-s">${used > 1 ? `${inr(spent - limit)} over your net-pay limit (${Math.round(used * 100)}%)` : `${inr(limit - spent)} left, ${Math.round(used * 100)}% of your net-pay limit used`}</p>` : ''}</section>
       <section class="sec box"><div class="sec-h"><h3>Where your money went</h3><button data-gotab="budget">Plan</button></div>${bars(list)}</section>
+      <section class="sec"><div class="group"><button class="navrow" data-gotab="review"><span class="nt">${(() => { const d = pDate(kpis().month); return d ? MONF[d.getMonth()] : 'Monthly'; })()} review<br><span class="small muted">What went over and three things to change</span></span><span class="chev">›</span></button></div></section>
       ${viewForecast()}
       ${viewTrends()}
       <section class="sec"><div class="group"><button class="navrow" data-gotab="loans"><span class="nt">Loans<br><span class="small muted">${inr(n(kpis().loans_owed))} still owed · prepay what-if</span></span><span class="chev">›</span></button></div></section>
@@ -1256,10 +1268,10 @@ async function refreshTrades() {
 /* ======================================================================
    SIPs, bills & subscriptions, goals (app-owned files in the data repo: app/*.json)
    ====================================================================== */
-const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json' };
+const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
 async function loadDocs() {
   for (const k of Object.keys(DOCS)) {
-    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching/.test(k) ? {} : []; }
+    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family/.test(k) ? {} : []; }
     catch (e) { /* keep the copy on this phone */ }
   }
   LS.set('docs', state.docs);
@@ -2076,6 +2088,241 @@ function tokenDays() {
   return isNaN(d) ? null : Math.floor((d - Date.now()) / DAY);
 }
 
+/* ======================================================================
+   Monthly review: last month vs plan, what went over, three suggestions
+   ====================================================================== */
+function monthReview() {
+  const k = kpis(), ym = String(k.month || '').slice(0, 7), mrow = tbl('AppMonthly').find(r => String(r.Month).startsWith(ym)) || {};
+  const plan = activePlan(), net = netPay(), limit = isFinite(net) ? net - (Number(plan.savings) || 0) : null;
+  const rows = tbl('AppBudget').filter(r => r.Category).map(r => {
+    const lim = plan.limits && plan.limits[r.Category] != null ? Number(plan.limits[r.Category]) : n(r.Target);
+    return { cat: r.Category, spent: n(r.Spent) || 0, lim: lim || 0 };
+  });
+  const over = rows.filter(r => r.lim > 0 && r.spent > r.lim * 1.02).sort((a, b) => (b.spent - b.lim) - (a.spent - a.lim));
+  const sugg = [];
+  const rate = Number(k.savings_rate) || 0, target = Number(k.savings_target) || 0.2;
+  const flex = over.find(o => !FIXED.has(o.cat) && !/Credit Card|UPI – Other/i.test(o.cat));     // fixed costs (EMIs, rent) can't simply be capped
+  if (flex) sugg.push(`Cap ${flex.cat} at ${inr(flex.lim)} – it was ${inr(flex.spent)}, ${inr(flex.spent - flex.lim)} over.`);
+  const cc = over.find(o => /Credit Card/i.test(o.cat));
+  if (cc && sugg.length < 2) sugg.push(`Card bills were ${inr(cc.spent)}. Check the card statement for spends that belong in other categories, and keep new card spends inside the plan.`);
+  const upi = rows.find(r => /UPI – Other/i.test(r.cat));
+  if (upi && upi.spent > 5000) sugg.push(`${inr(upi.spent)} went to “UPI – Other”. Sort those payees into real categories so the plan is accurate (Money → Sort UPI).`);
+  if (rate < target) sugg.push(`You saved ${Math.round(rate * 100)}% of income – aim for ${Math.round(target * 100)}%. Moving ${inr((target - rate) * (Number(mrow.Income) || 0))} a month into a SIP right after salary day closes the gap.`);
+  const tr = categoryTrends().find(x => x.diff > 2000);
+  if (tr && sugg.length < 3) sugg.push(`${tr.name} is rising: ${inr(tr.now)} against a usual ${inr(tr.avg)}.`);
+  if (sugg.length < 3 && (inv() || {}).epf) sugg.push('Check Tax → 80C before March so nothing is left unused.');
+  if (sugg.length < 3 && n(k.loans_owed) > 0) sugg.push(`Loans still owed: ${inr(k.loans_owed)}. Even a small prepayment saves interest (Money → Loans).`);
+  return { ym, mrow, limit, spent: Number(mrow.Spending) || n(k.spending_month) || 0, over, sugg: sugg.slice(0, 3), rate, target };
+}
+function viewReview() {
+  const r = monthReview(), d = pDate(r.ym + '-01');
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">${d ? MONF[d.getMonth()] + ' ' + d.getFullYear() : 'Last month'} in review</p>
+      <h2 class="hero-v num">${inr(r.spent)}<span style="font-size:16px;font-weight:500"> spent</span></h2>
+      <p class="hero-s" style="margin:0">${r.limit != null ? (r.spent > r.limit ? `${inr(r.spent - r.limit)} over your net-pay limit of ${inr(r.limit)}` : `${inr(r.limit - r.spent)} under your net-pay limit`) : ''}</p>
+      <div class="hero-tiles"><div><span>Income</span><b class="num">${inr(r.mrow.Income)}</b></div><div><span>Saved</span><b class="num">${inr(r.mrow.Saved)} · ${Math.round(r.rate * 100)}%</b></div></div></section>
+    <section class="sec box"><div class="sec-h"><h3>Three things to change</h3></div>
+      ${r.sugg.map((s, i) => `<div class="kv" style="justify-content:flex-start"><span class="sugg-n">${i + 1}</span><span>${esc(s)}</span></div>`).join('') || '<p class="small muted">Nothing stands out – a good month.</p>'}</section>
+    <section class="sec box"><div class="sec-h"><h3>Over the plan</h3><span class="small">${r.over.length}</span></div>
+      ${r.over.slice(0, 8).map(o => `<div class="kv"><span>${esc(o.cat)}<br><span class="small muted">plan ${inr(o.lim)}</span></span><span class="num bad">+${inr(o.spent - o.lim)}</span></div>`).join('') || '<p class="small muted">Every category stayed within plan.</p>'}</section>
+    <button class="secondary" data-gotab="budget">Change the plan</button>`;
+}
+
+/* ======================================================================
+   Sort "UPI – Other": group by payee, give each payee a real category
+   ====================================================================== */
+function upiGroups() {
+  const since = new Date(); since.setMonth(since.getMonth() - 6);
+  const g = {};
+  for (const t of allTx()) {
+    if (t._pending || t.Type !== 'Expenses' || !/UPI – Other|Uncategorised/i.test(t.Category)) continue;
+    const d = pDate(t.Date); if (!d || d < since) continue;
+    const p = upiParts(t.Details).payee; if (!p) continue;
+    const key = p.toUpperCase(), o = g[key] || (g[key] = { payee: p, n: 0, sum: 0, last: t, cat: t.Category });
+    o.n++; o.sum += Math.abs(n(t.Amount)); if (t.Date > o.last.Date) o.last = t;
+  }
+  return Object.values(g).sort((a, b) => b.sum - a.sum);
+}
+function viewSort() {
+  const gs = upiGroups(), cats = catsFor('Expenses'), tot = gs.reduce((s, x) => s + x.sum, 0);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">“UPI – Other”, last 6 months</p><h2 class="hero-v num">${inr(tot)}</h2>
+      <p class="hero-s" style="margin:0">${gs.length} payees. Pick a category for the big ones – every past and future payment to them moves.</p></section>
+    <section class="sec box">${gs.slice(0, 40).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(x.payee)}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
+        <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-sort-cat="${i}"><option value="">Choose category…</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option>${esc(c)}</option>`).join('')}</select>
+        <button class="chip" data-sort-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}</section>
+    <p class="note">Each choice is saved as a rule for that payee; Excel adds it to the top of Auto Rules next time it opens.</p>`;
+}
+function bindSort() {
+  const gs = upiGroups();
+  document.querySelectorAll('[data-sort-go]').forEach(b => b.onclick = async () => {
+    const i = Number(b.dataset.sortGo), sel = document.querySelector(`[data-sort-cat="${i}"]`), g = gs[i];
+    if (!sel.value) { toast('Choose a category first'); return; }
+    if (g.payee.length < 3) { toast('Payee name too short to match safely'); return; }
+    b.disabled = true; b.textContent = 'Saving…';
+    const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, keyword: g.payee.slice(0, 60),
+      direction: 'Debit', type: 'Expenses', category: sel.value, scope: 'payee', tx: txKey(g.last), note: `Payee sorted from phone (was ${g.cat})`, createdAt: now.toISOString() };
+    try { await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`); state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats); toast(`${g.payee} → ${sel.value}`); render(); }
+    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; b.textContent = 'Save'; }
+  });
+}
+
+/* ======================================================================
+   Shared expenses: who owes whom (app/shared.json)
+   ====================================================================== */
+function viewShared() {
+  const list = state.docs.shared || [], open = list.filter(x => !x.settled), f = state.shEdit;
+  const by = {}; open.forEach(x => { by[x.person] = (by[x.person] || 0) + (x.dir === 'owe' ? -1 : 1) * (Number(x.amount) || 0); });
+  const owedToMe = Object.values(by).filter(v => v > 0).reduce((s, v) => s + v, 0), iOwe = -Object.values(by).filter(v => v < 0).reduce((s, v) => s + v, 0);
+  return `<section class="hero"><div class="hero-tiles" style="margin-top:0"><div><span>Owed to you</span><b class="num">${inr(owedToMe)}</b></div><div><span>You owe</span><b class="num">${inr(iOwe)}</b></div></div></section>
+    ${f ? `<section class="card"><h2 style="margin-top:0">${f.id ? 'Edit' : 'Add'}</h2>
+      <div class="seg" id="sh-dir"><button data-v="owed" class="${f.dir !== 'owe' ? 'on' : ''}">They owe me</button><button data-v="owe" class="${f.dir === 'owe' ? 'on' : ''}">I owe them</button></div>
+      <label class="f" for="sh-person">Person</label><input class="inp" id="sh-person" list="sh-people" value="${esc(f.person || '')}"><datalist id="sh-people">${[...new Set(list.map(x => x.person))].map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      <label class="f" for="sh-amt">Amount (₹)</label><input class="inp num" id="sh-amt" inputmode="decimal" value="${esc(f.amount || '')}">
+      <label class="f" for="sh-note">For</label><input class="inp" id="sh-note" maxlength="60" value="${esc(f.note || '')}" placeholder="e.g. Dinner, movie tickets">
+      <label class="f" for="sh-date">Date</label><input class="inp" id="sh-date" type="date" value="${esc(f.date || isoToday())}" max="${isoToday()}">
+      <button class="primary" id="sh-save">Save</button><button class="secondary" id="sh-cancel">Cancel</button></section>` : `<button class="primary" id="sh-add">＋ Add who owes what</button>`}
+    ${Object.keys(by).length ? `<section class="sec box"><div class="sec-h"><h3>By person</h3></div>${Object.entries(by).filter(([, v]) => Math.abs(v) >= 1).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([p, v]) => `<div class="kv"><span>${esc(p)}</span><span class="num ${v > 0 ? 'good' : 'bad'}">${v > 0 ? 'owes you ' : 'you owe '}${inr(Math.abs(v))}</span></div>`).join('')}</section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>Open</h3><span class="small">${open.length}</span></div>
+      ${open.map(x => `<div class="kv"><span>${esc(x.person)} · ${esc(x.note || '')}<br><span class="small muted">${esc(fDay(pDate(x.date)))} · ${x.dir === 'owe' ? 'you owe' : 'owes you'}</span></span>
+        <span class="num" style="text-align:right">${inr(x.amount)}<br><button class="linkbtn" data-sh-settle="${esc(x.id)}">Settled</button> · <button class="linkbtn" data-sh-edit="${esc(x.id)}">Edit</button></span></div>`).join('') || '<p class="small muted">Nothing open.</p>'}</section>
+    ${list.some(x => x.settled) ? `<p class="small muted" style="text-align:center">${list.filter(x => x.settled).length} settled earlier</p>` : ''}`;
+}
+function bindShared() {
+  const $ = id => document.getElementById(id), save = async (list, msg) => {
+    const old = state.docs.shared; state.docs.shared = list;
+    try { await saveDoc('shared', msg); toast('Saved'); state.shEdit = null; } catch (e) { state.docs.shared = old; toast(e.message || 'Couldn’t reach GitHub'); }
+    render();
+  };
+  if ($('sh-add')) $('sh-add').onclick = () => { state.shEdit = { dir: 'owed' }; render(); };
+  document.querySelectorAll('[data-sh-edit]').forEach(b => b.onclick = () => { state.shEdit = { ...(state.docs.shared || []).find(x => x.id === b.dataset.shEdit) }; render(); window.scrollTo(0, 0); });
+  document.querySelectorAll('[data-sh-settle]').forEach(b => b.onclick = () => save((state.docs.shared || []).map(x => x.id === b.dataset.shSettle ? { ...x, settled: isoToday() } : x), 'Settled'));
+  const f = state.shEdit; if (!f) return;
+  const read = () => { f.person = $('sh-person').value.trim(); f.amount = $('sh-amt').value.replace(/[,₹\s]/g, ''); f.note = $('sh-note').value.trim(); f.date = $('sh-date').value; };
+  document.querySelectorAll('#sh-dir button').forEach(b => b.onclick = () => { read(); f.dir = b.dataset.v; render(); });
+  $('sh-cancel').onclick = () => { state.shEdit = null; render(); };
+  $('sh-save').onclick = () => {
+    read(); if (!f.person) { toast('Enter the person'); return; } if (!(Number(f.amount) > 0)) { toast('Enter the amount'); return; }
+    const item = { id: f.id || uid('x'), dir: f.dir || 'owed', person: f.person, amount: Number(f.amount), note: f.note, date: f.date || isoToday() };
+    const list = state.docs.shared || [];
+    save(f.id ? list.map(x => x.id === f.id ? item : x) : [...list, item], `${item.dir === 'owe' ? 'I owe' : 'Owed by'} ${item.person}`);
+  };
+}
+
+/* ======================================================================
+   Voice entry: "spent 250 on vegetables cash"
+   ====================================================================== */
+const CAT_WORDS = { Groceries: /vegetable|grocer|milk|fruit|kirana|zepto|blinkit|instamart|bigbasket/i, 'Food Online': /swiggy|zomato|food|lunch|dinner|breakfast|snack|tea|coffee/i,
+  Travel: /auto|cab|uber|ola|rapido|bus|train|metro|petrol|fuel|flight|ticket/i, Medical: /medicine|doctor|hospital|pharmacy|clinic/i, Shopping: /shirt|clothes|shoes|amazon|flipkart|shopping/i,
+  Utilities: /electric|power|water bill|gas|recharge|internet|wifi|broadband/i, Housing: /rent/i, Donation: /donat|temple|church|mosque/i };
+function parseSpoken(txt) {
+  const s = String(txt || '').toLowerCase();
+  const words = { hundred: 100, thousand: 1000, lakh: 100000 };
+  let amount = null;
+  const m = s.match(/(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|lakh|hundred)?/);
+  if (m) { amount = Number(m[1].replace(/,/g, '')); if (m[2]) amount *= m[2] === 'k' ? 1000 : words[m[2]]; }
+  const type = /\b(got|received|earned|income|salary|credited)\b/.test(s) ? 'Income' : 'Expenses';
+  const paid = /\bcash\b/.test(s) ? 'Cash' : /\b(upi|gpay|google pay|phonepe|paytm)\b/.test(s) ? 'UPI' : /\bcard\b/.test(s) ? 'Card' : 'Cash';
+  const note = (s.match(/\b(?:on|for|at|from)\s+(.+?)(?:\s+(?:by|in|with|using|via)\s+(?:cash|upi|card|gpay|phonepe|paytm)|\s+(?:cash|upi|card)\b|$)/) || [])[1] || '';
+  let category = '';
+  const cats = catsFor(type);
+  if (type === 'Expenses') for (const [c, re] of Object.entries(CAT_WORDS)) if (re.test(s) && cats.includes(c)) { category = c; break; }
+  if (!category) category = cats.find(c => !/^cash$/i.test(c) && s.includes(c.toLowerCase())) || '';
+  if (!category && type === 'Income') category = cats.find(c => /other income/i.test(c)) || '';
+  const date = /\byesterday\b/.test(s) ? (() => { const d = new Date(Date.now() - DAY); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : isoToday();
+  return { amount, type, paidWith: paid, note: note.replace(/\b(rupees?|rs)\b/g, '').trim().replace(/^./, c => c.toUpperCase()).slice(0, 60), category, date };
+}
+function voiceSupported() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Voice input isn’t available in this browser – try Chrome'); return; }
+  const r = new SR(); r.lang = 'en-IN'; r.interimResults = false; r.maxAlternatives = 1;
+  const b = document.getElementById('add-voice'); if (b) { b.classList.add('on'); b.textContent = '● Listening…'; }
+  r.onresult = e => { const txt = e.results[0][0].transcript; applySpoken(txt); };
+  r.onerror = e => { toast(e.error === 'not-allowed' ? 'Allow the microphone for MyMoney to use voice' : 'Didn’t catch that – try again'); render(); };
+  r.onend = () => { const bb = document.getElementById('add-voice'); if (bb) { bb.classList.remove('on'); bb.textContent = '🎤 Say it'; } };
+  r.start();
+}
+function applySpoken(txt) {
+  const p = parseSpoken(txt), a = state.add || (state.add = newAdd());
+  if (!p.amount) { toast(`Heard “${txt}” – no amount in it`); return; }
+  Object.assign(a, { amount: String(p.amount), type: p.type, paidWith: p.paidWith, note: p.note, date: p.date, category: p.category });
+  state.tab = 'add'; render(); toast(`Heard: “${txt}” – check and save`);
+}
+
+/* ======================================================================
+   Year in review
+   ====================================================================== */
+function viewYear() {
+  const years = [...new Set(tbl('AppRecent').map(t => String(t.Date).slice(0, 4)))].filter(y => /^\d{4}$/.test(y)).sort().reverse();
+  const y = state.yearPick && years.includes(state.yearPick) ? state.yearPick : years[0];
+  const tx = tbl('AppRecent').filter(t => String(t.Date).startsWith(y));
+  const sum = ty => tx.filter(t => t.Type === ty).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  const inc = sum('Income'), sp = sum('Expenses'), sv = sum('Savings');
+  const cats = {}; tx.filter(t => t.Type === 'Expenses').forEach(t => { cats[t.Category] = (cats[t.Category] || 0) + Math.abs(n(t.Amount)); });
+  const top = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 5), maxC = top.length ? top[0][1] : 1;
+  const months = {}; tx.filter(t => t.Type === 'Expenses').forEach(t => { const m = String(t.Date).slice(5, 7); months[m] = (months[m] || 0) + Math.abs(n(t.Amount)); });
+  const mm = Object.entries(months).sort((a, b) => b[1] - a[1]);
+  const big = tx.filter(t => t.Type === 'Expenses' && !/Loans|Credit Card|Housing/i.test(t.Category)).sort((a, b) => Math.abs(n(b.Amount)) - Math.abs(n(a.Amount))).slice(0, 3);
+  const payees = {}; tx.filter(t => t.Type === 'Expenses').forEach(t => { const p = upiParts(t.Details).payee; if (p) payees[p.toUpperCase()] = (payees[p.toUpperCase()] || 0) + 1; });
+  const fav = Object.entries(payees).sort((a, b) => b[1] - a[1])[0];
+  const nw = ((state.history && state.history.nw) || []).filter(p => p.d.startsWith(y));
+  return `<div class="chips" style="padding-top:0">${years.slice(0, 5).map(x => `<button class="chip ${x === y ? 'on' : ''}" data-yr="${x}">${x}</button>`).join('')}</div>
+    <section class="hero"><p class="hero-k" style="margin-top:0">${y} in review</p><h2 class="hero-v num">${inr(inc)}<span style="font-size:16px;font-weight:500"> came in</span></h2>
+      <div class="hero-tiles"><div><span>Spent</span><b class="num">${inr(sp)}</b></div><div><span>Saved & invested</span><b class="num">${inr(sv)} · ${inc ? Math.round(sv / inc * 100) : 0}%</b></div></div></section>
+    <section class="sec box"><div class="sec-h"><h3>Where it went</h3></div>${top.map(([c, v]) => `<div class="brow"><div class="row"><span>${esc(c)}</span><b class="num">${inr(v)}</b></div><div class="meter thin"><i style="width:${(v / maxC * 100).toFixed(1)}%"></i></div></div>`).join('')}</section>
+    <section class="sec box"><div class="sec-h"><h3>Highlights</h3></div>
+      ${mm.length ? `<div class="kv"><span>Biggest spending month</span><span>${MONF[Number(mm[0][0]) - 1]} · <b class="num">${inr(mm[0][1])}</b></span></div>
+      <div class="kv"><span>Lightest month</span><span>${MONF[Number(mm[mm.length - 1][0]) - 1]} · <b class="num">${inr(mm[mm.length - 1][1])}</b></span></div>` : ''}
+      ${fav ? `<div class="kv"><span>Paid most often</span><span>${esc(fav[0])} · ${fav[1]} times</span></div>` : ''}
+      <div class="kv"><span>Transactions</span><span class="num">${tx.length.toLocaleString('en-IN')}</span></div>
+      ${nw.length > 1 ? `<div class="kv"><span>Net worth change (tracked days)</span><span class="num ${nw[nw.length - 1].v >= nw[0].v ? 'good' : 'bad'}">${inr(nw[nw.length - 1].v - nw[0].v)}</span></div>` : ''}</section>
+    ${big.length ? `<section class="sec box"><div class="sec-h"><h3>Biggest single spends</h3></div>${big.map(t => `<div class="kv"><span>${esc(describe(t).title)}<br><span class="small muted">${esc(fDay(pDate(t.Date)))} · ${esc(t.Category)}</span></span><span class="num">${inr(Math.abs(n(t.Amount)))}</span></div>`).join('')}</section>` : ''}
+    <button class="secondary noprint" onclick="window.print()">Save as PDF</button>`;
+}
+function bindYear() { document.querySelectorAll('[data-yr]').forEach(b => b.onclick = () => { state.yearPick = b.dataset.yr; render(); }); }
+
+/* ======================================================================
+   Family view: view-only phones, limited to the screens you choose (app/family.json)
+   ====================================================================== */
+const FAMILY_SCREENS = [['home', 'Home'], ['salary', 'Salary'], ['money', 'Money'], ['invest', 'Invest'], ['future', 'Retire'], ['goals', 'Goals'], ['bills', 'Bills'], ['tx', 'Transactions']];
+function isViewer() { return !!(state.cfg && state.cfg.viewOnly); }
+function famAllowed() { const f = state.docs.family || {}; return Array.isArray(f.screens) && f.screens.length ? f.screens : ['home', 'money', 'future', 'goals']; }
+function viewFamily() {
+  if (isViewer()) return `<section class="card"><h2 style="margin-top:0">Family view</h2><p class="small muted">This phone is view-only. Ask the owner to change what you can see.</p>
+    <button class="secondary" id="fam-leave" style="color:var(--bad)">Stop view-only on this phone</button></section>`;
+  const allowed = new Set(famAllowed()), site = location.origin + location.pathname.replace(/index\.html$/, '');
+  const link = `${site}#family=${encodeURIComponent(state.cfg.owner)}/${encodeURIComponent(state.cfg.repo)}`;
+  return `<section class="card"><h2 style="margin-top:0">Family view</h2>
+      <p class="small muted" style="margin:0 0 8px">Let your spouse or family see your finances on their phone – read-only, with their own PIN, and only the screens you tick.</p>
+      ${FAMILY_SCREENS.map(([k, l]) => `<label class="tick"><input type="checkbox" data-fam="${k}" ${allowed.has(k) ? 'checked' : ''}> ${l}</label>`).join('')}
+      <button class="primary" id="fam-save">Save screens</button></section>
+    <section class="card"><h2 style="margin-top:0">Set up their phone</h2>
+      <ol class="steps small">
+        <li>On GitHub, make a <b>new fine-grained token</b> for them: only your data repo, <b>Contents: Read-only</b>. A read-only token means their phone can’t change anything, even by mistake.</li>
+        <li>Send them this link and open it on their phone:<br><code class="linkbox" id="fam-link">${esc(link)}</code><button class="secondary" id="fam-copy">Copy link</button></li>
+        <li>They paste the read-only token, tap Save, then set their own PIN in More → Lock.</li>
+      </ol></section>`;
+}
+function bindFamily() {
+  const $ = id => document.getElementById(id);
+  if ($('fam-leave')) $('fam-leave').onclick = () => { if (!confirmInline($('fam-leave'))) return; state.cfg.viewOnly = false; LS.set('cfg', state.cfg); state.tab = 'home'; render(); };
+  if ($('fam-copy')) $('fam-copy').onclick = () => { navigator.clipboard.writeText($('fam-link').textContent).then(() => toast('Link copied'), () => toast('Copy it by pressing on the link')); };
+  if ($('fam-save')) $('fam-save').onclick = async () => {
+    const screens = [...document.querySelectorAll('[data-fam]')].filter(i => i.checked).map(i => i.dataset.fam);
+    if (!screens.length) { toast('Tick at least one screen'); return; }
+    const old = state.docs.family; state.docs.family = { screens };
+    try { await saveDoc('family', 'Family view screens'); toast('Saved'); } catch (e) { state.docs.family = old; toast(e.message || 'Couldn’t reach GitHub'); }
+    render();
+  };
+}
+/* opened from the family link: owner/repo filled in, view-only */
+function handleFamilyLink() {
+  const m = location.hash.match(/^#family=([^/]+)\/(.+)$/); if (!m) return;
+  history.replaceState(null, '', location.pathname);
+  if (state.cfg && !state.cfg.viewOnly) { toast('This phone is already linked as the owner'); return; }
+  state.pendingFamily = { owner: decodeURIComponent(m[1]), repo: decodeURIComponent(m[2]) };
+  state.tab = 'settings';
+}
+
 /* Retirement: ring + projection, quick sliders, savings today (format from the reference) */
 function retireCard(x, b) {
   const r = retirePlan(x, b), p = Math.max(0, Math.min(1, r.atPace / (r.corpus || 1))), R = 46, C = 2 * Math.PI * R, ok = r.gap <= 0;
@@ -2125,6 +2372,11 @@ function viewMore() {
         ${row('data-go="loans"', 'Loans', '')}
         ${row('data-go="cover"', 'Insurance cover check', '')}
         ${row('data-go="report"', 'Monthly report (PDF)', '')}
+        ${row('data-go="review"', 'Monthly review', '')}
+        ${row('data-go="year"', 'Year in review', '')}
+        ${row('data-go="shared"', 'Shared expenses', '')}
+        ${row('data-go="sort"', 'Sort UPI – Other', '')}
+        ${row('data-go="family"', 'Family view', isViewer() ? 'This phone is view-only' : '')}
         ${row('data-go="budget"', 'Net-pay plan', '')}
         ${row('data-go="lockset"', 'Lock, look and this phone', lockCfg() ? 'Lock on' : '')}
         ${row('data-go="settings"', 'Notifications and settings', pushStatus() === 'on' ? 'Notifications on' : '')}
@@ -2328,6 +2580,7 @@ function viewAdd() {
     ${a.editId ? '<p class="small warn" style="margin:0 0 8px">Editing an entry that’s waiting for Excel</p>' : `<details class="sms"><summary>Paste a bank SMS or UPI message</summary>
       <textarea class="inp" id="add-sms" rows="3" placeholder="e.g. Rs.250.00 debited from A/c XX1234 on 17-11-26 to VPA swiggy@icici…"></textarea>
       <button class="secondary" id="add-sms-go">Fill in from message</button></details>`}<section class="card">
+    ${voiceSupported() && !a.editId ? '<button class="secondary voice" id="add-voice">🎤 Say it</button><p class="small muted" style="margin:6px 0 10px;text-align:center">e.g. “spent 250 on vegetables cash”</p>' : ''}
     <div class="seg" id="add-type">${['Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button data-t="${t}" class="${a.type === t ? 'on' : ''}">${t === 'Expenses' ? 'Spent' : t}</button>`).join('')}</div>
     <label class="f" for="add-amt">Amount (₹)</label>
     <input class="inp amount num" id="add-amt" inputmode="decimal" placeholder="0" value="${esc(a.amount)}" autocomplete="off">
@@ -2353,6 +2606,7 @@ function bindAdd() {
   document.querySelectorAll('#add-pay .chip').forEach(b => b.onclick = () => { sync1(); a.paidWith = b.dataset.p; render(); });
   const qp = quickPicks();
   document.querySelectorAll('#add-quick .chip').forEach(b => b.onclick = () => { const e = qp[Number(b.dataset.q)]; Object.assign(a, { type: e.type, category: e.category, amount: String(e.amount), note: e.note || '', paidWith: e.paidWith || 'Cash', date: isoToday() }); render(); });
+  const vb = document.getElementById('add-voice'); if (vb) vb.onclick = () => { sync1(); startVoice(); };
   const sg = document.getElementById('add-sms-go'); if (sg) sg.onclick = () => { sync1(); if (applySms(document.getElementById('add-sms').value)) render(); };
   const ac = document.getElementById('add-cancel'); if (ac) ac.onclick = () => { state.add = newAdd(); state.tab = 'tx'; render(); };
   document.getElementById('add-save').onclick = async () => {
@@ -2388,9 +2642,10 @@ function bindAdd() {
 
 /* ---------------- settings ---------------- */
 function viewSettings() {
-  const c = state.cfg || { owner: '', repo: 'mymoney-data', token: '', branch: 'main' };
+  const c = state.cfg || (state.pendingFamily ? { ...state.pendingFamily, token: '', branch: 'main' } : { owner: '', repo: 'mymoney-data', token: '', branch: 'main' });
   return `${state.cfg ? viewNotif() : ''}<section class="card">
-    <h2>${state.cfg ? 'GitHub link' : 'Connect to your data'}</h2>
+    <h2>${state.cfg ? 'GitHub link' : state.pendingFamily ? 'Family view – view only' : 'Connect to your data'}</h2>
+    ${state.pendingFamily && !state.cfg ? '<p class="small" style="margin:0 0 6px">Paste the read-only token you were given. This phone will only be able to look, not change anything.</p>' : ''}
     <p class="small muted" style="margin:0 0 4px">Same details you put in the AppLink macro. The token is kept only on this phone.</p>
     <label class="f" for="s-owner">GitHub username</label><input class="inp" id="s-owner" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(c.owner)}">
     <label class="f" for="s-repo">Private data repo</label><input class="inp" id="s-repo" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(c.repo)}">
@@ -2483,13 +2738,14 @@ function bindSettings() {
   const msg = document.getElementById('s-msg');
   document.getElementById('s-save').onclick = async () => {
     const cfg = { owner: document.getElementById('s-owner').value.trim(), repo: document.getElementById('s-repo').value.trim(),
-      token: document.getElementById('s-token').value.trim(), branch: document.getElementById('s-branch').value.trim() || 'main' };
+      token: document.getElementById('s-token').value.trim(), branch: document.getElementById('s-branch').value.trim() || 'main',
+      ...((state.cfg && state.cfg.viewOnly) || (!state.cfg && state.pendingFamily) ? { viewOnly: true } : {}) };
     if (!cfg.owner || !cfg.repo || !cfg.token) { msg.className = 'small bad'; msg.textContent = 'Fill in username, repo and token.'; return; }
     const prev = state.cfg; state.cfg = cfg; msg.className = 'small muted'; msg.textContent = 'Checking…';
     try {
       const repo = await GH.testRepo();
       if (!repo.private) { msg.className = 'small bad'; msg.textContent = 'That repo is PUBLIC – anyone could read your figures. Make it private on GitHub first.'; state.cfg = prev; return; }
-      LS.set('cfg', cfg); state.tab = 'home'; state.lastError = null; render(); sync({ toast: true });
+      LS.set('cfg', cfg); state.pendingFamily = null; state.tab = 'home'; state.lastError = null; render(); sync({ toast: true });
     } catch (e) { state.cfg = prev; msg.className = 'small bad'; msg.textContent = e.message || 'Couldn’t reach GitHub.'; }
   };
   const back = document.getElementById('s-back'); if (back) back.onclick = () => { state.tab = 'home'; render(); };
@@ -2519,6 +2775,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localh
 { const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
 applyTheme();
 handleShared();
+handleFamilyLink();
+if (location.hash === '#voice' && state.cfg) { history.replaceState(null, '', location.pathname); state.tab = 'add'; setTimeout(() => { if (voiceSupported()) startVoice(); }, 600); }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(v => v || navigator.storage.persist()).then(v => { state.storageSafe = !!v; }).catch(() => {});
 if (window.matchMedia) matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
 render();
