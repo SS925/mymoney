@@ -1030,7 +1030,7 @@ function invHoldings() {
 function tradeLog() {
   const x = inv(), inExcel = new Set(((x && x.log) || []).map(r => r[5]));
   const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true }));
-  for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], pending: false });
+  for (const r of (x && x.log) || []) if (Number(r[3]) > 0 && Number(r[4]) > 0) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], pending: false });   // skip half-filled rows
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
