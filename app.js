@@ -148,6 +148,7 @@ function cr(v) {
 const pct = v => isFinite(n(v)) ? (n(v) * 100).toFixed(1).replace(/\.0$/, '') + '%' : '–';
 function pDate(s) { if (!s) return null; const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d || 1); }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONF = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const fDay = d => d ? `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}` : '';
 const fMon = d => d ? `${MON[d.getMonth()]} ${d.getFullYear()}` : '';
 function isoToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
@@ -233,7 +234,12 @@ const TITLES = { home: 'MyMoney', tx: 'Activity', add: 'Add entry', budget: 'Bud
 const NAV_OF = { future: 'more', sheet: 'more' };
 function render() {
   const v = document.getElementById('view');
-  document.getElementById('screen-title').textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab];
+  const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
+  if (state.tab === 'home' && state.data) {
+    const nm = userName();
+    t.innerHTML = `<span class="hi">Welcome,</span>${esc(nm)}`;
+    av.hidden = false; av.textContent = nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  } else { t.textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab]; av.hidden = true; }
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === (NAV_OF[state.tab] || state.tab)));
   renderFreshness();
   if (!state.cfg && state.tab !== 'settings') state.tab = 'settings';
@@ -249,18 +255,24 @@ function render() {
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
   if (state.tab === 'budget') bindBudget();
+  const ha = document.querySelector('[data-homeall]'); if (ha) ha.onclick = () => { state.homeAlertsAll = !state.homeAlertsAll; render(); };
+  const hh = document.querySelector('[data-health]'); if (hh) hh.onclick = () => { state.healthOpen = !state.healthOpen; render(); };
   document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
+}
+function userName() {
+  try { const me = JSON.parse(localStorage.getItem('crm_me_v1') || 'null'); if (me && me.name) return me.name; } catch (e) {}
+  return (state.cfg && state.cfg.owner) || 'MyMoney';
 }
 function renderFreshness() {
   const f = document.getElementById('freshness'), b = document.getElementById('banner');
   const k = state.data ? kpis() : {};
   const pushed = state.data && state.data.pushedAt ? new Date(state.data.pushedAt) : null;
   f.textContent = state.data
-    ? `Data to ${fDay(pDate(k.as_of)).replace(/ \d{4}$/, '')} · sent ${pushed ? fDay(pushed).replace(/ \d{4}$/, '') + ', ' + pushed.toTimeString().slice(0, 5) : '–'}`
+    ? `Updated ${pushed ? fDay(pushed).replace(/ \d{4}$/, '') + ', ' + pushed.toTimeString().slice(0, 5) : '–'}`
     : '';
   let msg = state.lastError, cls = 'banner err';
   if (!msg && pushed && (Date.now() - pushed) > 3 * 864e5) {
-    msg = `Excel last sent figures ${Math.floor((Date.now() - pushed) / 864e5)} days ago. Open the workbook on your PC to sync and update.`;
+    msg = `Figures are ${Math.floor((Date.now() - pushed) / 864e5)} days old. Open the workbook on your PC to update.`;
     cls = 'banner';
   }
   if (!msg && state.outbox.length) { msg = `${state.outbox.length} entr${state.outbox.length === 1 ? 'y' : 'ies'} saved on this phone, waiting to upload.`; cls = 'banner'; }
@@ -270,11 +282,11 @@ function renderFreshness() {
 function ring(score) {
   const s = Math.max(0, Math.min(100, n(score) || 0)), r = 30, c = 2 * Math.PI * r;
   const col = s >= 75 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)';
-  return `<svg class="ring" width="76" height="76" viewBox="0 0 76 76" role="img" aria-label="Health score ${s} of 100">
-    <circle cx="38" cy="38" r="${r}" fill="none" stroke="#2c2944" stroke-width="8"/>
-    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round"
+  return `<svg class="ring" width="48" height="48" viewBox="0 0 76 76" role="img" aria-label="Health score ${s} of 100">
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="#2b373b" stroke-width="9"/>
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round"
       stroke-dasharray="${(c * s / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/>
-    <text x="38" y="43" text-anchor="middle" font-size="19" font-weight="700" fill="var(--text)">${s}</text></svg>`;
+    <text x="38" y="46" text-anchor="middle" font-size="24" font-weight="700" fill="var(--text)">${s}</text></svg>`;
 }
 
 function monthlyChart(rows) {
@@ -286,13 +298,13 @@ function monthlyChart(rows) {
   let g = '';
   rows.forEach((r, i) => {
     const x = pl + i * bw, w = (bw - 6) / 2;
-    g += `<rect x="${(x + 2).toFixed(1)}" y="${y(n(r.Income)).toFixed(1)}" width="${w.toFixed(1)}" height="${(pt + ih - y(n(r.Income))).toFixed(1)}" rx="2.5" fill="var(--teal)"/>`;
+    g += `<rect x="${(x + 2).toFixed(1)}" y="${y(n(r.Income)).toFixed(1)}" width="${w.toFixed(1)}" height="${(pt + ih - y(n(r.Income))).toFixed(1)}" rx="2.5" fill="var(--good)" opacity=".85"/>`;
     g += `<rect x="${(x + 3 + w).toFixed(1)}" y="${y(n(r.Spending)).toFixed(1)}" width="${w.toFixed(1)}" height="${(pt + ih - y(n(r.Spending))).toFixed(1)}" rx="2.5" fill="var(--amber)"/>`;
     const d = pDate(r.Month);
     if (i % 2 === rows.length % 2 || rows.length < 7) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--muted)">${MON[d.getMonth()]}</text>`;
   });
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Income and spending, last 12 months">${g}</svg>
-    <div class="legend"><span><i style="background:var(--teal)"></i>Income</span><span><i style="background:var(--amber)"></i>Spending</span></div>`;
+    <div class="legend"><span><i style="background:var(--good)"></i>Income</span><span><i style="background:var(--amber)"></i>Spending</span></div>`;
 }
 
 /* ---------------- net-pay limit ---------------- */
@@ -326,68 +338,61 @@ function monthProgress() {                                   // how far through 
   const day = sameMonth ? today.getDate() : (asOf && asOf.getMonth() === m.getMonth() ? asOf.getDate() : dim);
   return { done: Math.min(1, day / dim), left: sameMonth ? dim - day + 1 : 0, dim, day, complete: !sameMonth && day >= dim };
 }
-function netPayCard() {
+function netPayCard(compact) {
   const k = kpis(), net = netPay(); if (!isFinite(net)) return '';
   const p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0;
-  const used = limit > 0 ? spent / limit : 0, left = limit - spent, mp = monthProgress();
+  const used = limit > 0 ? spent / limit : 0, left = limit - spent, mp = monthProgress(), m = pDate(k.month);
   const pace = !mp.complete && mp.done > 0 ? spent / mp.done : spent;
-  let line;
-  if (left < 0) line = `<span class="bad">Over your limit by ${inr(-left)}</span>`;
-  else if (mp.left > 0) line = `<span class="good">${inr(left)} left</span> · about <b class="num">${inr(left / mp.left)}</b> a day for ${mp.left} days`;
-  else line = `<span class="good">${inr(left)} under your limit</span>`;
-  return `<section class="card">
-    <h2>${esc(fMon(pDate(k.month)))} · within net pay</h2>
-    <div class="row"><span style="font-size:24px;font-weight:700" class="num ${left < 0 ? 'bad' : ''}">${inr(spent)}</span><span class="muted small num">of ${inr(limit)} limit · ${Math.round(used * 100)}%</span></div>
-    <div class="bar ${used > 1 ? 'over' : ''}" style="margin-top:8px"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
-    <p class="small" style="margin:8px 0 0">${line}</p>
-    ${!mp.complete && mp.done < 1 ? `<p class="small ${pace > limit ? 'warn' : 'muted'}" style="margin:4px 0 0">At this pace: ${inr(pace)} by month end</p>` : ''}
-    <p class="small muted" style="margin:6px 0 0">Limit = net pay ${inr(net)} − saving ${inr(p.savings || 0)}${state.plan ? '' : ' (suggested)'} · <button class="link-btn" style="color:#b9a8ff;padding:0" data-gotab="budget">Plan ›</button></p>
+  const head = left < 0 ? `${inr(-left)}` : `${inr(left)}`;
+  let sub = `<b>${inr(spent)}</b> spent of your <b>${inr(limit)}</b> limit`;
+  if (left >= 0 && mp.left > 0) sub += `, about <b>${inr(left / mp.left)}</b> a day for ${mp.left} days`;
+  if (!mp.complete && mp.done < 1 && pace > limit && left >= 0) sub += `. At this pace you’ll reach ${inr(pace)}`;
+  return `<section class="hero">
+    <div class="hero-top"><span>${m ? MONF[m.getMonth()] + ' ' + m.getFullYear() : ''}</span><span>Net pay ${inr(net)}</span></div>
+    <p class="hero-k">${left < 0 ? 'Over your spending limit' : 'Left to spend this month'}</p>
+    <h2 class="hero-v num">${head}</h2>
+    <div class="meter ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i>${used > 1 ? `<span class="tick" style="left:${(100 / used).toFixed(1)}%"></span>` : ''}</div>
+    <p class="hero-s">${sub}.</p>
   </section>`;
 }
+
+const IC = {
+  add: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  receipt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7.5" cy="7.5" r="3"/><circle cx="16.5" cy="7.5" r="3"/><circle cx="7.5" cy="16.5" r="3"/><circle cx="16.5" cy="16.5" r="3"/></svg>',
+};
 function viewHome() {
-  const k = kpis(), month = pDate(k.month);
-  const spent = n(k.spending_month), budget = n(k.budget_month), used = budget > 0 ? spent / budget : 0;
-  const alerts = tbl('AppAlerts').map(a => a.Alert).filter(a => /^[⚠ℹ]/.test(a || ''));
+  const k = kpis();
+  const alerts = tbl('AppAlerts').map(x => String(x.Alert || '')).filter(x => /^[⚠ℹ]/.test(x));
+  const shown = state.homeAlertsAll ? alerts : alerts.slice(0, 3);
   const months = tbl('AppMonthly');
-  const lastLeft = months.slice(-6);
+  const recent = allTx().slice(0, 4);
   return `
-  <section class="card hero">
-    <div class="label">Net worth</div>
-    <div class="big num">${inr(k.net_worth)}</div>
-    <div class="small" style="color:#cfc8ff">Incl. investments & PF, minus loans</div>
-  </section>
-  <div class="grid2">
-    <div class="stat"><div class="l">Money available</div><div class="v num">${inr(k.money_available)}</div><div class="s">Cash & bank, all accounts</div></div>
-    <div class="stat"><div class="l">Left over · ${month ? MON[month.getMonth()] : ''}</div><div class="v num ${n(k.left_over) < 0 ? 'bad' : 'good'}">${inr(k.left_over)}</div><div class="s">${esc(k.over_budget_count)} categories over budget</div></div>
-    <div class="stat"><div class="l">Loans still owed</div><div class="v num">${inr(k.loans_owed)}</div><div class="s">Across all loans</div></div>
-    <div class="stat"><div class="l">Savings rate this year</div><div class="v num ${n(k.savings_rate) >= n(k.savings_target) ? 'good' : 'warn'}">${pct(k.savings_rate)}</div><div class="s">Target ${pct(k.savings_target)}</div></div>
+  ${netPayCard()}
+  <div class="actions">
+    <button class="act" data-gotab="add" aria-label="Add entry">${IC.add}</button>
+    <a class="act" href="receipts.html" aria-label="New receipt">${IC.receipt}</a>
+    <button class="act wide" data-gotab="budget">${IC.grid}<span>Net-pay plan</span></button>
   </div>
-  <div style="margin-top:12px">${netPayCard()}</div>
-  <section class="card">
-    <h2>${esc(fMon(month))} so far</h2>
-    <div class="kv"><span>Income</span><span class="num good">${inr(k.income_month)}</span></div>
-    <div class="kv"><span>Spending</span><span class="num">${inr(spent)}</span></div>
-    <div class="kv"><span>Saved & invested</span><span class="num">${inr(k.saved_month)}</span></div>
-    <div style="margin:12px 0 6px" class="row small"><span class="muted">Spending vs budget ${inr(budget)}</span><span class="num">${Math.round(used * 100)}%</span></div>
-    <div class="bar ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
-    <p class="small ${tone(k.pace_text)}" style="margin:10px 0 0">${esc(k.pace_text)}</p>
-    ${k.biggest_overspend ? `<p class="small muted" style="margin:4px 0 0">${esc(k.biggest_overspend)}</p>` : ''}
+  <section class="sec box">
+    <div class="sec-h"><h3>Transactions</h3><button data-gotab="tx">View all</button></div>
+    ${recent.map(t => txRow(t, true)).join('')}
   </section>
-  <section class="card">
-    <h2>Last 12 months</h2>
-    ${monthlyChart(months)}
-    <div class="row small" style="margin-top:10px;flex-wrap:wrap;gap:6px 12px">${lastLeft.map(r => `<span class="muted">${MON[pDate(r.Month).getMonth()]} <b class="num ${n(r.LeftOver) < 0 ? 'bad' : 'good'}">${inr(r.LeftOver)}</b></span>`).join('')}</div>
-    <p class="small muted" style="margin:6px 0 0">Left over per month (income − spending − saved)</p>
-  </section>
-  <section class="card">
-    <h2>Financial health</h2>
-    <div class="score">${ring(k.health_score)}<div><div style="font-size:17px;font-weight:650">${esc(k.health_label)}</div><div class="small muted">${esc(k.health_score)} / 100 · ✓ = 1 pt, OK = ½ pt</div></div></div>
-    <ul class="checks">${tbl('AppHealth').map(h => `<li><span>${esc(h.Check)}<br><span class="small muted">${esc(h.Value)}</span></span><span class="st small ${tone(h.Status)}">${esc(h.Status)}</span></li>`).join('')}</ul>
-  </section>
-  ${alerts.length ? `<section class="card"><h2>Needs attention · ${esc(k.alerts_summary)}</h2><ul class="alerts">${alerts.map(a => `<li class="${/^⚠/.test(a) ? 'warn' : ''}">${esc(a)}</li>`).join('')}</ul></section>` : ''}
-  <section class="card"><h2>Salary & tax</h2>
-    <div class="kv"><span>Latest salary</span><span class="num small">${esc(k.salary_line)}</span></div>
-    <p class="small" style="margin:8px 0 0">${esc(k.tax_better)}</p></section>`;
+  <section class="sec"><div class="figs">
+    <div class="fig"><span>Net worth</span><b class="num">${inr(k.net_worth)}</b></div>
+    <div class="fig"><span>Money available</span><b class="num">${inr(k.money_available)}</b></div>
+    <div class="fig"><span>Loans owed</span><b class="num">${inr(k.loans_owed)}</b></div>
+    <div class="fig"><span>Savings rate</span><b class="num ${n(k.savings_rate) >= n(k.savings_target) ? 'good' : 'warn'}">${pct(k.savings_rate)}</b><em>target ${pct(k.savings_target)}</em></div>
+  </div></section>
+  ${alerts.length ? `<section class="sec box"><div class="sec-h"><h3>Needs attention</h3><span class="small muted">${alerts.length}</span></div>
+    ${shown.map(x => `<div class="alert-row"><span class="dot ${/^⚠/.test(x) ? 'warn' : 'info'}"></span><span>${esc(x.replace(/^[⚠ℹ]\s*/, ''))}</span></div>`).join('')}
+    ${alerts.length > 3 ? `<button class="more-btn" data-homeall>${state.homeAlertsAll ? 'Show fewer' : `Show all ${alerts.length}`}</button>` : ''}</section>` : ''}
+  <section class="sec box"><div class="sec-h"><h3>Last 12 months</h3></div>
+    ${monthlyChart(months)}</section>
+  <section class="sec">
+    <button class="health-row" data-health>${ring(k.health_score)}<span class="ht"><b>${esc(String(k.health_label || '').replace(/^[^A-Za-z]+/, ''))}</b><span>Financial health, ${esc(k.health_score)} out of 100</span></span><span class="chev">${state.healthOpen ? '⌃' : '›'}</span></button>
+    ${state.healthOpen ? `<ul class="checks">${tbl('AppHealth').map(h => `<li><span>${esc(h.Check)}<br><span class="small muted">${esc(h.Value)}</span></span><span class="st small ${tone(h.Status)}">${esc(String(h.Status).replace(/\s*–\s*/, ', '))}</span></li>`).join('')}</ul>` : ''}
+  </section>`;
 }
 
 function allTx() {
@@ -396,6 +401,20 @@ function allTx() {
     Details: (x.e.note || x.e.category) + (x.e.paidWith ? ` (${x.e.paidWith})` : '') + ` app#${x.e.id}`, Source: 'Manual entry',
     _pending: x.state, _id: x.e.id, _sha: x.sha }));
   return p.concat(tbl('AppRecent'));
+}
+function txRow(t, compact) {
+  const d = describe(t), a = n(t.Amount);
+  const cls = t.Type === 'Income' ? 'good' : t.Type === 'Transfer' ? 'muted' : '';
+  const sign = t.Type === 'Income' ? '+' : t.Type === 'Expenses' ? '−' : '';
+  const tile = { Income: 'in', Savings: 'sv', Transfer: 'tr' }[t.Type] || '';
+  const letter = (String(d.title).match(/[A-Za-z0-9]/) || ['•'])[0].toUpperCase();
+  return `<div class="tx ${t._pending ? 'pending' : ''}"><div class="ic ${tile}">${letter}</div>
+    <div class="mid"><div class="t1">${esc(d.title)}${t._pending ? `<span class="badge">${t._pending === 'outbox' ? 'Not uploaded' : 'Waiting for Excel'}</span>` : ''}</div>
+    <div class="t2">${compact ? fDay(pDate(t.Date)).replace(/ \d{4}$/, '') + ', ' : ''}${esc(t.Category)}</div>
+    <div class="t3">${esc(fullDetails(t))}<br>${esc(t.Type)}, ${esc(d.src)}, ${fDay(pDate(t.Date))}</div>
+    ${t._pending === 'pending' && !compact ? `<button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
+    ${t._pending === 'outbox' && !compact ? `<button class="link-btn" data-delout="${esc(t._id)}">Remove</button>` : ''}</div>
+    <div class="amt num ${cls}">${sign}${inr(Math.abs(a))}</div></div>`;
 }
 function viewTx() {
   const f = state.tx, all = allTx();
@@ -416,29 +435,21 @@ function viewTx() {
   let html = `<input class="search" id="tx-q" type="search" placeholder="Search merchant, category or amount" value="${esc(f.q)}" autocomplete="off">
     <div class="chips" id="tx-types">${['All', 'Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button class="chip ${f.type === t ? 'on' : ''}" data-type="${t}">${t}</button>`).join('')}</div>
     <div class="filters">
-      <select class="inp sel" id="tx-year" aria-label="Year"><option value="All">All years</option>${years.map(y => `<option ${f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select>
-      <select class="inp sel" id="tx-month" aria-label="Month"><option value="All">All months</option>${MON.map((m, i) => { const v = String(i + 1).padStart(2, '0');
-        return `<option value="${v}" ${f.month === v ? 'selected' : ''} ${monthsHere.has(v) ? '' : 'disabled'}>${f.year === 'All' ? m + ' (every year)' : m + ' ' + f.year}</option>`; }).join('')}</select>
-      <select class="inp sel" id="tx-cat" aria-label="Category"><option value="All">All categories</option>${cats.map(c => `<option ${f.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
-    <div class="small muted num" style="margin:8px 2px 0">${list.length.toLocaleString('en-IN')} transactions · in ${inr(tot.Income)} · out ${inr(tot.Expenses)}</div>`;
+      <select class="inp sel" id="tx-year" aria-label="Year"><option value="All">Year</option>${years.map(y => `<option ${f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select>
+      <select class="inp sel" id="tx-month" aria-label="Month"><option value="All">Month</option>${MON.map((m, i) => { const v = String(i + 1).padStart(2, '0');
+        return `<option value="${v}" ${f.month === v ? 'selected' : ''} ${monthsHere.has(v) ? '' : 'disabled'}>${f.year === 'All' ? m + ', any year' : m + ' ' + f.year}</option>`; }).join('')}</select>
+      <select class="inp sel" id="tx-cat" aria-label="Category"><option value="All">Category</option>${cats.map(c => `<option ${f.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="small muted num" style="margin:8px 2px 0">${list.length.toLocaleString('en-IN')} transactions, ${inr(tot.Income)} in, ${inr(tot.Expenses)} out</div>`;
   if (!list.length) return html + `<div class="empty">Nothing matches.</div>`;
-  let lastDay = '';
+  let lastDay = '', open = false;
   list.slice(0, f.limit).forEach(t => {
     const day = String(t.Date).slice(0, 10);
-    if (day !== lastDay) { html += `<div class="day"><span>${fDay(pDate(day))}</span></div>`; lastDay = day; }
-    const d = describe(t), a = n(t.Amount);
-    const cls = t.Type === 'Income' ? 'good' : t.Type === 'Transfer' ? 'muted' : '';
-    const sign = t.Type === 'Income' ? '+' : t.Type === 'Expenses' ? '−' : '';
-    html += `<div class="tx ${t._pending ? 'pending' : ''}"><div class="ic">${TYPE_ICON[t.Type] || '•'}</div>
-      <div class="mid"><div class="t1">${esc(d.title)}${t._pending ? `<span class="badge">${t._pending === 'outbox' ? 'Not uploaded' : 'Waiting for Excel'}</span>` : ''}</div>
-      <div class="t2">${esc(t.Category)} · ${esc(d.src)}</div>
-      <div class="t3">${esc(fullDetails(t))}<br>${esc(t.Type)} · ${esc(t.Source)} · ${fDay(pDate(t.Date))}</div>
-      ${t._pending === 'pending' ? `<button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
-      ${t._pending === 'outbox' ? `<button class="link-btn" data-delout="${esc(t._id)}">Remove</button>` : ''}</div>
-      <div class="amt num ${cls}">${sign}${inr(Math.abs(a))}</div></div>`;
+    if (day !== lastDay) { html += `${open ? '</div>' : ''}<div class="day"><span>${fDay(pDate(day))}</span></div><div class="txcard">`; lastDay = day; open = true; }
+    html += txRow(t);
   });
+  if (open) html += '</div>';
   if (list.length > f.limit) html += `<button class="more" id="tx-more">Show ${Math.min(200, list.length - f.limit)} more (${(list.length - f.limit).toLocaleString('en-IN')} left)</button>`;
-  else html += `<p class="small muted" style="text-align:center;margin-top:14px">End of list · all ${tbl('AppRecent').length.toLocaleString('en-IN')} transactions from Excel${oldest()}</p>`;
+  else html += `<p class="small muted" style="text-align:center;margin-top:14px">That’s all ${tbl('AppRecent').length.toLocaleString('en-IN')} transactions from Excel${oldest()}</p>`;
   return html;
 }
 function fullDetails(t) {
@@ -479,19 +490,39 @@ function viewBudgetExcel() {
   const tT = rows.reduce((s, r) => s + (n(r.Target) || 0), 0), tS = rows.reduce((s, r) => s + (n(r.Spent) || 0), 0);
   const over = rows.filter(r => n(r.Spent) > n(r.Target));
   return `<section class="card">
-    <h2>${esc(fMon(pDate(k.month)))} · monthly targets</h2>
+    <h2>${esc(fMon(pDate(k.month)))} targets from Excel</h2>
     <div class="row"><span style="font-size:26px;font-weight:700" class="num">${inr(tS)}</span><span class="muted small num">of ${inr(tT)}</span></div>
     <div class="bar ${tS > tT ? 'over' : ''}" style="margin-top:8px"><i style="width:${Math.min(100, tT ? tS / tT * 100 : 0).toFixed(1)}%"></i></div>
-    <p class="small ${tS > tT ? 'bad' : 'good'}" style="margin:8px 0 0">${tS > tT ? `${inr(tS - tT)} over budget` : `${inr(tT - tS)} left`} · ${over.length} of ${rows.length} categories over</p>
+    <p class="small ${tS > tT ? 'bad' : 'good'}" style="margin:8px 0 0">${tS > tT ? `${inr(tS - tT)} over budget` : `${inr(tT - tS)} left`}, ${over.length} of ${rows.length} categories over</p>
     <p class="small ${tone(k.pace_text)}" style="margin:4px 0 0">${esc(k.pace_text)}</p></section>
-  <section class="card"><h2>By category</h2>
+  <section class="sec"><div class="sec-h"><h3>By category</h3></div>
     ${rows.map(r => { const t = n(r.Target), s = n(r.Spent), u = t > 0 ? s / t : (s > 0 ? 1.01 : 0);
-      return `<div class="bud"><div class="row"><span>${esc(r.Category)}</span><span class="num ${s > t ? 'bad' : ''}">${inr(s)} <span class="muted small">/ ${inr(t)}</span></span></div>
-      <div class="bar ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div>
-      <div class="s ${tone(r.Status)}">${esc(r.Status)}${s <= t && t > 0 ? ` · ${inr(n(r.Left))} left` : ''}</div></div>`; }).join('')}
+      return `<div class="brow"><div class="row"><span>${esc(r.Category)}</span><span class="num"><b class="${s > t ? 'bad' : ''}">${inr(s)}</b> <span class="lim">/ ${inr(t)}</span></span></div>
+      <div class="meter thin ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div></div>`; }).join('')}
     <p class="small muted" style="margin:12px 0 0">Targets come from Budget Planning in Excel – they add up to ${inr(tT)}${isFinite(netPay()) ? `, ${Math.round(tT / netPay() * 100)}% of your net pay` : ''}.</p></section>`;
 }
 
+const DONUT_COLORS = ['#a9cdf5', '#6fa4e0', '#3f74b3', '#2a4d78', '#8c9aab', '#4d5866'];
+function donut(parts, centerLabel, centerValue) {
+  const tot = parts.reduce((s, p) => s + p.v, 0); if (!(tot > 0)) return '';
+  const R = 80, C = 2 * Math.PI * R, gap = parts.length > 1 ? 3 : 0;
+  let off = 0, arcs = '';
+  parts.forEach((p, i) => {
+    const len = Math.max(0, p.v / tot * C - gap);
+    arcs += `<circle cx="110" cy="110" r="${R}" fill="none" stroke="${DONUT_COLORS[i % DONUT_COLORS.length]}" stroke-width="26"
+      stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 110 110)"><title>${esc(p.name)}: ${inr(p.v)}</title></circle>`;
+    off += p.v / tot * C;
+  });
+  return `<div class="donut-wrap"><svg viewBox="0 0 220 220" role="img" aria-label="${esc(centerLabel)} ${inr(tot)}">${arcs}
+    <text x="110" y="100" text-anchor="middle" font-size="15" fill="var(--muted)">${esc(centerLabel)}</text>
+    <text x="110" y="128" text-anchor="middle" font-size="26" font-weight="600" fill="var(--text)">${esc(centerValue || cr(tot))}</text></svg></div>
+    <div class="dlegend">${parts.map((p, i) => `<span><i style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></i>${esc(p.name)} <em>${Math.round(p.v / tot * 100)}%</em></span>`).join('')}</div>`;
+}
+function spendParts() {
+  const rows = tbl('AppBudget').filter(r => r.Category && n(r.Spent) > 0).map(r => ({ name: r.Category, v: n(r.Spent) })).sort((x, y) => y.v - x.v);
+  const top = rows.slice(0, 5), rest = rows.slice(5).reduce((s, r) => s + r.v, 0);
+  return rest > 0 ? top.concat([{ name: 'Other', v: rest }]) : top;
+}
 function viewBudget() {
   const seg = `<div class="seg seg2" id="bud-mode"><button data-b="plan" class="${state.budgetMode === 'plan' ? 'on' : ''}">Net-pay plan</button><button data-b="excel" class="${state.budgetMode === 'excel' ? 'on' : ''}">Excel targets</button></div>`;
   if (state.budgetMode === 'excel') return seg + viewBudgetExcel();
@@ -502,22 +533,24 @@ function viewBudget() {
   const cats = Object.keys(p.limits || {}).filter(c => p.limits[c] > 0 || spentBy[c] > 0);
   rows.forEach(r => { if (!cats.includes(r.Category) && spentBy[r.Category] > 0) cats.push(r.Category); });
   const over = cats.filter(c => spentBy[c] > (Number(p.limits[c]) || 0));
-  return seg + netPayCard() + `
-  <section class="card"><h2>Limits by category · ${over.length} over</h2>
-    ${state.plan ? '' : `<p class="small warn" style="margin:0 0 8px">These are suggested limits that fit your net pay. Tap “Edit plan” to make them yours.</p>`}
-    ${cats.map(c => { const t = Number(p.limits[c]) || 0, s = spentBy[c] || 0, u = t > 0 ? s / t : (s > 0 ? 1.01 : 0);
-      return `<div class="bud"><div class="row"><span>${esc(c)}</span><span class="num ${s > t ? 'bad' : ''}">${inr(s)} <span class="muted small">/ ${inr(t)}</span></span></div>
-      <div class="bar ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div>
-      <div class="s ${s > t ? 'bad' : 'muted'}">${s > t ? `Over by ${inr(s - t)}` : `${inr(t - s)} left`}</div></div>`; }).join('')}
-    <div class="kv" style="margin-top:8px"><span>Saving first</span><span class="num">${inr(p.savings || 0)}</span></div>
-    <div class="kv"><span>Limits total</span><span class="num">${inr(planTotal(p))} <span class="muted small">of ${inr(limit)}</span></span></div>
+  const m = pDate(kpis().month);
+  return seg + netPayCard(true) + `
+  <section class="sec box"><div class="sec-h"><h3>Where it went</h3><span class="small muted">${m ? MONF[m.getMonth()] : ''}</span></div>
+    ${donut(spendParts(), 'Spent', cr(n(kpis().spending_month)))}</section>
+  <section class="sec box"><div class="sec-h"><h3>Limits</h3><span class="small">${over.length} of ${cats.length} over</span></div>
+    ${state.plan ? '' : `<p class="small muted" style="margin:0 0 6px">Suggested limits that fit your net pay. Edit them to make them yours.</p>`}
+    <div class="rows">${cats.map(c => { const t = Number(p.limits[c]) || 0, s = spentBy[c] || 0, u = t > 0 ? s / t : (s > 0 ? 1.01 : 0);
+      return `<div class="brow"><div class="row"><span>${esc(c)}</span><span class="num"><b class="${s > t ? 'bad' : ''}">${inr(s)}</b> <span class="lim">/ ${inr(t)}</span></span></div>
+      <div class="meter thin ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div></div>`; }).join('')}</div>
+    <div class="kv" style="margin-top:6px"><span class="muted">Saved first</span><span class="num">${inr(p.savings || 0)}</span></div>
+    <div class="kv"><span class="muted">Limits add up to</span><span class="num">${inr(planTotal(p))} of ${inr(limit)}</span></div>
     <button class="secondary" id="plan-edit">Edit plan</button>
   </section>`;
 }
 function viewPlanEdit() {
   const e = state.planEdit, net = netPay(), avail = net - (Number(e.savings) || 0), tot = planTotal(e), ok = tot <= avail;
   const cats = budgetCats();
-  return `<section class="card"><h2>Net-pay plan · ${inr(net)} net pay</h2>
+  return `<section class="card"><h2>Your net pay: ${inr(net)}</h2>
     <p class="small muted" style="margin:0 0 6px">Your latest net pay from payslips. Save first, then split the rest. Limits can’t add up to more than what’s left.</p>
     <label class="f" for="pe-sav">Save / invest every month</label>
     <input class="inp num" id="pe-sav" inputmode="numeric" value="${esc(e.savings)}">
@@ -563,7 +596,7 @@ function projChart(rows) {
   const x = i => pl + (i / (rows.length - 1 || 1)) * iw, y = v => pt + ih - (Math.max(0, n(v) || 0) / max) * ih;
   const path = key => rows.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join('');
   let g = '';
-  [0, .5, 1].forEach(f => { const yy = pt + ih - f * ih; g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="#2f2b47"/><text x="${pl - 4}" y="${yy + 3}" text-anchor="end" font-size="9.5" fill="var(--muted)">${f ? Math.round(max * f / 1e7) + ' Cr' : '0'}</text>`; });
+  [0, .5, 1].forEach(f => { const yy = pt + ih - f * ih; g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="#2b373b"/><text x="${pl - 4}" y="${yy + 3}" text-anchor="end" font-size="9.5" fill="var(--muted)">${f ? Math.round(max * f / 1e7) + ' Cr' : '0'}</text>`; });
   rows.forEach((r, i) => { if (i % 5 === 0 || i === rows.length - 1) g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${r.Year}</text>`; });
   g += `<path d="${path('Needed')}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 4"/>`;
   g += `<path d="${path('NetWorth')}" fill="none" stroke="var(--violet)" stroke-width="2.5"/>`;
@@ -575,19 +608,19 @@ function viewFuture() {
   const ageR = n(k.retire_age) || 60;
   const pick = rows.filter((r, i) => i === 0 || n(r.Age) % 5 === 0 || n(r.Age) === ageR);
   const ea = n(k.earliest_retire_age);
-  return `<section class="card hero">
-    <div class="label">Net worth at ${ageR}</div>
-    <div class="big num">${cr(k.nw_at_60)}</div>
-    <div class="small" style="color:#cfc8ff">${cr(k.nw_at_60_today)} in today’s money · ${esc(k.retire_status)}</div></section>
-  <section class="card"><h2>Retirement checks</h2>
+  return `<section class="hero">
+    <p class="hero-k">Net worth at ${ageR}</p>
+    <h2 class="hero-v num">${cr(k.nw_at_60)}</h2>
+    <p class="hero-s"><b>${cr(k.nw_at_60_today)}</b> in today’s money. <span class="${tone(k.retire_status)}">${esc(k.retire_status)}</span></p></section>
+  <section class="sec"><div class="sec-h"><h3>Retirement checks</h3></div>
     <div class="kv"><span>Earliest retirement</span><span>${isFinite(ea) ? 'Age ' + ea : esc(k.earliest_retire_age)} <span class="small ${tone(k.earliest_retire_status)}">${esc(k.earliest_retire_status)}</span></span></div>
     <div class="kv"><span>Money lasts until</span><span>${esc(k.money_lasts)} <span class="small ${tone(k.money_lasts_status)}">${esc(k.money_lasts_status)}</span></span></div>
     <div class="kv"><span>Corpus needed at ${ageR}</span><span class="num">${cr(k.corpus_needed)}</span></div>
-    <div class="kv"><span>Investing per month</span><span class="num">${inr(k.invest_actual_month)} <span class="muted small">actual · plan ${inr(k.invest_plan_month)}</span></span></div></section>
-  <section class="card"><h2>At your actual SIP pace</h2>
+    <div class="kv"><span>Investing per month</span><span class="num">${inr(k.invest_actual_month)} <span class="muted small">actual, plan ${inr(k.invest_plan_month)}</span></span></div></section>
+  <section class="sec"><div class="sec-h"><h3>At your actual SIP pace</h3></div>
     <div class="row"><span style="font-size:24px;font-weight:700" class="num">${cr(k.actual_pace_60)}</span><span class="small ${tone(k.actual_pace_status)}">${esc(k.actual_pace_status)}</span></div>
     <p class="small ${tone(k.actual_pace_note)}" style="margin:8px 0 0">${esc(k.actual_pace_note)}</p></section>
-  <section class="card"><h2>Path to ${ageR}</h2>${projChart(rows)}
+  <section class="sec"><div class="sec-h"><h3>Path to ${ageR}</h3></div>${projChart(rows)}
     <table class="proj" style="margin-top:10px"><tr><th>Year</th><th>Age</th><th>Net worth</th><th>Today’s ₹</th></tr>
     ${pick.map(r => `<tr><td>${r.Year}</td><td>${r.Age}</td><td class="num">${cr(r.NetWorth)}</td><td class="num">${cr(r.NetWorthToday)}</td></tr>`).join('')}</table>
     <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included).</p></section>`;
@@ -613,23 +646,24 @@ function receiptsSummary() {
 function viewMore() {
   const list = sheetList(), at = state.sheets && state.sheets.exportedAt ? new Date(state.sheets.exportedAt) : null;
   const rc = receiptsSummary();
-  return `<section class="card"><h2>Coaching</h2>
-      <a class="navrow" href="receipts.html"><span class="ni">🧾</span><span class="nt">Coaching receipts<br><span class="small muted">${rc.count
-        ? `${rc.count} receipt${rc.count === 1 ? '' : 's'} · this month ${inr(rc.month)} · all time ${inr(rc.all)}`
-        : 'Make a receipt, share the PDF, find old ones'}</span></span><span class="chev">›</span></a>
-      ${rc.last ? `<p class="small muted" style="margin:6px 0 0">Last: ${esc(rc.last.no)} · ${esc(rc.last.client)} · ${fDay(pDate(rc.last.date))}</p>` : ''}
-      <div class="row" style="gap:8px;margin-top:8px"><a class="secondary btnlink" href="receipts.html">New receipt</a><a class="secondary btnlink" href="receipts.html#history">Past receipts</a></div>
-    </section>
-    <section class="card"><h2>App screens</h2>
-      <button class="navrow" data-go="future"><span class="ni">↗</span><span class="nt">Retirement<br><span class="small muted">Net worth at 60, earliest retirement, path to 60</span></span><span class="chev">›</span></button>
-      <button class="navrow" data-go="settings"><span class="ni">🔔</span><span class="nt">Phone notifications<br><span class="small muted">${pushStatus() === 'on' ? 'On for this phone' : 'Premiums due, budget alerts, monthly summary'}</span></span><span class="chev">›</span></button></section>
-    <section class="card"><h2>Your Excel sheets${at ? ` · sent ${fDay(at).replace(/ \d{4}$/, '')}, ${at.toTimeString().slice(0, 5)}` : ''}</h2>
-    ${list.length ? list.map(s => `<button class="navrow" data-sheet="${esc(s.name)}"><span class="ni">${SHEET_ICON[s.name] || '▦'}</span>
-        <span class="nt">${esc(s.name)}${s.hidden ? ' <span class="badge">hidden in Excel</span>' : ''}<br><span class="small muted">${sheetHint(s)}</span></span><span class="chev">›</span></button>`).join('')
-      : `<p class="small muted" style="margin:0">No sheets yet. Update the AppLink macro in Excel (see the update notes), run <b>AppLinkNow</b>, then tap ⟳.</p>`}
-    </section>
-    <p class="small muted" style="text-align:center">Sheets show exactly what Excel shows. Charts aren’t included – the app draws its own.</p>`;
+  const row = (attrs, title, sub) => `<${attrs.startsWith('href') ? 'a' : 'button'} class="navrow" ${attrs}><span class="nt">${title}${sub ? `<br><span class="small muted">${sub}</span>` : ''}</span><span class="chev">›</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
+  return `<section class="sec"><div class="sec-h"><h3>Coaching</h3>${rc.count ? `<span class="small">${inr(rc.month)} this month</span>` : ''}</div>
+      <div class="group">
+        ${row('href="receipts.html"', 'New receipt', '')}
+        ${row('href="receipts.html#history"', 'Past receipts', rc.count ? `${rc.count} receipts, ${inr(rc.all)} in all${rc.last ? `. Last: ${esc(rc.last.client)}, ${fDay(pDate(rc.last.date))}` : ''}` : '')}
+      </div></section>
+    <section class="sec"><div class="sec-h"><h3>Plans</h3></div>
+      <div class="group">
+        ${row('data-go="future"', 'Retirement', '')}
+        ${row('data-go="budget"', 'Net-pay plan', '')}
+        ${row('data-go="settings"', 'Notifications and settings', pushStatus() === 'on' ? 'Notifications on' : '')}
+      </div></section>
+    <section class="sec"><div class="sec-h"><h3>Excel sheets</h3>${at ? `<span class="small">sent ${fDay(at).replace(/ \d{4}$/, '')}</span>` : ''}</div>
+      ${list.length ? `<div class="group">${list.map(s => row(`data-sheet="${esc(s.name)}"`, esc(s.name) + (s.hidden ? ' <span class="small muted">(hidden in Excel)</span>' : ''), '')).join('')}</div>`
+        : `<p class="small muted">No sheets yet. Run AppLinkNow in Excel, then tap ⟳.</p>`}
+    </section>`;
 }
+
 function sheetHint(s) {
   if (s.choices && s.choices.length) return esc('Pick ' + s.choices.map(c => c.label.toLowerCase()).join(', ') + ': ' + s.choices[0].options.map(o => o.v).join(', '));
   const first = (s.rows || []).slice(0, 3).map(r => r.c.find(x => x)).filter(Boolean);
@@ -736,7 +770,7 @@ function vText(t, names) {
 }
 function subLine(vals) {
   const plain = vals.filter(x => barPct(x.v) == null && !isStatus(x.v));
-  return plain.map(x => x.h ? `${esc(x.h)} <b class="num">${esc(x.v)}</b>` : `<span class="${tone(x.v)}">${esc(x.v)}</span>`).join(' · ');
+  return plain.map(x => x.h ? `${esc(x.h)} <b class="num">${esc(x.v)}</b>` : `<span class="${tone(x.v)}">${esc(x.v)}</span>`).join(', ');
 }
 function sectionTotal(s) {
   const rows = s.items.filter(it => it.type === 'row' && it.prim && isNum(it.prim.v));
@@ -765,7 +799,7 @@ function viewList(secs, names) {
 function viewFold(secs, names, sheet) {
   const openSet = state.fold[sheet] || (state.fold[sheet] = new Set());
   const allOpen = secs.every((s, k) => openSet.has(k));
-  return `<div class="row small" style="justify-content:flex-end;margin:-4px 2px 6px"><button class="link-btn" style="color:#b9a8ff" data-foldall="${allOpen ? 0 : 1}">${allOpen ? 'Close all' : 'Open all'}</button></div><div class="vlist">${secs.map((s, k) => {
+  return `<div class="row small" style="justify-content:flex-end;margin:-4px 2px 6px"><button class="link-btn"  data-foldall="${allOpen ? 0 : 1}">${allOpen ? 'Close all' : 'Open all'}</button></div><div class="vlist">${secs.map((s, k) => {
     const isOpen = openSet.has(k), tot = sectionTotal(s);
     return `<div class="fold ${isOpen ? 'open' : ''}"><button class="fold-h" data-fold="${k}"><span class="fold-c">${isOpen ? '▾' : '▸'}</span><span class="vl-l">${esc(s.title || 'Section')}</span><span class="vl-v num">${esc(tot)}</span></button>
       ${isOpen ? viewList([{ ...s, title: '' }], names).replace('<div class="vlist">', '<div>') : ''}</div>`;
@@ -854,7 +888,7 @@ function bindAdd() {
     try {
       const sha = await GH.putEntry(entry);
       state.pending.unshift({ id: entry.id, sha, entry }); LS.set('pending', state.pending);
-      toast(`Saved ${inr(entry.amount)} · Excel adds it next time it opens`);
+      toast(`Saved ${inr(entry.amount)}. Excel adds it next time it opens`);
     } catch (e) {
       state.outbox.push(entry); LS.set('outbox', state.outbox);
       toast(e instanceof AppError && !/offline/i.test(e.message) && navigator.onLine !== false ? e.message + ' Kept on this phone.' : 'Saved on this phone · uploads when you’re online');
@@ -877,7 +911,7 @@ function viewSettings() {
     <p class="small" id="s-msg" style="margin:10px 0 0"></p>
     ${state.cfg ? `<button class="secondary" id="s-back">Back</button><button class="secondary" id="s-forget" style="color:var(--bad)">Forget this phone</button>` : ''}
   </section>
-  <p class="small muted" style="text-align:center">MyMoney · reads figures your Excel workbook sends to GitHub.</p>`;
+`;
 }
 /* ---------------- phone notifications ---------------- */
 const b64url = bytes => btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
