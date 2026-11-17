@@ -879,8 +879,11 @@ function viewSalary() {
   const deds = ['PF (Employee)', 'Professional Tax', 'Income Tax', 'ESI', 'Labour Welfare Fund', 'Meal Recovery'].filter(h => num(r[h]) > 0);
   const line = (l, v, b) => `<div class="kv ${b ? 'kvb' : ''}"><span>${l}</span><span class="num">${inr(v)}</span></div>`;
   const fy = (sheetList().find(s => s.name === 'Salary') || { rows: [] }).rows.map(x => x.c.filter(t => t)).filter(c => /^FY \d{4}/.test(c[0] || '') && num(c[1]) > 0);
-  return `<div class="pick-row"><span class="muted small">Payslip for</span>
-      <select class="inp sel" id="pay-month">${ps.months.map((m, k) => `<option value="${k}" ${k === idx ? 'selected' : ''}>${esc(m)}</option>`).reverse().join('')}</select></div>
+  const yOf = m => (String(m).match(/\d{4}/) || [''])[0], years = [...new Set(ps.months.map(yOf))].filter(Boolean).sort().reverse(), yr = yOf(ps.months[idx]);
+  const inYr = ps.months.map((m, k) => ({ m, k })).filter(x => yOf(x.m) === yr).reverse();
+  return `<div class="row2" style="margin-bottom:12px">
+      <div><label class="f" for="pay-year" style="margin-top:0">Year</label><select class="inp" id="pay-year">${years.map(y => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+      <div><label class="f" for="pay-month" style="margin-top:0">Month</label><select class="inp" id="pay-month">${inYr.map(x => `<option value="${x.k}" ${x.k === idx ? 'selected' : ''}>${esc((() => { const t = String(x.m).replace(/[\s-]*\d{4}\s*$/, ''), i = MON.findIndex(mm => mm.toLowerCase() === t.slice(0, 3).toLowerCase()); return i >= 0 ? MONF[i] : (t || x.m); })())}</option>`).join('')}</select></div></div>
     <section class="hero">
       <p class="hero-k" style="margin-top:0">Net take-home pay</p>
       <h2 class="hero-v num">${inr(net)}</h2>
@@ -903,6 +906,11 @@ function viewSalary() {
 function bindSalary() {
   const sel = document.getElementById('pay-month'); if (!sel) return;
   sel.onchange = () => { state.payIdx = Number(sel.value); render(); };
+  const ys = document.getElementById('pay-year');
+  if (ys) ys.onchange = () => {                                    // newest payslip of the chosen year
+    const ps = latestPayslip(); const k = ps.months.map((m, i) => ({ m, i })).filter(x => (String(x.m).match(/\d{4}/) || [''])[0] === ys.value).pop();
+    if (k) { state.payIdx = k.i; render(); }
+  };
   document.getElementById('pay-share').onclick = async () => {
     const r = latestPayslip(state.payIdx == null ? undefined : state.payIdx).row;
     const t = `Payslip ${r.Month} – ${r.Employer}\nGross ${inr(num(r['Gross Earnings']))}\nDeductions ${inr(num(r['Total Deductions']))}\nNet pay ${inr(num(r['Net Pay']))}`;
