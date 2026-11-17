@@ -357,3 +357,14 @@ html[data-theme=light] .tabs{background:rgba(255,255,255,.92)}
 details.sms{margin:0 0 12px;background:var(--surface);border-radius:16px;padding:12px 14px}
 details.sms summary{cursor:pointer;font-size:14px;color:var(--blue1)}
 details.sms .secondary{margin-top:8px}
+
+/* easier navigation */
+.subnav{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -20px 14px;padding:2px 20px 4px;-webkit-overflow-scrolling:touch}
+.subnav::-webkit-scrollbar{display:none}
+.sn{flex:none;border:1px solid var(--line);background:none;color:var(--muted);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.sn.on{background:var(--raised);color:var(--text);border-color:transparent;font-weight:600}
+.shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 6px}
+.sc{display:flex;flex-direction:column;align-items:center;gap:6px;border:none;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:0;min-width:0}
+.sc span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sc-i{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--surface);font-size:22px}
+.back-btn{font-size:30px!important;line-height:1;margin-left:-8px}
