@@ -23,7 +23,7 @@ const state = {
   tab: 'home', lastError: null, syncing: false, stack: [], lastTab: 'home', goingBack: false,
   tx: { q: '', type: 'All', year: 'All', month: 'All', cat: 'All', limit: 100 },
   add: null,
-  trades: LS.get('trades', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
+  trades: LS.get('trades', []), tradeDels: LS.get('tradeDels', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
   balSaved: LS.get('balSaved', null), pfEdit: null,
@@ -201,6 +201,9 @@ async function sync(opts = {}) {
     try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
     try { await refreshTrades(); } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'tradedel'); if (r.status === 404) state.tradeDels = []; else if (r.ok) { const fl = (await r.json()).filter(f => /\.json$/.test(f.name)), known = Object.fromEntries(state.tradeDels.map(d => [d.id, d])), out = [];
+      for (const f of fl) { const id = f.name.replace(/\.json$/, ''); let d = known[id]; if (!d) { try { d = { id, entry: await GH.getEntry(f.path) }; } catch (e) { continue; } } out.push(d); } state.tradeDels = out; }
+      LS.set('tradeDels', state.tradeDels); } catch (e) { /* optional */ }
     await loadDocs();
     try { await refreshRecats(); } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
@@ -1019,6 +1022,11 @@ function invHoldings() {
     else { h.invested -= h.units > 0 ? h.invested * Math.min(1, t.units / h.units) : 0; h.units -= t.units; }
     h.pending++;
   }
+  for (const d of state.tradeDels) {
+    const e = d.entry, h = find(e.name); if (!h || !(Number(e.units) > 0)) continue;
+    if (e.side === 'Sell') { h.units += Number(e.units); h.invested += Number(e.amount) || 0; } else { h.units -= Number(e.units); h.invested -= Number(e.amount) || 0; }
+    h.pending++;
+  }
   for (const h of list) {
     const p = priceOf(h.code);
     h.price = p ? p.price : null; h.priceDate = p ? p.date : '';
@@ -1030,7 +1038,9 @@ function invHoldings() {
 function tradeLog() {
   const x = inv(), inExcel = new Set(((x && x.log) || []).map(r => r[5]));
   const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true }));
-  for (const r of (x && x.log) || []) if (Number(r[3]) > 0 && Number(r[4]) > 0) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], pending: false });   // skip half-filled rows
+  const dels = new Set(state.tradeDels.map(d => d.entry.row));
+  for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], row: r[6], pending: false,
+    empty: !(Number(r[3]) > 0 && Number(r[4]) > 0), deleting: r[6] != null && dels.has(r[6]) });
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
@@ -1038,7 +1048,7 @@ function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN'
 function viewInvestFunds() {
   const hs = invHoldings(), tot = hs.reduce((s, h) => s + h.value, 0), invd = hs.reduce((s, h) => s + h.invested, 0);
   const dates = hs.map(h => h.priceDate).filter(Boolean).sort();
-  const log = tradeLog().slice(0, 6);
+  const log = tradeLog().slice(0, state.logAll ? 60 : 8);
   return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${hs.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
       ${hs.length ? hs.map(h => `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}</span></span>
           <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`).join('')
@@ -1047,8 +1057,10 @@ function viewInvestFunds() {
       <button class="primary" data-gotab="trade" style="margin-top:12px">Add buy / sell</button>
     </section>
     ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
-      ${log.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${esc(fDay(pDate(r.date)))} · ${esc(r.side)} ${fUnits(Number(r.units) || 0)} units${r.pending ? ' · waiting for Excel' : ''}</span></span>
-        <span class="num" style="text-align:right">${r.side === 'Sell' ? '+' : ''}${inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>` : ''}</span></div>`).join('')}</section>` : ''}`;
+      ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${esc(r.side)} ${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
+        <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
+          : r.row && !r.deleting ? `<br><button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
+      ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}</section>` : ''}`;
 }
 function viewInvestPf() {
   const x = inv() || {}, e = x.epf, p = x.ppf || {}, b = balPending(), pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
@@ -1280,7 +1292,25 @@ function bindTrade() {
     }
   };
 }
+async function deleteLogRows(rows) {
+  let ok = 0;
+  for (const r of rows) {
+    const entry = { id: uid('d'), row: r.row, date: String(r.date).slice(0, 10), name: r.name, units: Number(r.units) || 0, amount: Number(r.amount) || 0, side: r.side, createdAt: new Date().toISOString() };
+    try { await GH.putJson(`tradedel/${entry.id}.json`, entry, `Delete row ${r.row} ${r.name}`); state.tradeDels.push({ id: entry.id, entry }); ok++; }
+    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); break; }
+  }
+  LS.set('tradeDels', state.tradeDels);
+  if (ok) toast(`${ok} row${ok === 1 ? '' : 's'} will be deleted when Excel next opens`);
+  render();
+}
 function bindInvest() {
+  const logRows = () => tradeLog().filter(r => !r.pending);
+  document.querySelectorAll('[data-log-del]').forEach(b => b.onclick = () => { if (!confirmInline(b)) { b.textContent = 'Tap again to delete'; return; } const r = logRows().find(x => String(x.row) === b.dataset.logDel); if (r) deleteLogRows([r]); });
+  document.querySelectorAll('[data-log-undo]').forEach(b => b.onclick = async () => {
+    const d = state.tradeDels.find(x => String(x.entry.row) === b.dataset.logUndo); if (!d) return;
+    try { await GH.remove(`tradedel/${d.id}.json`, 'Undo delete'); state.tradeDels = state.tradeDels.filter(x => x !== d); LS.set('tradeDels', state.tradeDels); render(); } catch (e) { toast(e.message || 'Couldn’t reach GitHub'); }
+  });
+  const de = document.getElementById('log-del-empty'); if (de) de.onclick = () => { if (!confirmInline(de)) { de.textContent = 'Tap again to delete the empty rows'; return; } deleteLogRows(logRows().filter(r => r.empty && !r.deleting)); };
   document.querySelectorAll('[data-trade-edit]').forEach(b => b.onclick = () => editTrade(b.dataset.tradeEdit));
   document.querySelectorAll('[data-trade-del]').forEach(b => b.onclick = async () => {
     const id = b.dataset.tradeDel; b.disabled = true;
