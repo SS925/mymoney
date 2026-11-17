@@ -832,7 +832,7 @@ function viewFuture() {
   const ri = retireInputs(), base = { ...ri.x, ...(retirePending() && state.retireSaved ? state.retireSaved.values : {}) };
   const tx = state.retireTry || (state.retireTry = { x: { ...base }, b: ri.b });
   const changed = tx.x.retire !== base.retire;
-  const ep = sheetRowCells('Savings Schemes', 'EPF'), pp = sheetRowCells('Savings Schemes', 'PPF'), fd = sheetRowCells('Savings Schemes', 'Fixed deposits');
+  const ep = sheetRowRaw('Savings Schemes', 'EPF'), pp = sheetRowRaw('Savings Schemes', 'PPF'), fd = sheetRowRaw('Savings Schemes', 'Fixed deposits');
   const today = [ep && ['Employees’ Provident Fund (EPF)', num(ep[2])], pp && ['Public Provident Fund (PPF)', num(pp[2])], fd && num(fd[2]) > 0 && ['Fixed deposits', num(fd[2])]].filter(Boolean);
   return `<section class="hero" id="rt-card">${retireCard(tx.x, tx.b)}</section>
   ${retirePending() ? `<p class="banner" style="margin:14px 0 0">Your new plan is saved. Excel applies it next time the workbook opens; the Excel figures below update after that.</p>` : ''}
@@ -865,6 +865,12 @@ function viewFuture() {
 }
 
 /* ---------------- Salary, Money, Investments (layout from the reference screens) ---------------- */
+/* same row, but every column kept in place (blank cells stay blank) */
+function sheetRowRaw(sheetName, startsWith) {
+  const sh = sheetList().find(s => s.name === sheetName); if (!sh) return null;
+  const r = sh.rows.find(x => String(x.c[0] || '').trim().toLowerCase().startsWith(startsWith.toLowerCase()));
+  return r ? r.c : null;
+}
 function sheetRowCells(sheetName, startsWith) {
   const sh = sheetList().find(s => s.name === sheetName); if (!sh) return null;
   const r = sh.rows.find(x => (x.c.find(t => t) || '').trim().toLowerCase().startsWith(startsWith.toLowerCase()));
@@ -961,7 +967,7 @@ function bindMoney() {
 
 function viewInvest() {
   const tot = sheetRowValue('Balances', 'Investments total');
-  const sum = sheetRowCells('Savings Schemes', 'Total');          // Total | Invested | Est. value | Gain | Gain %
+  const sum = sheetRowRaw('Savings Schemes', 'Total');          // Total | Invested | Est. value | Gain | Gain %
   const mf = sheetRowCells('Balances', 'Mutual funds');
   const mix = ['Safe', 'Pension', 'Market'].map(w => {
     const sh = sheetList().find(s => s.name === 'Balances'); if (!sh) return null;
@@ -969,7 +975,7 @@ function viewInvest() {
     return null; }).filter(Boolean);
   const mixTot = mix.reduce((s, x) => s + x.v, 0) || 1;
   const MIXC = ['#a9cdf5', '#3f74b3', '#6fd3a0'];
-  const hold = ['EPF', 'PPF', 'Fixed deposits', 'Other schemes'].map(l => { const c = sheetRowCells('Savings Schemes', l); return c ? { name: c[0], inv: num(c[1]), v: num(c[2]), g: c[4] } : null; })
+  const hold = ['EPF', 'PPF', 'Fixed deposits', 'Other schemes'].map(l => { const c = sheetRowRaw('Savings Schemes', l); return c ? { name: c[0], inv: num(c[1]), v: num(c[2]), g: num(c[1]) > 0 ? c[4] : '' } : null; })   // no gain % without an invested figure
     .filter(x => x && (x.v > 0 || x.inv > 0));
   if (mf) hold.push({ name: 'Mutual funds and stocks', v: num(mf[mf.length > 3 ? 3 : 2]), g: '' });
   const k = kpis();
@@ -1615,7 +1621,7 @@ function viewTax() {
   const e = (inv() || {}).epf || {}, now = new Date();
   const monthsDone = Math.max(0, Math.min(12, (now.getFullYear() - from.getFullYear()) * 12 + now.getMonth() - 3));
   const epf = (Number(e.youMonth) || 0) * monthsDone;
-  const ppfC = sheetRowCells('Savings Schemes', 'Deposited this financial year'), ppf = ppfC ? num(ppfC[1]) : 0;
+  const ppfC = sheetRowRaw('Savings Schemes', 'Deposited this financial year'), ppf = ppfC ? num(ppfC[1]) : 0;
   const elssNames = new Set(invHoldings().filter(h => /ELSS/i.test(h.type)).map(h => h.name.toLowerCase()));
   const elss = tradeLog().filter(r => r.side === 'Buy' && elssNames.has(String(r.name).toLowerCase()) && inFy(r)).reduce((s, r) => s + (Number(r.amount) || 0), 0);
   const ins = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /insurance|lic/i.test(t.Category) && /\blic\b|life/i.test(t.Details) && inFy(t)).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
