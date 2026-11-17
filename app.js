@@ -2511,7 +2511,11 @@ document.addEventListener('visibilitychange', () => {
   if (lockCfg() && !state.locked && Date.now() - (LS.get('lastActive', 0) || 0) > LOCK_AFTER) showLock();
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
+  const hadSw = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSw && !window.__mmReloaded) { window.__mmReloaded = true; location.reload(); } });   // new version: show it at once
+}
 { const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
 applyTheme();
 handleShared();
