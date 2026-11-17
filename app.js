@@ -1152,10 +1152,10 @@ function viewTrade() {
     <div class="seg" id="tr-kind" style="margin-top:8px">${[['MF', 'Mutual fund'], ['Stock', 'Stock / ETF']].map(([k, l]) => `<button data-v="${k}" class="${t.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     ${mine.length ? `<label class="f">Your holdings</label><div class="pay" id="tr-mine">${mine.slice(0, 12).map((h, i) => `<button class="chip ${t.name === h.name ? 'on' : ''}" data-i="${i}">${esc(h.name.length > 28 ? h.name.slice(0, 27) + '…' : h.name)}</button>`).join('')}</div>` : ''}
     <label class="f" for="tr-name">${t.kind === 'MF' ? 'Fund name' : 'Stock name'}</label>
-    <input class="inp" id="tr-name" autocomplete="off" placeholder="${t.kind === 'MF' ? 'Type 3+ letters to search, e.g. Parag Parikh' : 'e.g. Tata Motors'}" value="${esc(t.name)}">
-    <div id="tr-results" class="group" ${t.results.length ? '' : 'hidden'}>${t.results.map((r, i) => `<button class="navrow" data-r="${i}"><span class="nt">${esc(r.schemeName)}<br><span class="small muted">Code ${esc(r.schemeCode)}</span></span></button>`).join('')}</div>
+    <input class="inp" id="tr-name" autocomplete="off" placeholder="${t.kind === 'MF' ? 'Type 3+ letters to search, e.g. Parag Parikh' : 'Type the company name or symbol, e.g. Infosys'}" value="${esc(t.name)}">
+    <div id="tr-results" class="group" ${t.results.length ? '' : 'hidden'}>${t.results.map((r, i) => resultRow(r, i)).join('')}</div>
     <label class="f" for="tr-code">Price code</label>
-    <input class="inp" id="tr-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="${t.kind === 'MF' ? 'AMFI code – filled in when you pick a fund' : 'NSE symbol, e.g. TATAMOTORS'}" value="${esc(t.code)}">
+    <input class="inp" id="tr-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="${t.kind === 'MF' ? 'AMFI code – filled in when you pick a fund' : 'Filled in when you pick – NSE symbol or BSE:code'}" value="${esc(t.code)}">
     <div class="row2">
       <div><label class="f" for="tr-units">Units</label><input class="inp num" id="tr-units" inputmode="decimal" placeholder="0" value="${esc(t.units)}"></div>
       <div><label class="f" for="tr-price">Price per unit (₹)</label><input class="inp num" id="tr-price" inputmode="decimal" placeholder="NAV / price" value="${esc(t.price)}"></div>
@@ -1173,6 +1173,33 @@ function viewTrade() {
     <button class="primary" id="tr-save">${t.editId ? 'Save changes' : `Save ${t.side === 'Buy' ? 'buy' : 'sell'}`}</button>
     <p class="note">Amount is what you paid (buy) or got back (sell). Each one is added as a new row in Excel’s buy/sell log on Stocks &amp; MF the next time the workbook opens.</p>
   </section>`;
+}
+
+/* NSE + BSE company list (stocks.json, saved weekly by the GitHub price check) */
+let _stocks = null;
+async function stockList() {
+  if (_stocks) return _stocks;
+  const c = LS.get('stocks', null);
+  if (c && c.list && Date.now() - (c.at || 0) < 7 * DAY) return (_stocks = c.list);
+  try { const r = await GH.call('GET', 'stocks.json', { raw: true }); if (r.ok) { const j = await r.json(); _stocks = j.list || []; LS.set('stocks', { at: Date.now(), list: _stocks }); return _stocks; } } catch (e) { /* offline */ }
+  return (_stocks = c && c.list ? c.list : []);
+}
+function searchStocks(list, q) {
+  const Q = q.toUpperCase().replace(/\s+/g, ' '), words = Q.split(' ').filter(Boolean);
+  const scored = [];
+  for (const [code, name, ex, id] of list) {
+    const N = String(name).toUpperCase(), sym = ex === 'BSE' ? String(id || '').toUpperCase() : code;
+    let sc = 0;
+    if (sym === Q || code === Q || code === 'BSE:' + Q) sc = 100; else if (sym.startsWith(Q)) sc = 80; else if (N.startsWith(Q)) sc = 70;
+    else if (words.every(w => N.includes(w) || sym.includes(w))) sc = 40; else continue;
+    if (ex === 'NSE') sc += 5;                                         // same company on both: NSE first
+    scored.push({ sc, schemeName: name, schemeCode: code, ex, sym });
+  }
+  return scored.sort((a, b) => b.sc - a.sc || a.schemeName.length - b.schemeName.length).slice(0, 10);
+}
+function resultRow(x, i) {
+  const sub = x.ex ? `${x.ex} · ${x.ex === 'BSE' ? esc(x.schemeCode.slice(4)) + (x.sym ? ` (${esc(x.sym)})` : '') : esc(x.schemeCode)}` : `Code ${esc(x.schemeCode)}`;
+  return `<button class="navrow" data-r="${i}"><span class="nt">${esc(x.schemeName)}<br><span class="small muted">${sub}</span></span></button>`;
 }
 function bindTrade() {
   const t = state.trade, $ = id => document.getElementById(id);
@@ -1195,7 +1222,12 @@ function bindTrade() {
   // fund search (public mutual fund list)
   let timer;
   $('tr-name').oninput = () => {
-    if (t.kind !== 'MF') return;
+    if (t.kind !== 'MF') {                                              // stocks: NSE + BSE list saved by the daily GitHub check
+      const q = $('tr-name').value.trim(); if (q.length < 2) { $('tr-results').hidden = true; return; }
+      stockList().then(list => { t.results = searchStocks(list, q); const box = $('tr-results'); if (!box) return;
+        box.innerHTML = t.results.map((x, i) => resultRow(x, i)).join('') || '<p class="small muted" style="padding:8px 0">No match – type the NSE symbol or BSE:code in Price code.</p>'; box.hidden = false; bindResults(); });
+      return;
+    }
     clearTimeout(timer); const q = $('tr-name').value.trim();
     if (q.length < 3) { $('tr-results').hidden = true; return; }
     timer = setTimeout(async () => {
@@ -1205,13 +1237,14 @@ function bindTrade() {
         t.results = arr.filter(x => /direct/i.test(x.schemeName) === /direct/i.test(q) || !/direct|regular/i.test(q)).slice(0, 8);
         if (!t.results.length) t.results = arr.slice(0, 8);
         const box = $('tr-results'); if (!box) return;
-        box.innerHTML = t.results.map((x, i) => `<button class="navrow" data-r="${i}"><span class="nt">${esc(x.schemeName)}<br><span class="small muted">Code ${esc(x.schemeCode)}</span></span></button>`).join('');
+        box.innerHTML = t.results.map((x, i) => resultRow(x, i)).join('');
         box.hidden = !t.results.length; bindResults();
       } catch (e) { /* offline or search unavailable: type the code yourself */ }
     }, 350);
   };
   const bindResults = () => document.querySelectorAll('#tr-results [data-r]').forEach(b => b.onclick = () => {
     read(); const x = t.results[Number(b.dataset.r)]; t.name = x.schemeName; t.code = String(x.schemeCode); t.results = [];
+    if (x.ex) { t.type = /\bETF\b|BEES/i.test(x.schemeName + ' ' + x.schemeCode) ? 'ETF' : 'Stock'; const p = priceOf(t.code); if (p && !t.price) t.price = String(p.price); render(); return; }
     if (/elss|tax saver/i.test(x.schemeName)) t.type = 'ELSS (tax saver)'; else if (/index|nifty|sensex/i.test(x.schemeName)) t.type = 'Index fund';
     else if (/small|mid ?cap/i.test(x.schemeName)) t.type = 'Small / Mid cap MF'; else if (/hybrid|balanced/i.test(x.schemeName)) t.type = 'Hybrid MF';
     else if (/debt|liquid|gilt|bond/i.test(x.schemeName)) t.type = 'Debt MF';
