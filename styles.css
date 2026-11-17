@@ -296,3 +296,59 @@ table.proj th{color:var(--muted);font-weight:500}
 #tr-results .navrow .nt{font-size:14px}
 .kv.hold > span:first-child{min-width:0;overflow-wrap:anywhere}
 .kv > .num{white-space:nowrap}
+
+/* list rows that open an editor */
+.kv.rowbtn{width:100%;background:none;border:0;border-bottom:1px solid var(--hair);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.kv.rowbtn:last-child{border-bottom:none}
+.kv.rowbtn > span:first-child{min-width:0}
+.kv.rowbtn .num{text-align:right}
+.btnlink{display:block;text-align:center;text-decoration:none;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--blue2)}
+textarea.inp{resize:vertical;font-family:inherit;line-height:1.4}
+
+/* lock screen */
+#lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:20px}
+body.locked > :not(#lock){visibility:hidden}
+.lk{width:100%;max-width:320px;text-align:center}
+.lk-logo{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;display:grid;place-items:center;font-size:30px;font-weight:700;color:#fff;background:var(--card-grad)}
+.lk h2{margin:0 0 4px;font-size:22px}
+.lk-dots{display:flex;justify-content:center;gap:14px;margin:22px 0 26px}
+.lk-dots i{width:13px;height:13px;border-radius:50%;border:2px solid var(--muted)}
+.lk-dots i.on{background:var(--blue1);border-color:var(--blue1)}
+.lk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;justify-items:center}
+.lk-pad button{width:72px;height:72px;border-radius:50%;border:0;background:var(--surface);color:var(--text);font-size:26px;font-weight:500;cursor:pointer}
+.lk-pad button:active{background:var(--raised)}
+
+/* monthly report, and printing it as a PDF */
+.report{background:#fff;color:#151515;border-radius:18px;padding:22px 20px;margin-top:16px}
+.report h1{font-size:22px;margin:0 0 4px} .report h2{font-size:16px;margin:20px 0 6px}
+.report .muted{color:#666}
+.rt{width:100%;border-collapse:collapse;font-size:14px}
+.rt th,.rt td{padding:7px 4px;border-bottom:1px solid #e3e6ea;text-align:left}
+.rt th{font-size:12px;color:#555;font-weight:600}
+.rt td.num,.rt tr.num td{text-align:right}
+.rt tr.num td:first-child{text-align:left}
+@media print{
+  body{background:#fff!important}
+  body > :not(main), header, nav, .tabs, .banner, .noprint, #toast, .fab{display:none!important}
+  main{padding:0!important;margin:0!important}
+  .report{border-radius:0;padding:0;margin:0}
+}
+
+/* light theme */
+html[data-theme=light]{
+  --bg:#f4f6f9; --surface:#ffffff; --raised:#e9eef4; --line:#d9dfe6; --hair:rgba(0,0,0,.08);
+  --text:#16202b; --muted:#5d6773; --faint:#8a939e;
+  --good:#16804f; --bad:#c8392c; --warn:#a86b00; --blue1:#2f6db3; --blue2:#3d7cc4; --slate:#8796a8;
+}
+html[data-theme=light] body{background:var(--bg)}
+html[data-theme=light] .banner{background:#e3ecf7;color:#23466e}
+html[data-theme=light] .banner.err{background:#fde7e4;color:#8a2219}
+html[data-theme=light] .chip.on,html[data-theme=light] .seg button.on{box-shadow:inset 0 0 0 1px #c3ccd7}
+html[data-theme=light] .tx .ic.tr{background:#e3e7ec;color:#3a4350}
+html[data-theme=light] .tx.pending .ic,html[data-theme=light] .badge{background:#dfeaf8;color:#24508a}
+html[data-theme=light] .hero{box-shadow:0 14px 30px rgba(30,60,100,.22)}
+html[data-theme=light] .lk-logo{color:#fff}
+html[data-theme=light] .top{background:rgba(244,246,249,.85)}
+html[data-theme=light] .tabs{background:rgba(255,255,255,.92)}
+#lock[hidden]{display:none}
