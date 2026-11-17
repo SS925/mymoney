@@ -1066,7 +1066,7 @@ function viewInvestPf() {
   const x = inv() || {}, e = x.epf, p = x.ppf || {}, b = balPending(), pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
   const wait = b ? `<p class="small warn" style="margin:2px 0 8px">Waiting for Excel: EPF ${inr(b.values.epf)}, EPS ${inr(b.values.eps)} (as of ${esc(fDay(pDate(b.values.asOf)))}), PPF ${inr(b.values.ppf)}. Open the workbook to apply.</p>` : '';
   return `<section class="sec box"><div class="sec-h"><h3>PF and PPF</h3><span class="small">from your passbook</span></div>${wait}
-      ${e ? `<div class="kv"><span>EPF + EPS<br><span class="small muted">Passbook as of ${e.asOf ? esc(fDay(pDate(e.asOf))) : '–'}</span></span><span class="num" style="text-align:right">${inr(e.value)}<br><span class="small muted">EPS ${inr(e.epsTotal)}</span></span></div>
+      ${e ? `<div class="kv"><span>EPF + EPS<br><span class="small muted">Passbook as of ${e.asOf ? esc(fDay(pDate(e.asOf))) : '–'}${Number(e.invested) > 0 ? ` · invested ${inr(e.invested)}` : ' · invested not entered'}</span></span><span class="num" style="text-align:right">${inr(e.value)}<br>${Number(e.invested) > 0 ? `<span class="small ${e.value >= e.invested ? 'good' : 'bad'}">${e.value >= e.invested ? '+' : '−'}${inr(Math.abs(e.value - e.invested))}</span>` : `<span class="small muted">EPS ${inr(e.epsTotal)}</span>`}</span></div>
       <div class="kv"><span>Into EPF each month<br><span class="small muted">You ${pc(e.yourRate)} = ${inr(e.youMonth)} · employer ${inr(e.employerMonth)} after EPS</span></span><span class="num" style="text-align:right">${inr(e.epfMonth)}<br><span class="small muted">EPS ${inr(e.epsMonth)}</span></span></div>
       <div class="kv"><span>PPF<br><span class="small muted">${p.updated ? 'Updated ' + esc(fDay(pDate(p.updated))) : 'Balance you typed'}</span></span><span class="num">${inr(p.balance)}</span></div>`
       : `<p class="small muted" style="margin:4px 0 0">Run the new AppLink macro once in Excel to see your PF and PPF here.</p>`}
@@ -1082,7 +1082,7 @@ function pfMonthly(wage, you, er, cap, rate) {
 function viewPfEdit() {
   const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, s = (balPending() || {}).values || {};
   const f = state.pfEdit || (state.pfEdit = {
-    epf: s.epf ?? e.epfPassbook ?? '', eps: s.eps ?? e.epsPassbook ?? '', asOf: s.asOf ?? e.asOf ?? isoToday(),
+    epf: s.epf ?? e.epfPassbook ?? '', eps: s.eps ?? e.epsPassbook ?? '', asOf: s.asOf ?? e.asOf ?? isoToday(), inv: s.epfInvested ?? e.invested ?? '',
     ppf: s.ppf ?? p.balance ?? '', ppfDate: s.ppfDate ?? p.updated ?? isoToday(),
     wage: s.wage ?? e.wage ?? 25000, you: +(((s.yourRate ?? e.yourRate ?? 0.12) * 100).toFixed(2)), er: +(((s.employerRate ?? e.employerRate ?? 0.12) * 100).toFixed(2)) });
   const m = pfMonthly(Number(f.wage) || 0, (Number(f.you) || 0) / 100, (Number(f.er) || 0) / 100, Number(e.epsCap) || 25000, Number(e.epsRate) || 0.0833);
@@ -1094,6 +1094,8 @@ function viewPfEdit() {
     <input class="inp num" id="pf-epf" inputmode="decimal" value="${esc(val(f.epf))}" placeholder="Employee + employer share, with interest">
     <label class="f" for="pf-eps">EPS pension balance (₹)</label>
     <input class="inp num" id="pf-eps" inputmode="decimal" value="${esc(val(f.eps))}" placeholder="Pension contribution total">
+    <label class="f" for="pf-inv">Total invested so far (₹)</label>
+    <input class="inp num" id="pf-inv" inputmode="decimal" value="${esc(val(f.inv))}" placeholder="Your figure – used for gain and return">
     <label class="f" for="pf-asof">Passbook balance as of</label>
     <input class="inp" id="pf-asof" type="date" value="${esc(f.asOf)}" max="${isoToday()}">
     <p class="small muted" style="margin:8px 0 0">Each full month after this date adds ${inr(m.epf)} to EPF and ${inr(m.eps)} to EPS.</p>
@@ -1126,7 +1128,7 @@ function viewPfEdit() {
 function bindPfEdit() {
   const f = state.pfEdit, $ = id => document.getElementById(id), e = (inv() || {}).epf || {};
   const n = v => { const t = String(v).replace(/[,₹\s%]/g, ''); return t === '' ? null : Number(t); };
-  const read = () => { f.epf = $('pf-epf').value; f.eps = $('pf-eps').value; f.asOf = $('pf-asof').value; f.ppf = $('pf-ppf').value;
+  const read = () => { f.epf = $('pf-epf').value; f.eps = $('pf-eps').value; f.inv = $('pf-inv').value; f.asOf = $('pf-asof').value; f.ppf = $('pf-ppf').value;
     f.ppfDate = $('pf-ppfd').value; f.wage = $('pf-wage').value; f.you = $('pf-you').value; f.er = $('pf-er').value; };
   const live = () => {
     read();
@@ -1137,13 +1139,14 @@ function bindPfEdit() {
   $('pf-cancel').onclick = () => { state.pfEdit = null; state.tab = 'invest'; window.scrollTo(0, 0); render(); };
   $('pf-save').onclick = async () => {
     read();
-    const v = { epf: n(f.epf), eps: n(f.eps), asOf: f.asOf, ppf: n(f.ppf), ppfDate: f.ppfDate, wage: n(f.wage), yourRate: n(f.you), employerRate: n(f.er) };
+    const v = { epf: n(f.epf), eps: n(f.eps), epfInvested: n(f.inv), asOf: f.asOf, ppf: n(f.ppf), ppfDate: f.ppfDate, wage: n(f.wage), yourRate: n(f.you), employerRate: n(f.er) };
     for (const [k, label] of [['epf', 'EPF balance'], ['eps', 'EPS balance'], ['ppf', 'PPF balance'], ['wage', 'PF wage']])
       if (v[k] == null || !(v[k] >= 0) || Number.isNaN(v[k])) { toast(`Enter the ${label}`); return; }
     if (!(v.yourRate > 0 && v.yourRate <= 50) || !(v.employerRate >= 0 && v.employerRate <= 50)) { toast('PF % should be between 0 and 50'); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.asOf)) { toast('Pick the passbook date'); return; }
     v.yourRate = Math.round(v.yourRate * 100) / 10000; v.employerRate = Math.round(v.employerRate * 100) / 10000;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.ppfDate || '')) delete v.ppfDate;
+    if (v.epfInvested == null || !(v.epfInvested >= 0)) delete v.epfInvested;
     const saved = { id: 'b' + Date.now().toString(36), ...v, values: v, savedAt: new Date().toISOString() };
     const btn = $('pf-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
