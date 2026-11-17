@@ -190,3 +190,5 @@ table.mtab tr:last-child td{border-bottom:none}
 .pe-row label{flex:1;min-width:0}
 .pe-row .inp{width:118px;padding:8px 10px;font-size:15px;text-align:right}
 #bud-mode{margin-bottom:12px}
+a.navrow{text-decoration:none;color:inherit}
+.btnlink{display:block;text-align:center;text-decoration:none;color:var(--text);margin-top:0;flex:1}

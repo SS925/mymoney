@@ -598,9 +598,29 @@ const SHEET_ICON = { Home: '⌂', Insights: '📊', 'Monthly Compare': '📅', G
   'Yearly Calendar': '🗓', 'Side Income': '💼', 'Goal Planner': '🧭', 'NW Projection': '🚀', 'Savings Schemes': '🏛', 'Big Expenses': '💸',
   Trends: '〰', 'Yearly Summary': '📆', 'Budget Planning': '📝', Balances: '💰', Salary: '🧾', Payslips: '📄' };
 function sheetList() { return (state.sheets && state.sheets.sheets) || []; }
+/* Coaching receipts live in receipts.html on the same site, so their saved copy is readable here */
+function receiptsSummary() {
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem('crm_receipts_v1') || '[]') || []; } catch (e) { list = []; }
+  const inrOf = r => r.cur === '₹' ? Number(r.total) || 0 : Number(r.inr) || 0;
+  const d = new Date(), ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const monthOf = r => r.month || String(r.date || '').slice(0, 7);
+  const thisMonth = list.filter(r => monthOf(r) === ym);
+  const last = list.slice().sort((x, y) => String(y.date || '').localeCompare(String(x.date || '')))[0];
+  return { count: list.length, month: thisMonth.reduce((s, r) => s + inrOf(r), 0), monthCount: thisMonth.length,
+    all: list.reduce((s, r) => s + inrOf(r), 0), last };
+}
 function viewMore() {
   const list = sheetList(), at = state.sheets && state.sheets.exportedAt ? new Date(state.sheets.exportedAt) : null;
-  return `<section class="card"><h2>App screens</h2>
+  const rc = receiptsSummary();
+  return `<section class="card"><h2>Coaching</h2>
+      <a class="navrow" href="receipts.html"><span class="ni">🧾</span><span class="nt">Coaching receipts<br><span class="small muted">${rc.count
+        ? `${rc.count} receipt${rc.count === 1 ? '' : 's'} · this month ${inr(rc.month)} · all time ${inr(rc.all)}`
+        : 'Make a receipt, share the PDF, find old ones'}</span></span><span class="chev">›</span></a>
+      ${rc.last ? `<p class="small muted" style="margin:6px 0 0">Last: ${esc(rc.last.no)} · ${esc(rc.last.client)} · ${fDay(pDate(rc.last.date))}</p>` : ''}
+      <div class="row" style="gap:8px;margin-top:8px"><a class="secondary btnlink" href="receipts.html">New receipt</a><a class="secondary btnlink" href="receipts.html#history">Past receipts</a></div>
+    </section>
+    <section class="card"><h2>App screens</h2>
       <button class="navrow" data-go="future"><span class="ni">↗</span><span class="nt">Retirement<br><span class="small muted">Net worth at 60, earliest retirement, path to 60</span></span><span class="chev">›</span></button>
       <button class="navrow" data-go="settings"><span class="ni">🔔</span><span class="nt">Phone notifications<br><span class="small muted">${pushStatus() === 'on' ? 'On for this phone' : 'Premiums due, budget alerts, monthly summary'}</span></span><span class="chev">›</span></button></section>
     <section class="card"><h2>Your Excel sheets${at ? ` · sent ${fDay(at).replace(/ \d{4}$/, '')}, ${at.toTimeString().slice(0, 5)}` : ''}</h2>
