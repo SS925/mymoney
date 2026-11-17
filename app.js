@@ -26,6 +26,7 @@ const state = {
   trades: LS.get('trades', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
+  balSaved: LS.get('balSaved', null), pfEdit: null,   // PF / PPF figures saved on the phone (settings/balances.json)
 };
 
 /* ---------------- GitHub ---------------- */
@@ -192,6 +193,7 @@ async function sync(opts = {}) {
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
     try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
     try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
     try { await refreshTrades(); } catch (e) { /* optional */ }
     await refreshPending();
@@ -237,8 +239,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pfedit: 'invest', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -257,7 +259,7 @@ function render() {
       <button class="secondary" onclick="sync({toast:true})">Try again</button></div>`;
     return;
   }
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade };
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit };
   v.innerHTML = views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -267,6 +269,7 @@ function render() {
   if (state.tab === 'money') bindMoney();
   if (state.tab === 'invest') bindInvest();
   if (state.tab === 'trade') bindTrade();
+  if (state.tab === 'pfedit') bindPfEdit();
   document.querySelectorAll('[data-sheet-open]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheetOpen; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   if (state.tab === 'future') {
     if (state.retireEdit) bindRetireEdit();
@@ -963,14 +966,95 @@ function viewInvestFunds() {
         <span class="num" style="text-align:right">${r.side === 'Sell' ? '+' : ''}${inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>` : ''}</span></div>`).join('')}</section>` : ''}`;
 }
 function viewInvestPf() {
-  const x = inv(); if (!x || !x.epf) return '';
-  const e = x.epf, p = x.ppf || {}, pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
-  return `<section class="sec box"><div class="sec-h"><h3>PF and PPF</h3><span class="small">from your passbook</span></div>
-      <div class="kv"><span>EPF + EPS<br><span class="small muted">Passbook as of ${e.asOf ? esc(fDay(pDate(e.asOf))) : '–'}</span></span><span class="num" style="text-align:right">${inr(e.value)}<br><span class="small muted">EPS ${inr(e.epsTotal)}</span></span></div>
+  const x = inv() || {}, e = x.epf, p = x.ppf || {}, b = balPending(), pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+  const wait = b ? `<p class="small warn" style="margin:2px 0 8px">Waiting for Excel: EPF ${inr(b.values.epf)}, EPS ${inr(b.values.eps)} (as of ${esc(fDay(pDate(b.values.asOf)))}), PPF ${inr(b.values.ppf)}. Open the workbook to apply.</p>` : '';
+  return `<section class="sec box"><div class="sec-h"><h3>PF and PPF</h3><span class="small">from your passbook</span></div>${wait}
+      ${e ? `<div class="kv"><span>EPF + EPS<br><span class="small muted">Passbook as of ${e.asOf ? esc(fDay(pDate(e.asOf))) : '–'}</span></span><span class="num" style="text-align:right">${inr(e.value)}<br><span class="small muted">EPS ${inr(e.epsTotal)}</span></span></div>
       <div class="kv"><span>Into EPF each month<br><span class="small muted">You ${pc(e.yourRate)} = ${inr(e.youMonth)} · employer ${inr(e.employerMonth)} after EPS</span></span><span class="num" style="text-align:right">${inr(e.epfMonth)}<br><span class="small muted">EPS ${inr(e.epsMonth)}</span></span></div>
-      <div class="kv"><span>PPF<br><span class="small muted">${p.updated ? 'Updated ' + esc(fDay(pDate(p.updated))) : 'Balance you typed'}</span></span><span class="num">${inr(p.balance)}</span></div>
-      <p class="small muted" style="margin:8px 0 0">Change the balances, PF wage and PF % in Excel → Savings Schemes (blue cells).</p>
+      <div class="kv"><span>PPF<br><span class="small muted">${p.updated ? 'Updated ' + esc(fDay(pDate(p.updated))) : 'Balance you typed'}</span></span><span class="num">${inr(p.balance)}</span></div>`
+      : `<p class="small muted" style="margin:4px 0 0">Run the new AppLink macro once in Excel to see your PF and PPF here.</p>`}
+      <button class="primary" data-gotab="pfedit" style="margin-top:12px">Update PF / PPF</button>
     </section>`;
+}
+/* Update PF / PPF from the phone: saved as settings/balances.json, Excel writes it into Savings Schemes */
+function balPending() { const b = state.balSaved; return b && b.id && (!state.data || state.data.balancesApplied !== b.id) ? b : null; }
+function pfMonthly(wage, you, er, cap, rate) {
+  const emp = Math.round(wage * er), eps = Math.min(emp, Math.round(Math.min(wage, cap) * rate));
+  return { you: Math.round(wage * you), eps, erEpf: emp - eps, epf: Math.round(wage * you) + emp - eps };
+}
+function viewPfEdit() {
+  const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, s = (balPending() || {}).values || {};
+  const f = state.pfEdit || (state.pfEdit = {
+    epf: s.epf ?? e.epfPassbook ?? '', eps: s.eps ?? e.epsPassbook ?? '', asOf: s.asOf ?? e.asOf ?? isoToday(),
+    ppf: s.ppf ?? p.balance ?? '', ppfDate: s.ppfDate ?? p.updated ?? isoToday(),
+    wage: s.wage ?? e.wage ?? 25000, you: +(((s.yourRate ?? e.yourRate ?? 0.12) * 100).toFixed(2)), er: +(((s.employerRate ?? e.employerRate ?? 0.12) * 100).toFixed(2)) });
+  const m = pfMonthly(Number(f.wage) || 0, (Number(f.you) || 0) / 100, (Number(f.er) || 0) / 100, Number(e.epsCap) || 25000, Number(e.epsRate) || 0.0833);
+  const val = v => v === '' || v == null ? '' : String(Math.round(Number(v) * 100) / 100);
+  return `<section class="card">
+    <h2 style="margin-top:0">EPF passbook</h2>
+    <p class="small muted" style="margin:0 0 4px">From UMANG or passbook.epfindia.gov.in. Overwrites the old figures – nothing is added as a new row.</p>
+    <label class="f" for="pf-epf">EPF balance (₹)</label>
+    <input class="inp num" id="pf-epf" inputmode="decimal" value="${esc(val(f.epf))}" placeholder="Employee + employer share, with interest">
+    <label class="f" for="pf-eps">EPS pension balance (₹)</label>
+    <input class="inp num" id="pf-eps" inputmode="decimal" value="${esc(val(f.eps))}" placeholder="Pension contribution total">
+    <label class="f" for="pf-asof">Passbook balance as of</label>
+    <input class="inp" id="pf-asof" type="date" value="${esc(f.asOf)}" max="${isoToday()}">
+    <p class="small muted" style="margin:8px 0 0">Each full month after this date adds ${inr(m.epf)} to EPF and ${inr(m.eps)} to EPS.</p>
+  </section>
+  <section class="card">
+    <h2 style="margin-top:0">PPF</h2>
+    <label class="f" for="pf-ppf">PPF balance (₹)</label>
+    <input class="inp num" id="pf-ppf" inputmode="decimal" value="${esc(val(f.ppf))}" placeholder="Balance in your passbook">
+    <label class="f" for="pf-ppfd">Balance date</label>
+    <input class="inp" id="pf-ppfd" type="date" value="${esc(f.ppfDate || '')}" max="${isoToday()}">
+  </section>
+  <section class="card">
+    <h2 style="margin-top:0">PF % and wage</h2>
+    <p class="small muted" style="margin:0 0 4px">Change these only when your salary or PF % changes.</p>
+    <label class="f" for="pf-wage">PF wage per month (Basic + DA, ₹)</label>
+    <input class="inp num" id="pf-wage" inputmode="decimal" value="${esc(val(f.wage))}">
+    <div class="row2">
+      <div><label class="f" for="pf-you">Your PF %</label><input class="inp num" id="pf-you" inputmode="decimal" value="${esc(f.you)}"></div>
+      <div><label class="f" for="pf-er">Employer PF %</label><input class="inp num" id="pf-er" inputmode="decimal" value="${esc(f.er)}"></div>
+    </div>
+    <div class="kv" style="margin-top:10px"><span>You → EPF</span><span class="num" id="pf-m-you">${inr(m.you)}</span></div>
+    <div class="kv"><span>Employer → EPS (pension, max ₹2,083)</span><span class="num" id="pf-m-eps">${inr(m.eps)}</span></div>
+    <div class="kv"><span>Employer → EPF</span><span class="num" id="pf-m-er">${inr(m.erEpf)}</span></div>
+    <div class="kv"><span><b>Into EPF each month</b></span><span class="num"><b id="pf-m-epf">${inr(m.epf)}</b></span></div>
+  </section>
+  <button class="primary" id="pf-save">Save PF and PPF</button>
+  <button class="secondary" id="pf-cancel">Cancel</button>
+  <p class="note">Saved on GitHub. Excel writes these into Savings Schemes (blue cells) next time it opens – then save the workbook.</p>`;
+}
+function bindPfEdit() {
+  const f = state.pfEdit, $ = id => document.getElementById(id), e = (inv() || {}).epf || {};
+  const n = v => { const t = String(v).replace(/[,₹\s%]/g, ''); return t === '' ? null : Number(t); };
+  const read = () => { f.epf = $('pf-epf').value; f.eps = $('pf-eps').value; f.asOf = $('pf-asof').value; f.ppf = $('pf-ppf').value;
+    f.ppfDate = $('pf-ppfd').value; f.wage = $('pf-wage').value; f.you = $('pf-you').value; f.er = $('pf-er').value; };
+  const live = () => {
+    read();
+    const m = pfMonthly(n(f.wage) || 0, (n(f.you) || 0) / 100, (n(f.er) || 0) / 100, Number(e.epsCap) || 25000, Number(e.epsRate) || 0.0833);
+    $('pf-m-you').textContent = inr(m.you); $('pf-m-eps').textContent = inr(m.eps); $('pf-m-er').textContent = inr(m.erEpf); $('pf-m-epf').textContent = inr(m.epf);
+  };
+  ['pf-wage', 'pf-you', 'pf-er'].forEach(id => $(id).oninput = live);
+  $('pf-cancel').onclick = () => { state.pfEdit = null; state.tab = 'invest'; window.scrollTo(0, 0); render(); };
+  $('pf-save').onclick = async () => {
+    read();
+    const v = { epf: n(f.epf), eps: n(f.eps), asOf: f.asOf, ppf: n(f.ppf), ppfDate: f.ppfDate, wage: n(f.wage), yourRate: n(f.you), employerRate: n(f.er) };
+    for (const [k, label] of [['epf', 'EPF balance'], ['eps', 'EPS balance'], ['ppf', 'PPF balance'], ['wage', 'PF wage']])
+      if (v[k] == null || !(v[k] >= 0) || Number.isNaN(v[k])) { toast(`Enter the ${label}`); return; }
+    if (!(v.yourRate > 0 && v.yourRate <= 50) || !(v.employerRate >= 0 && v.employerRate <= 50)) { toast('PF % should be between 0 and 50'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v.asOf)) { toast('Pick the passbook date'); return; }
+    v.yourRate = Math.round(v.yourRate * 100) / 10000; v.employerRate = Math.round(v.employerRate * 100) / 10000;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v.ppfDate || '')) delete v.ppfDate;
+    const saved = { id: 'b' + Date.now().toString(36), ...v, values: v, savedAt: new Date().toISOString() };
+    const btn = $('pf-save'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await GH.putJson('settings/balances.json', saved, 'PF and PPF balances from the app');
+      state.balSaved = saved; LS.set('balSaved', saved); state.pfEdit = null; state.tab = 'invest';
+      toast('Saved. Excel updates Savings Schemes next time it opens'); window.scrollTo(0, 0); render();
+    } catch (err) { toast(err.message || 'Couldn’t reach GitHub – try again'); btn.disabled = false; btn.textContent = 'Save PF and PPF'; }
+  };
 }
 
 /* Add buy / sell */
@@ -1508,6 +1592,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
-{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'settings'].includes(h) && state.cfg) state.tab = h; }
+{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'pfedit', 'settings'].includes(h) && state.cfg) state.tab = h; }
 render();
 if (state.cfg) sync();
