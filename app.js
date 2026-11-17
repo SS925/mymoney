@@ -20,7 +20,7 @@ const state = {
   sheetMode: ['fold', 'tiles', 'table'].includes(LS.get('sheetMode2', 'fold')) ? LS.get('sheetMode2', 'fold') : 'fold', fold: {},
   pending: LS.get('pending', []),    // [{id, sha, entry}] in GitHub inbox, not yet in Excel data
   outbox: LS.get('outbox', []),      // entries saved offline, not uploaded yet
-  tab: 'home', lastError: null, syncing: false,
+  tab: 'home', lastError: null, syncing: false, stack: [], lastTab: 'home', goingBack: false,
   tx: { q: '', type: 'All', year: 'All', month: 'All', cat: 'All', limit: 100 },
   add: null,
   trades: LS.get('trades', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
@@ -258,6 +258,9 @@ function render() {
     av.hidden = false; av.textContent = nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   } else { t.textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab]; av.hidden = true; }
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === (NAV_OF[state.tab] || state.tab)));
+  if (state.lastTab !== state.tab) { if (!state.goingBack && !MAIN_TABS.includes(state.tab)) state.stack.push(state.lastTab); if (MAIN_TABS.includes(state.tab)) state.stack = []; state.stack = state.stack.slice(-20); state.lastTab = state.tab; }
+  state.goingBack = false;
+  const bb = document.getElementById('btn-back'); if (bb) bb.hidden = MAIN_TABS.includes(state.tab) || state.tab === 'settings' && !state.cfg;
   renderFreshness();
   if (!state.cfg && state.tab !== 'settings') state.tab = 'settings';
   if (state.tab === 'settings') { v.innerHTML = viewSettings(); bindSettings(); return; }
@@ -269,7 +272,7 @@ function render() {
   if (state.docEdit && state.docEdit.kind !== state.tab) state.docEdit = null;
   document.body.dataset.tab = state.tab;
   const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover };
-  v.innerHTML = views[state.tab]();
+  v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
@@ -315,6 +318,31 @@ function render() {
   const ha = document.querySelector('[data-homeall]'); if (ha) ha.onclick = () => { state.homeAlertsAll = !state.homeAlertsAll; render(); };
   const hh = document.querySelector('[data-health]'); if (hh) hh.onclick = () => { state.healthOpen = !state.healthOpen; render(); };
   document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
+}
+
+/* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
+const MAIN_TABS = ['home', 'salary', 'money', 'invest', 'future'];
+const SUBNAV = {
+  money: [['money', 'Spending'], ['tx', 'Transactions'], ['bills', 'Bills'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
+  invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['tax', 'Tax'], ['import', 'Import']],
+  future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance']],
+};
+function groupOf(tab) { return MAIN_TABS.includes(tab) ? tab : (NAV_OF[tab] || 'home'); }
+function subnav() {
+  const g = groupOf(state.tab), list = SUBNAV[g]; if (!list) return '';
+  return `<div class="subnav" role="tablist">${list.map(([t, l]) => `<button class="sn ${state.tab === t ? 'on' : ''}" data-gotab="${t}" role="tab" aria-selected="${state.tab === t}">${l}</button>`).join('')}</div>`;
+}
+const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['trade', '📈', 'Buy / sell'], ['goals', '🎯', 'Goals'],
+  ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax'], ['pfedit', '🏛', 'PF / PPF'],
+  ['report', '📄', 'Report'], ['coaching', '🎓', 'Coaching'], ['cover', '🛡', 'Insurance'], ['more', '⋯', 'More']];
+function viewShortcuts() {
+  return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
+    ${SHORTCUTS.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
+}
+function goBack() {
+  let t = state.stack.pop();
+  while (t && t === state.tab) t = state.stack.pop();
+  state.goingBack = true; state.docEdit = null; state.tab = t || (NAV_OF[state.tab] || 'home'); window.scrollTo(0, 0); render();
 }
 function userName() {
   try { const me = JSON.parse(localStorage.getItem('crm_me_v1') || 'null'); if (me && me.name) return me.name; } catch (e) {}
@@ -455,6 +483,7 @@ function viewHome() {
     ${qa('data-gotab="invest"', IC.invest, 'Invest')}
     ${qa('data-gotab="future"', IC.retire, 'Retirement')}
   </div>
+  ${viewShortcuts()}
   ${(() => { const d = tokenDays(); return d != null && d <= 14 ? `<section class="sec box warnbox"><div class="sec-h"><h3>GitHub token ${d < 0 ? 'has expired' : `expires in ${d} day${d === 1 ? '' : 's'}`}</h3></div><p class="small" style="margin:0">Make a new token on GitHub (same settings), then paste it in More → Notifications and settings and in Excel’s AppLink module.</p></section>` : ''; })()}
   ${viewLowBalance()}
   <section class="sec box">
@@ -2474,6 +2503,7 @@ let toastTimer;
 function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 3200); }
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; window.scrollTo(0, 0); render(); });
 document.getElementById('btn-sync').onclick = () => sync({ toast: true });
+document.getElementById('btn-back').onclick = goBack;
 document.getElementById('btn-settings').onclick = () => { state.tab = 'more'; window.scrollTo(0, 0); render(); };
 window.addEventListener('online', () => sync());
 document.addEventListener('visibilitychange', () => {
@@ -2482,7 +2512,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
-{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'pfedit', 'sips', 'bills', 'goals', 'tax', 'report', 'coaching', 'import', 'lockset', 'loans', 'cover', 'settings'].includes(h) && state.cfg) state.tab = h; }
+{ const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
 applyTheme();
 handleShared();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(v => v || navigator.storage.persist()).then(v => { state.storageSafe = !!v; }).catch(() => {});
