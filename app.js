@@ -26,7 +26,10 @@ const state = {
   trades: LS.get('trades', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
-  balSaved: LS.get('balSaved', null), pfEdit: null,   // PF / PPF figures saved on the phone (settings/balances.json)
+  balSaved: LS.get('balSaved', null), pfEdit: null,
+  docs: Object.assign({ sips: [], bills: [], goals: [] }, LS.get('docs', {})), docEdit: null,   // app/*.json in the data repo
+  history: LS.get('history', null),  // history.json: daily value of funds and stocks
+  locked: false,   // PF / PPF figures saved on the phone (settings/balances.json)
 };
 
 /* ---------------- GitHub ---------------- */
@@ -196,6 +199,8 @@ async function sync(opts = {}) {
     try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
     try { await refreshTrades(); } catch (e) { /* optional */ }
+    await loadDocs();
+    try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
     await refreshPending();
     if (opts.toast) toast('Up to date');
   } catch (e) {
@@ -239,8 +244,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pfedit: 'invest', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'App lock and look', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -259,7 +264,9 @@ function render() {
       <button class="secondary" onclick="sync({toast:true})">Try again</button></div>`;
     return;
   }
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit };
+  if (state.docEdit && state.docEdit.kind !== state.tab) state.docEdit = null;
+  document.body.dataset.tab = state.tab;
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings };
   v.innerHTML = views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -270,6 +277,11 @@ function render() {
   if (state.tab === 'invest') bindInvest();
   if (state.tab === 'trade') bindTrade();
   if (state.tab === 'pfedit') bindPfEdit();
+  if (['sips', 'bills', 'goals'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) bindGoals(); }
+  if (state.tab === 'report') bindReport();
+  if (state.tab === 'coaching') bindCoaching();
+  if (state.tab === 'import') bindImport();
+  if (state.tab === 'lockset') bindLockSettings();
   document.querySelectorAll('[data-sheet-open]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheetOpen; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   if (state.tab === 'future') {
     if (state.retireEdit) bindRetireEdit();
@@ -466,7 +478,7 @@ function txRow(t, compact) {
     <div class="mid"><div class="t1">${esc(d.title)}${t._pending ? `<span class="badge">${t._pending === 'outbox' ? 'Not uploaded' : 'Waiting for Excel'}</span>` : ''}</div>
     <div class="t2">${compact ? fDay(pDate(t.Date)).replace(/ \d{4}$/, '') + ', ' : ''}${esc(t.Category)}</div>
     <div class="t3">${esc(fullDetails(t))}<br>${esc(t.Type)}, ${esc(d.src)}, ${fDay(pDate(t.Date))}</div>
-    ${t._pending === 'pending' && !compact ? `<button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
+    ${t._pending === 'pending' && !compact ? `<button class="link-btn" data-edit="${esc(t._id)}">Edit</button> <button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
     ${t._pending === 'outbox' && !compact ? `<button class="link-btn" data-delout="${esc(t._id)}">Remove</button>` : ''}</div>
     <div class="amt num ${cls}">${sign}${inr(Math.abs(a))}</div></div>`;
 }
@@ -527,6 +539,7 @@ function bindTx() {
     catch (e) { toast(e.message || 'Couldn’t remove – try again'); }
     render();
   });
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editPending(b.dataset.edit));
   document.querySelectorAll('.tx').forEach(el => el.onclick = e => { if (!e.target.closest('button')) el.classList.toggle('open'); });
   document.querySelectorAll('[data-delout]').forEach(b => b.onclick = () => {
     if (!confirmInline(b)) return;
@@ -793,7 +806,8 @@ function viewFuture() {
   <section class="sec"><div class="sec-h"><h3>Path to ${ageR}</h3></div>${projChart(rows)}
     <table class="proj" style="margin-top:10px"><tr><th>Year</th><th>Age</th><th>Net worth</th><th>Today’s ₹</th></tr>
     ${pick.map(r => `<tr><td>${r.Year}</td><td>${r.Age}</td><td class="num">${cr(r.NetWorth)}</td><td class="num">${cr(r.NetWorthToday)}</td></tr>`).join('')}</table>
-    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included).</p></section>`;
+    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included).</p></section>
+  <section class="sec"><div class="group"><button class="navrow" data-gotab="goals"><span class="nt">Goals<br><span class="small muted">${(state.docs.goals || []).length ? `${state.docs.goals.length} goal${state.docs.goals.length === 1 ? '' : 's'} · what-if` : 'Emergency fund, car, trip – with what-if'}</span></span><span class="chev">›</span></button></div></section>`;
 }
 
 /* ---------------- Salary, Money, Investments (layout from the reference screens) ---------------- */
@@ -869,6 +883,8 @@ function viewMoney() {
         ${isFinite(net) ? `<div class="meter ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
         <p class="hero-s">${used > 1 ? `${inr(spent - limit)} over your net-pay limit (${Math.round(used * 100)}%)` : `${inr(limit - spent)} left, ${Math.round(used * 100)}% of your net-pay limit used`}</p>` : ''}</section>
       <section class="sec box"><div class="sec-h"><h3>Where your money went</h3><button data-gotab="budget">Plan</button></div>${bars(list)}</section>
+      ${viewTrends()}
+      <section class="sec"><div class="group"><button class="navrow" data-gotab="bills"><span class="nt">Bills and subscriptions<br><span class="small muted">${(() => { const l = statuses('bills'), nx = l.filter(x => x.st.s === 'due').sort((a, b) => a.st.due - b.st.due)[0]; return l.length ? (nx ? `Next: ${esc(nx.it.name)}, ${esc(nx.st.txt.toLowerCase())}` : `${l.filter(x => x.st.s === 'paid').length} of ${l.length} paid`) : 'Rent, EMIs, LIC, subscriptions – with reminders'; })()}</span></span><span class="chev">›</span></button></div></section>
       <section class="sec box"><div class="sec-h"><h3>Last 12 months</h3></div>${monthlyChart(tbl('AppMonthly'))}</section>`;
   }
   return seg + body + `<button class="secondary" data-gotab="tx" style="margin-top:16px">View all transactions</button>
@@ -902,7 +918,14 @@ function viewInvest() {
       <div class="stack">${mix.map((x, i) => `<i style="width:${(x.v / mixTot * 100).toFixed(1)}%;background:${MIXC[i]}"></i>`).join('')}</div>
       <div class="dlegend">${mix.map((x, i) => `<span><i style="background:${MIXC[i]}"></i>${esc(x.name.replace(/\s*\(.*$/, ''))} <em>${esc(x.pc || '')}</em></span>`).join('')}</div></section>` : ''}
     ${viewInvestFunds()}
+    ${viewInvestChart()}
     ${viewInvestPf()}
+    ${viewInvestFds()}
+    <section class="sec"><div class="group">
+      <button class="navrow" data-gotab="sips"><span class="nt">SIPs<br><span class="small muted">${(() => { const l = statuses('sips'); return l.length ? `${l.filter(x => x.st.s === 'paid').length} of ${l.length} paid this month${l.some(x => x.st.s === 'missed') ? ' · one missed' : ''}` : 'Track and get reminders'; })()}</span></span><span class="chev">›</span></button>
+      <button class="navrow" data-gotab="tax"><span class="nt">Tax: 80C and capital gains</span><span class="chev">›</span></button>
+      <button class="navrow" data-gotab="import"><span class="nt">Import holdings from Groww</span><span class="chev">›</span></button>
+    </div></section>
     <section class="sec box"><div class="sec-h"><h3>All investments</h3></div>
       ${hold.map(h => `<div class="kv"><span>${esc(h.name)}${h.inv ? `<br><span class="small muted">Invested ${inr(h.inv)}</span>` : ''}</span>
         <span class="num" style="text-align:right">${inr(h.v)}${h.g ? `<br><span class="small ${num(h.g) >= 0 ? 'good' : 'bad'}">+${esc(h.g)}</span>` : ''}</span></div>`).join('')}</section>
@@ -963,7 +986,7 @@ function viewInvestFunds() {
     </section>
     ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
       ${log.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${esc(fDay(pDate(r.date)))} · ${esc(r.side)} ${fUnits(Number(r.units) || 0)} units${r.pending ? ' · waiting for Excel' : ''}</span></span>
-        <span class="num" style="text-align:right">${r.side === 'Sell' ? '+' : ''}${inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>` : ''}</span></div>`).join('')}</section>` : ''}`;
+        <span class="num" style="text-align:right">${r.side === 'Sell' ? '+' : ''}${inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>` : ''}</span></div>`).join('')}</section>` : ''}`;
 }
 function viewInvestPf() {
   const x = inv() || {}, e = x.epf, p = x.ppf || {}, b = balPending(), pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
@@ -1085,7 +1108,7 @@ function viewTrade() {
     <input class="inp" id="tr-date" type="date" value="${esc(t.date)}" max="${isoToday()}">
     <label class="f" for="tr-note">Note</label>
     <input class="inp" id="tr-note" maxlength="80" placeholder="e.g. Monthly SIP" value="${esc(t.note)}">
-    <button class="primary" id="tr-save">Save ${t.side === 'Buy' ? 'buy' : 'sell'}</button>
+    <button class="primary" id="tr-save">${t.editId ? 'Save changes' : `Save ${t.side === 'Buy' ? 'buy' : 'sell'}`}</button>
     <p class="note">Amount is what you paid (buy) or got back (sell). Each one is added as a new row in Excel’s buy/sell log on Stocks &amp; MF the next time the workbook opens.</p>
   </section>`;
 }
@@ -1142,17 +1165,18 @@ function bindTrade() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) { toast('Pick a date'); return; }
     if (t.side === 'Sell') {
       const h = invHoldings().find(x => x.name.toLowerCase() === t.name.trim().toLowerCase());
+      if (h && t.editId) { const old = state.trades.find(x => x.id === t.editId); if (old && old.entry.side === 'Sell') h.units += old.entry.units; }
       if (!h) { toast('Sell: pick one of your holdings'); return; }
       if (units > h.units + 1e-6) { toast(`You have ${fUnits(h.units)} units – can’t sell more`); return; }
     }
     const now = new Date(), stamp = now.toISOString().replace(/[-:]/g, '').slice(0, 15);
-    const entry = { id: `${stamp}-${Math.random().toString(36).slice(2, 7)}`, date: t.date, side: t.side, name: t.name.trim().slice(0, 120),
+    const entry = { id: t.editId || `${stamp}-${Math.random().toString(36).slice(2, 7)}`, date: t.date, side: t.side, name: t.name.trim().slice(0, 120),
       code: t.code.slice(0, 20), type: t.type, units: Math.round(units * 10000) / 10000, amount: Math.round(amount * 100) / 100,
-      platform: t.platform, note: t.note.trim().slice(0, 80), createdAt: now.toISOString() };
+      platform: t.platform, note: t.note.trim().slice(0, 80), createdAt: t.createdAt || now.toISOString() };
     const btn = $('tr-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       await GH.putJson(`trades/${entry.id}.json`, entry, `${entry.side} ${entry.name}`);
-      state.trades.unshift({ id: entry.id, entry }); LS.set('trades', state.trades);
+      state.trades = [{ id: entry.id, entry }, ...state.trades.filter(x => x.id !== entry.id)]; LS.set('trades', state.trades);
       toast(`Saved. Excel adds it to Stocks & MF next time it opens`);
       state.trade = null; state.tab = 'invest'; window.scrollTo(0, 0); render();
     } catch (e) {
@@ -1162,6 +1186,7 @@ function bindTrade() {
   };
 }
 function bindInvest() {
+  document.querySelectorAll('[data-trade-edit]').forEach(b => b.onclick = () => editTrade(b.dataset.tradeEdit));
   document.querySelectorAll('[data-trade-del]').forEach(b => b.onclick = async () => {
     const id = b.dataset.tradeDel; b.disabled = true;
     try {
@@ -1184,6 +1209,518 @@ async function refreshTrades() {
   }
   out.sort((a, b) => String(b.entry.createdAt || '').localeCompare(String(a.entry.createdAt || '')));
   state.trades = out; LS.set('trades', out);
+}
+
+/* ======================================================================
+   SIPs, bills & subscriptions, goals (app-owned files in the data repo: app/*.json)
+   ====================================================================== */
+const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json' };
+async function loadDocs() {
+  for (const k of Object.keys(DOCS)) {
+    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j)) state.docs[k] = j; } else if (r.status === 404) state.docs[k] = state.docs[k] || []; }
+    catch (e) { /* keep the copy on this phone */ }
+  }
+  LS.set('docs', state.docs);
+}
+async function saveDoc(k, msg) { await GH.putJson(DOCS[k], state.docs[k], msg || `Update ${k}`); LS.set('docs', state.docs); }
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+const DAY = 864e5;
+function dayOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function dueIn(y, m, day) { const last = new Date(y, m + 1, 0).getDate(); return new Date(y, m, Math.min(Math.max(1, day), last)); }
+function bankEnd() { const r = tbl('AppRecent'); return r.length ? pDate(r[0].Date) : null; }
+/* Finds the bank transaction that paid an item: same amount (±tolerance), in the date window, keyword in the details */
+function findPayment(item, from, to, types, tol, used) {
+  const kw = String(item.keyword || '').trim().toLowerCase(), amt = Number(item.amount) || 0;
+  return tbl('AppRecent').find(t => {
+    if (used && used.has(t)) return false;
+    const d = pDate(t.Date); if (!d || d < from || d > to) return false;
+    if (!types.includes(t.Type)) return false;
+    if (Math.abs(Math.abs(n(t.Amount)) - amt) > Math.max(2, amt * tol)) return false;
+    return !kw || `${t.Details} ${t.Category}`.toLowerCase().includes(kw);
+  }) || null;
+}
+/* Status of one SIP or bill for the period that contains its next/current due date */
+function itemStatus(item, kind) {
+  const today = dayOnly(new Date()), end = bankEnd(), used = state._used || (state._used = new Set());
+  let due;
+  if (kind === 'bills' && item.every === 'Yearly') {
+    const m = (Number(item.month) || 1) - 1;
+    due = dueIn(today.getFullYear(), m, Number(item.day) || 1);
+    if (due < new Date(today - 20 * DAY)) due = dueIn(today.getFullYear() + 1, m, Number(item.day) || 1);
+  } else due = dueIn(today.getFullYear(), today.getMonth(), Number(item.day) || 1);
+  const yearly = kind === 'bills' && item.every === 'Yearly';
+  const from = yearly ? new Date(due - 20 * DAY) : new Date(due.getFullYear(), due.getMonth(), 1);
+  const to = yearly ? new Date(+due + 20 * DAY) : new Date(due.getFullYear(), due.getMonth() + 1, 0);
+  const types = kind === 'sips' ? ['Savings', 'Expenses', 'Transfer'] : ['Expenses', 'Savings', 'Transfer'];
+  const hit = findPayment(item, from, to, types, kind === 'sips' ? 0.01 : 0.1, used);
+  if (hit) { used.add(hit); return { s: 'paid', due, txt: `Paid ${fDay(pDate(hit.Date)).replace(/ \d{4}$/, '')}`, cls: 'good' }; }
+  const days = Math.round((due - today) / DAY);
+  if (days > 0) return { s: 'due', due, txt: days === 1 ? 'Due tomorrow' : `Due in ${days} days`, cls: days <= 3 ? 'warn' : 'muted' };
+  if (days === 0) return { s: 'due', due, txt: 'Due today', cls: 'warn' };
+  if (!end || end < due) return { s: 'wait', due, txt: `Due ${fDay(due).replace(/ \d{4}$/, '')} – bank data not synced yet`, cls: 'muted' };
+  return { s: 'missed', due, txt: `Not found in bank data (due ${fDay(due).replace(/ \d{4}$/, '')})`, cls: 'bad' };
+}
+function statuses(kind) { state._used = new Set(); return (state.docs[kind] || []).map(it => ({ it, st: itemStatus(it, kind) })); }
+
+const DOC_FIELDS = {
+  sips: [['name', 'Fund name', 'text', 'e.g. Parag Parikh Flexi Cap'], ['amount', 'Amount each month (₹)', 'num'], ['day', 'Day of the month it runs', 'num', '1–28'],
+    ['keyword', 'Text in the bank details', 'text', 'e.g. GROWW, ICCL or YESB00709 – leave empty to match by amount']],
+  bills: [['name', 'Name', 'text', 'e.g. Rent, Netflix, LIC'], ['amount', 'Amount (₹)', 'num'], ['every', 'How often', 'sel', ['Monthly', 'Yearly']],
+    ['day', 'Due day of the month', 'num', '1–31'], ['month', 'Due month (yearly bills)', 'selm'], ['keyword', 'Text in the bank details', 'text', 'e.g. NETFLIX, LIC, rent payee name']],
+  goals: [['name', 'Goal', 'text', 'e.g. Emergency fund, Car, Trip'], ['target', 'Target amount (₹)', 'num'], ['date', 'Target date', 'month'],
+    ['saved', 'Saved so far (₹)', 'num'], ['monthly', 'Putting in each month (₹)', 'num'], ['ret', 'Expected return (% a year)', 'num', 'e.g. 7 for FD/debt, 12 for equity']],
+};
+const DOC_NAME = { sips: 'SIP', bills: 'bill', goals: 'goal' };
+function viewDocForm(kind) {
+  const e = state.docEdit, it = e.item;
+  const fld = ([k, label, type, hint]) => {
+    const v = it[k] ?? '';
+    if (type === 'sel') return `<label class="f">${label}</label><div class="seg" data-sel="${k}">${hint.map(o => `<button data-v="${o}" class="${v === o ? 'on' : ''}">${o}</button>`).join('')}</div>`;
+    if (type === 'selm') return it.every === 'Yearly' ? `<label class="f" for="df-${k}">${label}</label><select class="inp" id="df-${k}">${MONF.map((m, i) => `<option value="${i + 1}" ${Number(v) === i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select>` : '';
+    return `<label class="f" for="df-${k}">${label}</label><input class="inp ${type === 'num' ? 'num' : ''}" id="df-${k}" ${type === 'num' ? 'inputmode="decimal"' : ''} ${type === 'month' ? 'type="month"' : ''} value="${esc(v)}" placeholder="${esc(hint || '')}">`;
+  };
+  return `<section class="card"><h2 style="margin-top:0">${e.isNew ? 'Add' : 'Edit'} ${DOC_NAME[kind]}</h2>
+    ${DOC_FIELDS[kind].map(fld).join('')}
+    <button class="primary" id="df-save">Save</button>
+    ${e.isNew ? '' : `<button class="secondary" id="df-del" style="color:var(--bad)">Delete</button>`}
+    <button class="secondary" id="df-cancel">Cancel</button></section>`;
+}
+function bindDocForm(kind) {
+  const e = state.docEdit, it = e.item, $ = id => document.getElementById(id);
+  const read = () => DOC_FIELDS[kind].forEach(([k, , type]) => { const el = $('df-' + k); if (el) it[k] = type === 'num' ? el.value.replace(/[,₹\s%]/g, '') : el.value.trim(); });
+  document.querySelectorAll('[data-sel] button').forEach(b => b.onclick = () => { read(); it[b.parentElement.dataset.sel] = b.dataset.v; render(); });
+  $('df-cancel').onclick = () => { state.docEdit = null; render(); };
+  const save = async (list, msg) => {
+    const old = state.docs[kind]; state.docs[kind] = list;
+    try { await saveDoc(kind, msg); state.docEdit = null; toast('Saved'); }
+    catch (err) { state.docs[kind] = old; toast(err.message || 'Couldn’t reach GitHub – try again'); }
+    render();
+  };
+  if ($('df-del')) $('df-del').onclick = () => { if (!confirmInline($('df-del'))) return; save(state.docs[kind].filter(x => x.id !== it.id), `Delete ${DOC_NAME[kind]} ${it.name}`); };
+  $('df-save').onclick = () => {
+    read();
+    if (!it.name) { toast('Enter a name'); return; }
+    for (const [k, label, type] of DOC_FIELDS[kind]) if (type === 'num' && it[k] !== '' && !(Number(it[k]) >= 0)) { toast(`Check ${label.toLowerCase()}`); return; }
+    if (kind !== 'goals' && !(Number(it.amount) > 0)) { toast('Enter the amount'); return; }
+    if (kind !== 'goals' && !(Number(it.day) >= 1 && Number(it.day) <= 31)) { toast('Enter the day (1–31)'); return; }
+    if (kind === 'goals' && !(Number(it.target) > 0)) { toast('Enter the target amount'); return; }
+    if (kind === 'goals' && !/^\d{4}-\d{2}$/.test(it.date || '')) { toast('Pick the target date'); return; }
+    const clean = { ...it }; DOC_FIELDS[kind].forEach(([k, , type]) => { if (type === 'num') clean[k] = clean[k] === '' ? null : Number(clean[k]); });
+    if (kind === 'bills' && clean.every !== 'Yearly') delete clean.month;
+    const list = e.isNew ? [...state.docs[kind], clean] : state.docs[kind].map(x => x.id === clean.id ? clean : x);
+    save(list, `${e.isNew ? 'Add' : 'Update'} ${DOC_NAME[kind]} ${clean.name}`);
+  };
+}
+function docAdd(kind, extra) { state.docEdit = { kind, isNew: true, item: { id: uid(kind[0]), ...(kind === 'bills' ? { every: 'Monthly' } : {}), ...(extra || {}) } }; render(); window.scrollTo(0, 0); }
+function bindDocList(kind) {
+  document.querySelectorAll('[data-doc-add]').forEach(b => b.onclick = () => docAdd(b.dataset.docAdd));
+  document.querySelectorAll('[data-doc-edit]').forEach(b => b.onclick = () => {
+    const [k, id] = b.dataset.docEdit.split(':'); const it = state.docs[k].find(x => x.id === id);
+    if (it) { state.docEdit = { kind: k, isNew: false, item: { ...it } }; render(); window.scrollTo(0, 0); }
+  });
+}
+
+/* SIPs */
+function viewSips() {
+  if (state.docEdit) return viewDocForm('sips');
+  const list = statuses('sips'), tot = list.reduce((s, x) => s + (Number(x.it.amount) || 0), 0), paid = list.filter(x => x.st.s === 'paid').length;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">SIPs each month</p><h2 class="hero-v num">${inr(tot)}</h2>
+      <p class="hero-s" style="margin:0">${list.length ? `${paid} of ${list.length} paid this month` : 'Add your SIPs to track them'}${bankEnd() ? `. Bank data up to ${fDay(bankEnd())}` : ''}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Your SIPs</h3><button data-doc-add="sips">＋ Add</button></div>
+      ${list.length ? list.map(({ it, st }) => `<button class="kv rowbtn" data-doc-edit="sips:${esc(it.id)}"><span>${esc(it.name)}<br><span class="small ${st.cls}">${esc(st.txt)}</span></span><span class="num">${inr(it.amount)}<br><span class="small muted">on the ${ord(it.day)}</span></span></button>`).join('')
+        : '<p class="small muted">Nothing yet. Tap ＋ Add for each SIP – you get a reminder the day before, and a warning if it doesn’t show up in your bank data.</p>'}
+    </section><p class="note">Paid / missed is checked against your bank transactions: same amount, in the month, with the text you gave. Reminders need notifications turned on (More → Notifications).</p>`;
+}
+function ord(d) { d = Number(d) || 0; const s = ['th', 'st', 'nd', 'rd'], v = d % 100; return d + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+/* Bills & subscriptions */
+function viewBills() {
+  if (state.docEdit) return viewDocForm('bills');
+  const list = statuses('bills').sort((a, b) => (a.st.s === 'paid') - (b.st.s === 'paid') || a.st.due - b.st.due);
+  const monthly = (state.docs.bills || []).reduce((s, b) => s + (Number(b.amount) || 0) / (b.every === 'Yearly' ? 12 : 1), 0);
+  const next = list.find(x => x.st.s === 'due');
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Bills and subscriptions</p><h2 class="hero-v num">${inr(monthly)}<span style="font-size:16px;font-weight:500"> a month</span></h2>
+      <p class="hero-s" style="margin:0">${next ? `Next: ${esc(next.it.name)} ${inr(next.it.amount)}, ${esc(next.st.txt.toLowerCase())}` : list.length ? 'Nothing due right now' : 'Add rent, EMIs, LIC, phone, OTT…'}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>All bills</h3><button data-doc-add="bills">＋ Add</button></div>
+      ${list.length ? list.map(({ it, st }) => `<button class="kv rowbtn" data-doc-edit="bills:${esc(it.id)}"><span>${esc(it.name)}<br><span class="small ${st.cls}">${esc(st.txt)}</span></span><span class="num">${inr(it.amount)}<br><span class="small muted">${it.every === 'Yearly' ? `yearly, ${MON[(Number(it.month) || 1) - 1]} ${Number(it.day)}` : `monthly, ${ord(it.day)}`}</span></span></button>`).join('')
+        : '<p class="small muted">Nothing yet. You get a reminder the day before each bill is due.</p>'}
+    </section>`;
+}
+
+/* Goals with what-if */
+function goalCalc(g, extra) {
+  const r = (Number(g.ret) || 0) / 1200, saved = Number(g.saved) || 0, pm = (Number(g.monthly) || 0) + (extra || 0), target = Number(g.target) || 0;
+  const [y, m] = String(g.date || '').split('-').map(Number), now = new Date();
+  const months = Math.max(0, (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth()));
+  const fv = (n) => r ? saved * Math.pow(1 + r, n) + pm * (Math.pow(1 + r, n) - 1) / r : saved + pm * n;
+  const atDate = fv(months);
+  const need = months > 0 ? (r ? Math.max(0, (target - saved * Math.pow(1 + r, months)) * r / (Math.pow(1 + r, months) - 1)) : Math.max(0, (target - saved) / months)) : Math.max(0, target - saved);
+  let reach = null;                                    // months until the target at this pace
+  if (saved >= target) reach = 0; else if (pm > 0 || r > 0) { for (let k = 1; k <= 600; k++) if (fv(k) >= target) { reach = k; break; } }
+  return { months, atDate, need, reach, pct: target ? Math.min(1, saved / target) : 0 };
+}
+function monthsLabel(k) { if (k == null) return 'never at this pace'; const d = new Date(); d.setMonth(d.getMonth() + k); return `${MON[d.getMonth()]} ${d.getFullYear()}`; }
+function viewGoals() {
+  if (state.docEdit) return viewDocForm('goals');
+  const gs = state.docs.goals || [], extra = state.goalExtra || {};
+  return `${gs.length ? '' : `<section class="hero"><p class="hero-k" style="margin-top:0">Goals</p><h2 class="hero-v" style="font-size:24px">Plan for what’s next</h2><p class="hero-s" style="margin:0">An emergency fund, a car, a trip – see how much to put in each month and when you’ll get there.</p></section>`}
+    ${gs.map(g => { const c = goalCalc(g), x = extra[g.id] || 0, w = goalCalc(g, x), ok = c.atDate >= (Number(g.target) || 0);
+      return `<section class="sec box"><div class="sec-h"><h3>${esc(g.name)}</h3><button data-doc-edit="goals:${esc(g.id)}">Edit</button></div>
+        <div class="row"><span class="num"><b>${inr(g.saved)}</b> of ${inr(g.target)}</span><span class="small muted">by ${esc(fMon(pDate(g.date + '-01')))}</span></div>
+        <div class="meter" style="margin:8px 0"><i style="width:${(c.pct * 100).toFixed(1)}%"></i></div>
+        <p class="small ${ok ? 'good' : 'warn'}" style="margin:0">${ok ? `On track – about ${inr(c.atDate)} by then` : `Short by ${inr((Number(g.target) || 0) - c.atDate)} at ${inr(g.monthly || 0)} a month. Need ${inr(c.need)} a month`}</p>
+        <label class="f" for="gx-${esc(g.id)}">What if I add more each month? <b class="num" id="gxv-${esc(g.id)}">+${inr(x)}</b></label>
+        <input type="range" id="gx-${esc(g.id)}" data-gx="${esc(g.id)}" min="0" max="${Math.max(5000, Math.ceil((c.need || 10000) * 2 / 1000) * 1000)}" step="500" value="${x}">
+        <p class="small muted" id="gxr-${esc(g.id)}" style="margin:4px 0 0">${goalWhatIf(g, x)}</p></section>`; }).join('')}
+    <button class="primary" data-doc-add="goals">＋ Add a goal</button>
+    <p class="note">Goals are kept in your data repo (app/goals.json). Update “saved so far” whenever you check.</p>`;
+}
+function goalWhatIf(g, x) { const w = goalCalc(g, x); return `At ${inr((Number(g.monthly) || 0) + x)} a month you reach ${inr(g.target)} in ${esc(monthsLabel(w.reach))}` + (x ? '' : ' – move the slider to try more'); }
+function bindGoals() {
+  document.querySelectorAll('[data-gx]').forEach(inp => inp.oninput = () => {
+    const id = inp.dataset.gx, g = state.docs.goals.find(x => x.id === id), x = Number(inp.value);
+    (state.goalExtra || (state.goalExtra = {}))[id] = x;
+    document.getElementById('gxv-' + id).textContent = '+' + inr(x);
+    document.getElementById('gxr-' + id).textContent = goalWhatIf(g, x);
+  });
+}
+
+/* ======================================================================
+   Edit pending phone entries
+   ====================================================================== */
+function editPending(id) {
+  const p = state.pending.find(x => x.id === id); if (!p) return;
+  const e = p.entry;
+  state.add = { type: e.type, amount: String(e.amount), category: e.category, date: e.date, paidWith: e.paidWith || 'Cash', note: e.note || '', editId: id, createdAt: e.createdAt };
+  state.tab = 'add'; window.scrollTo(0, 0); render();
+}
+function editTrade(id) {
+  const t = state.trades.find(x => x.id === id); if (!t) return;
+  const e = t.entry;
+  state.trade = { side: e.side, kind: /^\d+$/.test(e.code || '') || /MF|fund|ELSS/i.test(e.type || '') ? 'MF' : 'Stock', name: e.name, code: e.code || '', type: e.type || 'Equity MF',
+    units: String(e.units), price: String(Math.round(e.amount / e.units * 10000) / 10000), amount: String(e.amount), platform: e.platform || 'Groww', date: e.date, note: e.note || '', results: [], editId: id, createdAt: e.createdAt };
+  state.tab = 'trade'; window.scrollTo(0, 0); render();
+}
+/* Quick add: the entries you add most often, newest first */
+function quickPicks() {
+  const seen = new Set(), out = [];
+  const src = state.pending.map(p => p.entry).concat(allTx().filter(t => /app#/.test(t.Details || '')).map(t => ({ type: t.Type, category: t.Category, amount: Math.abs(n(t.Amount)),
+    note: fullDetails(t).replace(/\s*\((Cash|UPI|Card|Other)\)\s*$/, ''), paidWith: (String(t.Details).match(/\((Cash|UPI|Card|Other)\)/) || [])[1] || 'Cash' })));
+  for (const e of src) {
+    const key = `${e.type}|${e.category}|${String(e.note || '').toLowerCase()}`;
+    if (seen.has(key) || !e.category) continue; seen.add(key); out.push(e);
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+/* ======================================================================
+   Investments extras: value history chart, FDs, tax view
+   ====================================================================== */
+function lineChart(pts) {
+  if (pts.length < 2) return `<p class="small muted">The chart fills in day by day after the price check runs (about 10 pm).</p>`;
+  const W = 320, H = 130, P = 6, xs = pts.map((_, i) => P + i * (W - 2 * P) / (pts.length - 1));
+  const vals = pts.flatMap(p => [p.v, p.i]), lo = Math.min(...vals) * 0.98, hi = Math.max(...vals) * 1.02 || 1;
+  const y = v => H - P - (v - lo) / (hi - lo || 1) * (H - 2 * P);
+  const path = k => pts.map((p, i) => `${i ? 'L' : 'M'}${xs[i].toFixed(1)},${y(p[k]).toFixed(1)}`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Portfolio value over time">
+      <path d="${path('i')}" fill="none" stroke="var(--slate)" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <path d="${path('v')}" fill="none" stroke="var(--blue1)" stroke-width="2.2"/></svg>
+    <div class="dlegend"><span><i style="background:var(--blue1)"></i>Value</span><span><i style="background:var(--slate)"></i>Invested</span>
+      <span class="muted">${esc(fDay(pDate(pts[0].d)))} – ${esc(fDay(pDate(pts[pts.length - 1].d)))}</span></div>`;
+}
+function viewInvestChart() {
+  const h = (state.history && state.history.points) || [];
+  if (!h.length && !invHoldings().length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks over time</h3></div>${lineChart(h.slice(-180))}</section>`;
+}
+function fdRows() {
+  const sh = sheetList().find(s => s.name === 'Savings Schemes'); if (!sh) return [];
+  const out = []; let on = false, hdr = null;
+  for (const r of sh.rows) {
+    const c0 = String(r.c[0] || '');
+    if (/Fixed deposits \(bank/.test(c0)) { on = true; hdr = r.c; continue; }
+    if (on && /^Total/.test(c0)) break;
+    if (on && c0) { const o = {}; hdr.forEach((h, i) => { o[h] = r.c[i]; }); o.name = c0; out.push(o); }
+  }
+  return out;
+}
+function viewInvestFds() {
+  const fds = fdRows().filter(f => f.Status === 'Active'); if (!fds.length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Fixed deposits</h3></div>
+    ${fds.map(f => `<div class="kv"><span>${esc(f.name)}<br><span class="small ${Number(String(f['Days left']).replace(/,/g, '')) <= 30 ? 'warn' : 'muted'}">Matures ${esc(f['Maturity date'] || '')} · ${esc(f['Days left'] || '')} days left</span></span>
+      <span class="num" style="text-align:right">${esc(f['Value now'] || '')}<br><span class="small muted">at maturity ${esc(f['Maturity value'] || '')}</span></span></div>`).join('')}</section>`;
+}
+function fyStart(d) { d = d || new Date(); return new Date(d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1, 3, 1); }
+function capitalGains(from, to) {
+  const types = Object.fromEntries(invHoldings().map(h => [h.name.toLowerCase(), h.type]).concat(((inv() || {}).holdings || []).map(h => [String(h.name).toLowerCase(), h.type])));
+  const pools = {}, sells = [];
+  for (const r of tradeLog().slice().reverse()) {                   // oldest first
+    const k = String(r.name).toLowerCase(), p = pools[k] || (pools[k] = { units: 0, cost: 0, first: r.date });
+    const u = Number(r.units) || 0, a = Number(r.amount) || 0, d = pDate(r.date);
+    if (r.side === 'Buy') { if (p.units <= 1e-9) p.first = r.date; p.units += u; p.cost += a; }
+    else if (p.units > 0) {
+      const cost = p.cost * Math.min(1, u / p.units); p.cost -= cost; p.units -= u;
+      if (d >= from && d <= to) {
+        const held = (d - pDate(p.first)) / DAY, debt = /Debt/i.test(types[k] || '');
+        sells.push({ name: r.name, date: r.date, gain: a - cost, kind: debt ? 'slab' : held > 365 ? 'LT' : 'ST' });
+      }
+    }
+  }
+  return sells;
+}
+function viewTax() {
+  const from = fyStart(), to = new Date(from.getFullYear() + 1, 2, 31), fy = `${from.getFullYear()}–${String(from.getFullYear() + 1).slice(2)}`;
+  const inFy = t => { const d = pDate(t.Date || t.date); return d && d >= from && d <= to; };
+  const e = (inv() || {}).epf || {}, now = new Date();
+  const monthsDone = Math.max(0, Math.min(12, (now.getFullYear() - from.getFullYear()) * 12 + now.getMonth() - 3));
+  const epf = (Number(e.youMonth) || 0) * monthsDone;
+  const ppfC = sheetRowCells('Savings Schemes', 'Deposited this financial year'), ppf = ppfC ? num(ppfC[1]) : 0;
+  const elssNames = new Set(invHoldings().filter(h => /ELSS/i.test(h.type)).map(h => h.name.toLowerCase()));
+  const elss = tradeLog().filter(r => r.side === 'Buy' && elssNames.has(String(r.name).toLowerCase()) && inFy(r)).reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const ins = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /insurance|lic/i.test(t.Category) && /\blic\b|life/i.test(t.Details) && inFy(t)).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  const items = [['EPF – your share (estimated)', epf], ['PPF deposits', ppf], ['ELSS buys', elss], ['Life insurance premiums (LIC)', ins]];
+  const used = items.reduce((s, x) => s + x[1], 0), left = Math.max(0, 150000 - used);
+  const cg = capitalGains(from, to), st = cg.filter(x => x.kind === 'ST').reduce((s, x) => s + x.gain, 0), lt = cg.filter(x => x.kind === 'LT').reduce((s, x) => s + x.gain, 0), sl = cg.filter(x => x.kind === 'slab').reduce((s, x) => s + x.gain, 0);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Section 80C, FY ${fy}</p><h2 class="hero-v num">${inr(Math.min(used, 150000))}<span style="font-size:16px;font-weight:500"> of ₹1,50,000</span></h2>
+      <div class="meter"><i style="width:${Math.min(100, used / 1500).toFixed(1)}%"></i></div>
+      <p class="hero-s">${left ? `${inr(left)} left to invest by 31 Mar` : 'Limit reached'}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>What counts so far</h3></div>${items.map(([l, v]) => `<div class="kv"><span>${l}</span><span class="num">${inr(v)}</span></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">80C only helps in the old tax regime. Home-loan principal and tuition fees also count but aren’t tracked here.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Capital gains from sells, FY ${fy}</h3></div>
+      ${cg.length ? `<div class="kv"><span>Short-term (equity, held ≤ 1 year)<br><span class="small muted">taxed at 20%</span></span><span class="num ${st >= 0 ? '' : 'bad'}">${inr(st)}</span></div>
+      <div class="kv"><span>Long-term (equity, held > 1 year)<br><span class="small muted">12.5% above ₹1.25 lakh a year</span></span><span class="num ${lt >= 0 ? '' : 'bad'}">${inr(lt)}</span></div>
+      ${sl ? `<div class="kv"><span>Debt funds<br><span class="small muted">added to income, taxed at your slab</span></span><span class="num">${inr(sl)}</span></div>` : ''}
+      ${cg.map(x => `<div class="kv small"><span class="muted">${esc(fDay(pDate(x.date)))} · ${esc(x.name)}</span><span class="num ${x.gain >= 0 ? 'good' : 'bad'}">${inr(x.gain)}</span></div>`).join('')}`
+        : '<p class="small muted">No sells this financial year.</p>'}
+      <p class="small muted" style="margin:8px 0 0">Estimate using average cost from your buy/sell log. Not tax advice – check with your tax filing or a CA.</p></section>`;
+}
+
+/* ======================================================================
+   Category trends (Money → Expenses)
+   ====================================================================== */
+function categoryTrends() {
+  const k = kpis(), ym = String(k.month || '').slice(0, 7); if (!ym) return [];
+  const [y, m] = ym.split('-').map(Number), prev = [1, 2, 3].map(i => { const d = new Date(y, m - 1 - i, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; });
+  const by = {};
+  for (const t of tbl('AppRecent')) {
+    if (t.Type !== 'Expenses') continue;
+    const mo = String(t.Date).slice(0, 7), c = t.Category || 'Other'; if (mo !== ym && !prev.includes(mo)) continue;
+    const o = by[c] || (by[c] = { now: 0, before: 0 }); if (mo === ym) o.now += Math.abs(n(t.Amount)); else o.before += Math.abs(n(t.Amount)) / 3;
+  }
+  const frac = monthProgress().done || 1;
+  return Object.entries(by).map(([name, o]) => ({ name, now: o.now, avg: o.before, diff: o.now - o.before * frac }))
+    .filter(x => x.avg > 200 || x.now > 500).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 6);
+}
+function viewTrends() {
+  const list = categoryTrends(); if (!list.length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Compared with your usual</h3><span class="small">3-month average</span></div>
+    ${list.map(x => `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">usually ${inr(x.avg)} a month</span></span>
+      <span class="num" style="text-align:right">${inr(x.now)}<br><span class="small ${x.diff > 0 ? 'bad' : 'good'}">${x.diff > 0 ? '▲' : '▼'} ${inr(Math.abs(x.diff))} ${x.diff > 0 ? 'more' : 'less'} so far</span></span></div>`).join('')}</section>`;
+}
+
+/* ======================================================================
+   Monthly report (print → Save as PDF)
+   ====================================================================== */
+function viewReport() {
+  const months = tbl('AppMonthly').map(r => String(r.Month).slice(0, 7)).filter(Boolean);
+  const mk = state.reportMonth && months.includes(state.reportMonth) ? state.reportMonth : months[months.length - 1] || String(kpis().month || '').slice(0, 7);
+  const row = tbl('AppMonthly').find(r => String(r.Month).startsWith(mk)) || {};
+  const tx = tbl('AppRecent').filter(t => String(t.Date).startsWith(mk));
+  const cats = {}; tx.filter(t => t.Type === 'Expenses').forEach(t => { cats[t.Category] = (cats[t.Category] || 0) + Math.abs(n(t.Amount)); });
+  const top = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  const inc = {}; tx.filter(t => t.Type === 'Income').forEach(t => { inc[t.Category] = (inc[t.Category] || 0) + Math.abs(n(t.Amount)); });
+  const k = kpis(), d = pDate(mk + '-01'), hs = invHoldings();
+  return `<div class="noprint"><label class="f" for="rp-m">Month</label><select class="inp" id="rp-m">${months.slice().reverse().map(m => `<option value="${m}" ${m === mk ? 'selected' : ''}>${fMon(pDate(m + '-01'))}</option>`).join('')}</select>
+      <button class="primary" id="rp-print" style="margin-top:12px">Save as PDF / print</button></div>
+    <article class="report">
+      <h1>MyMoney – ${d ? MONF[d.getMonth()] + ' ' + d.getFullYear() : ''}</h1><p class="small muted">${esc(userName())} · made ${fDay(new Date())}</p>
+      <table class="rt"><tr><th>Income</th><th>Spent</th><th>Saved / invested</th><th>Left over</th></tr>
+        <tr class="num"><td>${inr(row.Income)}</td><td>${inr(row.Spending)}</td><td>${inr(row.Saved)}</td><td>${inr(row.LeftOver)}</td></tr></table>
+      <h2>Where the money went</h2><table class="rt">${top.map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${inr(v)}</td></tr>`).join('') || '<tr><td>No spending</td></tr>'}</table>
+      <h2>Income</h2><table class="rt">${Object.entries(inc).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${inr(v)}</td></tr>`).join('') || '<tr><td>No income</td></tr>'}</table>
+      <h2>Net worth and investments (now)</h2><table class="rt"><tr><td>Net worth</td><td class="num">${inr(k.net_worth)}</td></tr>
+        ${hs.map(h => `<tr><td>${esc(h.name)}</td><td class="num">${inr(h.value)}</td></tr>`).join('')}
+        ${(inv() || {}).epf ? `<tr><td>EPF + EPS</td><td class="num">${inr(inv().epf.value)}</td></tr><tr><td>PPF</td><td class="num">${inr((inv().ppf || {}).balance)}</td></tr>` : ''}</table>
+    </article>`;
+}
+function bindReport() {
+  const s = document.getElementById('rp-m'); if (s) s.onchange = () => { state.reportMonth = s.value; render(); };
+  const p = document.getElementById('rp-print'); if (p) p.onclick = () => window.print();
+}
+
+/* ======================================================================
+   Coaching earnings (receipts kept by receipts.html on this phone)
+   ====================================================================== */
+function receiptsList() { try { return JSON.parse(localStorage.getItem('crm_receipts_v1') || '[]') || []; } catch (e) { return []; } }
+function viewCoaching() {
+  const list = receiptsList(), inrOf = r => r.cur === '₹' ? Number(r.total) || 0 : Number(r.inr) || 0, monthOf = r => r.month || String(r.date || '').slice(0, 7);
+  const now = new Date(), ms = [...Array(6)].map((_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; });
+  const byM = ms.map(m => ({ m, v: list.filter(r => monthOf(r) === m).reduce((s, r) => s + inrOf(r), 0) }));
+  const max = Math.max(1, ...byM.map(x => x.v)), thisM = ms[5], lastM = ms[4];
+  const fyFrom = fyStart(), byC = {};
+  list.filter(r => pDate(r.date) >= fyFrom).forEach(r => { byC[r.client] = (byC[r.client] || 0) + inrOf(r); });
+  const paidNow = new Set(list.filter(r => monthOf(r) === thisM).map(r => r.client));
+  const notYet = [...new Set(list.filter(r => monthOf(r) === lastM).map(r => r.client))].filter(c => !paidNow.has(c));
+  const sent = new Set(LS.get('rcSent', []));
+  const cash = list.filter(r => /cash/i.test(r.method || '') && !sent.has(r.id));
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Coaching this month</p><h2 class="hero-v num">${inr(byM[5].v)}</h2>
+      <p class="hero-s" style="margin:0">${list.filter(r => monthOf(r) === thisM).length} receipts · last month ${inr(byM[4].v)}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Last 6 months</h3></div>
+      ${byM.map(x => `<div class="brow"><div class="row"><span>${MON[Number(x.m.slice(5)) - 1]} ${x.m.slice(0, 4)}</span><b class="num">${inr(x.v)}</b></div><div class="meter thin inc"><i style="width:${(x.v / max * 100).toFixed(1)}%"></i></div></div>`).join('')}</section>
+    ${notYet.length ? `<section class="sec box"><div class="sec-h"><h3>Paid last month, not yet this month</h3></div>${notYet.map(c => `<div class="kv"><span>${esc(c)}</span><span class="small warn">no receipt yet</span></div>`).join('')}</section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>By client, this financial year</h3></div>
+      ${Object.entries(byC).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="kv"><span>${esc(c)}</span><span class="num">${inr(v)}</span></div>`).join('') || '<p class="small muted">No receipts yet.</p>'}</section>
+    <section class="sec box"><div class="sec-h"><h3>Add to MyMoney</h3></div>
+      <p class="small muted" style="margin:0 0 8px">Payments into your bank already reach Excel through the bank sync, so only cash receipts are added here (as Income → Other Income).</p>
+      ${cash.length ? `${cash.slice(0, 10).map(r => `<div class="kv"><span>${esc(r.client)}<br><span class="small muted">${esc(fDay(pDate(r.date)))} · cash</span></span><span class="num">${inr(inrOf(r))}</span></div>`).join('')}
+        <button class="primary" id="rc-add">Add ${cash.length} cash receipt${cash.length === 1 ? '' : 's'} to MyMoney</button>` : '<p class="small muted">No cash receipts waiting.</p>'}
+    </section>
+    <a class="secondary btnlink" href="receipts.html">Open receipts</a>`;
+}
+function bindCoaching() {
+  const b = document.getElementById('rc-add'); if (!b) return;
+  b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Adding…';
+    const sent = new Set(LS.get('rcSent', [])), inrOf = r => r.cur === '₹' ? Number(r.total) || 0 : Number(r.inr) || 0;
+    let ok = 0;
+    for (const r of receiptsList().filter(r => /cash/i.test(r.method || '') && !sent.has(r.id))) {
+      const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, date: String(r.date).slice(0, 10), type: 'Income',
+        category: 'Other Income', amount: Math.round(inrOf(r) * 100) / 100, paidWith: 'Cash', note: `Coaching – ${r.client}${r.no ? ' ' + r.no : ''}`.slice(0, 80), createdAt: now.toISOString() };
+      if (!(entry.amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) { sent.add(r.id); continue; }
+      try { const sha = await GH.putEntry(entry); state.pending.unshift({ id: entry.id, sha, entry }); sent.add(r.id); ok++; }
+      catch (e) { toast(e.message || 'Couldn’t reach GitHub'); break; }
+    }
+    LS.set('rcSent', [...sent]); LS.set('pending', state.pending);
+    if (ok) toast(`${ok} receipt${ok === 1 ? '' : 's'} added. Excel adds them next time it opens`);
+    render();
+  };
+}
+
+/* ======================================================================
+   Groww import: paste the holdings file (Groww → Stocks → Holdings → Download)
+   ====================================================================== */
+function parseHoldingsText(txt) {
+  const lines = String(txt).split(/\r?\n/).map(l => l.trim()).filter(Boolean); if (!lines.length) return [];
+  const sep = lines.some(l => l.includes('\t')) ? '\t' : ',';
+  const split = l => { const out = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out.map(s => s.trim()); };
+  const rows = lines.map(split);
+  const hi = rows.findIndex(r => r.some(c => /quantity|qty|units/i.test(c)) && r.some(c => /name|stock|symbol|scheme/i.test(c)));
+  if (hi < 0) return [];
+  const h = rows[hi].map(c => c.toLowerCase()), col = re => h.findIndex(c => re.test(c));
+  const iName = col(/stock name|scheme name|^name|company/), iSym = col(/symbol|ticker/), iQty = col(/quantity|qty|units/), iAvg = col(/average|avg/), iInv = col(/invested|buy value|cost/), iIsin = col(/isin/);
+  const nm = s => Number(String(s || '').replace(/[,₹\s]/g, ''));
+  return rows.slice(hi + 1).map(r => {
+    const qty = nm(r[iQty]), avg = iAvg >= 0 ? nm(r[iAvg]) : 0, inv = iInv >= 0 ? nm(r[iInv]) : 0;
+    return { name: (r[iName >= 0 ? iName : iSym] || '').trim(), code: iSym >= 0 ? String(r[iSym]).trim().toUpperCase() : '', isin: iIsin >= 0 ? r[iIsin] : '', units: qty, amount: inv > 0 ? inv : Math.round(qty * avg * 100) / 100 };
+  }).filter(x => x.name && x.units > 0 && x.amount > 0);
+}
+function viewImport() {
+  const im = state.imp || (state.imp = { text: '', rows: [], date: isoToday(), kind: 'Stock' });
+  return `<section class="card"><h2 style="margin-top:0">Import holdings</h2>
+    <p class="small muted" style="margin:0 0 6px">In Groww: Stocks (or Mutual funds) → Holdings → download the holdings file. Open it, copy the table, and paste it here. Each holding becomes one buy with your total units and amount invested.</p>
+    <div class="seg" id="im-kind">${[['Stock', 'Stocks'], ['MF', 'Mutual funds']].map(([k, l]) => `<button data-v="${k}" class="${im.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <label class="f" for="im-text">Paste here</label>
+    <textarea class="inp" id="im-text" rows="6" placeholder="Stock Name, Symbol, Quantity, Average buy price…">${esc(im.text)}</textarea>
+    <label class="f" for="im-date">Date to use for these buys</label>
+    <input class="inp" id="im-date" type="date" value="${esc(im.date)}" max="${isoToday()}">
+    <button class="secondary" id="im-read">Read the table</button>
+    ${im.rows.length ? `<div class="group" style="margin-top:10px">${im.rows.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${fUnits(r.units)} units${r.code ? ' · ' + esc(r.code) : ''}</span></span><span class="num">${inr(r.amount)}</span></div>`).join('')}</div>
+      <p class="small muted">${im.kind === 'Stock' ? 'Price code is the symbol – check it matches the NSE symbol.' : 'For funds, add the AMFI price code afterwards (Edit on each buy) to get live prices.'}</p>
+      <button class="primary" id="im-save">Add ${im.rows.length} holding${im.rows.length === 1 ? '' : 's'}</button>` : ''}
+  </section>`;
+}
+function bindImport() {
+  const im = state.imp, $ = id => document.getElementById(id);
+  document.querySelectorAll('#im-kind button').forEach(b => b.onclick = () => { im.text = $('im-text').value; im.kind = b.dataset.v; render(); });
+  $('im-read').onclick = () => { im.text = $('im-text').value; im.date = $('im-date').value; im.rows = parseHoldingsText(im.text); if (!im.rows.length) toast('Couldn’t find a table with name and quantity columns'); render(); };
+  const s = $('im-save'); if (s) s.onclick = async () => {
+    im.date = $('im-date').value; if (!/^\d{4}-\d{2}-\d{2}$/.test(im.date)) { toast('Pick a date'); return; }
+    s.disabled = true; s.textContent = 'Adding…'; let ok = 0;
+    for (const r of im.rows) {
+      const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, date: im.date, side: 'Buy',
+        name: r.name.slice(0, 120), code: im.kind === 'Stock' ? r.code.slice(0, 20) : '', type: im.kind === 'Stock' ? 'Stock' : 'Equity MF', units: Math.round(r.units * 10000) / 10000,
+        amount: r.amount, platform: 'Groww', note: 'Imported holding', createdAt: now.toISOString() };
+      try { await GH.putJson(`trades/${entry.id}.json`, entry, `Import ${entry.name}`); state.trades.unshift({ id: entry.id, entry }); ok++; }
+      catch (e) { toast(e.message || 'Couldn’t reach GitHub'); break; }
+    }
+    LS.set('trades', state.trades); state.imp = null; toast(`${ok} holding${ok === 1 ? '' : 's'} added`); state.tab = 'invest'; render();
+  };
+}
+
+/* ======================================================================
+   Lock screen: PIN (+ fingerprint / face where the phone supports it)
+   ====================================================================== */
+const LOCK_AFTER = 5 * 60e3;
+async function sha256(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+function lockCfg() { return LS.get('lock', null); }
+function showLock() {
+  const c = lockCfg(); if (!c) return;
+  let el = document.getElementById('lock');
+  if (!el) { el = document.createElement('div'); el.id = 'lock'; document.body.appendChild(el); }
+  state.locked = true; state.pinTry = '';
+  el.innerHTML = `<div class="lk"><div class="lk-logo">₹</div><h2>MyMoney is locked</h2><p class="small muted" id="lk-msg">Enter your PIN</p>
+    <div class="lk-dots" id="lk-dots">${'<i></i>'.repeat(c.len)}</div>
+    <div class="lk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, c.bio ? 'bio' : '', 0, 'del'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}" aria-label="${k === 'bio' ? 'Use fingerprint' : k === 'del' ? 'Delete' : k}">${k === 'bio' ? '◉' : k === 'del' ? '⌫' : k}</button>`).join('')}</div></div>`;
+  el.hidden = false; document.body.classList.add('locked');
+  el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => lockKey(b.dataset.k));
+  if (c.bio) setTimeout(bioUnlock, 300);
+}
+async function lockKey(k) {
+  const c = lockCfg(); if (k === 'bio') return bioUnlock();
+  if (k === 'del') state.pinTry = state.pinTry.slice(0, -1); else if (state.pinTry.length < c.len) state.pinTry += k;
+  document.querySelectorAll('#lk-dots i').forEach((d, i) => d.classList.toggle('on', i < state.pinTry.length));
+  if (state.pinTry.length === c.len) {
+    if (await sha256(c.salt + state.pinTry) === c.hash) unlock();
+    else { document.getElementById('lk-msg').textContent = 'Wrong PIN – try again'; state.pinTry = ''; setTimeout(() => document.querySelectorAll('#lk-dots i').forEach(d => d.classList.remove('on')), 250); }
+  }
+}
+async function bioUnlock() {
+  const c = lockCfg(); if (!c || !c.bio || !window.PublicKeyCredential) return;
+  try {
+    const id = Uint8Array.from(atob(c.bio), ch => ch.charCodeAt(0));
+    await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id }], userVerification: 'required', timeout: 60000 } });
+    unlock();
+  } catch (e) { /* cancelled: PIN still works */ }
+}
+function unlock() { state.locked = false; LS.set('lastActive', Date.now()); const el = document.getElementById('lock'); if (el) el.hidden = true; document.body.classList.remove('locked'); }
+async function setPin(pin) { const salt = crypto.getRandomValues(new Uint32Array(2)).join('-'); LS.set('lock', { salt, hash: await sha256(salt + pin), len: pin.length, bio: (lockCfg() || {}).bio || null }); }
+async function addBio() {
+  if (!window.PublicKeyCredential || !(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false))) { toast('This phone doesn’t offer fingerprint or face unlock to web apps'); return false; }
+  const cred = await navigator.credentials.create({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'MyMoney' },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'mymoney', displayName: 'MyMoney' }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000 } });
+  const c = lockCfg(); c.bio = btoa(String.fromCharCode(...new Uint8Array(cred.rawId))); LS.set('lock', c); return true;
+}
+function viewLockSettings() {
+  const c = lockCfg(), theme = LS.get('theme', 'dark');
+  return `<section class="card"><h2 style="margin-top:0">App lock</h2>
+      <p class="small muted" style="margin:0 0 8px">${c ? `On – asks for your ${c.len}-digit PIN when the app opens and after 5 minutes away${c.bio ? ', or your fingerprint / face' : ''}.` : 'Off. Set a PIN so nobody can open your finances on this phone.'}</p>
+      <label class="f" for="lk-new">${c ? 'New PIN' : 'PIN (4–6 digits)'}</label><input class="inp num" id="lk-new" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+      <label class="f" for="lk-new2">Type it again</label><input class="inp num" id="lk-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+      <button class="primary" id="lk-save">${c ? 'Change PIN' : 'Turn on app lock'}</button>
+      ${c ? `${c.bio ? '<button class="secondary" id="lk-bio-off">Stop using fingerprint / face</button>' : '<button class="secondary" id="lk-bio">Also unlock with fingerprint / face</button>'}
+        <button class="secondary" id="lk-off" style="color:var(--bad)">Turn off app lock</button>` : ''}
+    </section>
+    <section class="card"><h2 style="margin-top:0">Look</h2><div class="seg" id="theme-seg">${[['dark', 'Dark'], ['light', 'Light'], ['auto', 'Match phone']].map(([k, l]) => `<button data-v="${k}" class="${theme === k ? 'on' : ''}">${l}</button>`).join('')}</div></section>`;
+}
+function bindLockSettings() {
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('#theme-seg button').forEach(b => b.onclick = () => { LS.set('theme', b.dataset.v); applyTheme(); render(); });
+  $('lk-save').onclick = async () => {
+    const a = $('lk-new').value, b = $('lk-new2').value;
+    if (!/^\d{4,6}$/.test(a)) { toast('PIN must be 4 to 6 digits'); return; }
+    if (a !== b) { toast('The two PINs don’t match'); return; }
+    await setPin(a); toast('App lock on'); render();
+  };
+  if ($('lk-off')) $('lk-off').onclick = () => { if (!confirmInline($('lk-off'))) return; LS.del('lock'); toast('App lock off'); render(); };
+  if ($('lk-bio')) $('lk-bio').onclick = async () => { try { if (await addBio()) toast('Fingerprint / face unlock on'); } catch (e) { toast('Not set up – ' + (e.name === 'NotAllowedError' ? 'cancelled' : 'not supported here')); } render(); };
+  if ($('lk-bio-off')) $('lk-bio-off').onclick = () => { const c = lockCfg(); c.bio = null; LS.set('lock', c); render(); };
+}
+function applyTheme() {
+  const t = LS.get('theme', 'dark'), light = t === 'light' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = light ? '#f4f6f9' : '#0d0f12';
 }
 
 /* Retirement: ring + projection, quick sliders, savings today (format from the reference) */
@@ -1222,12 +1759,19 @@ function viewMore() {
   return `<section class="sec"><div class="sec-h"><h3>Coaching</h3>${rc.count ? `<span class="small">${inr(rc.month)} this month</span>` : ''}</div>
       <div class="group">
         ${row('href="receipts.html"', 'New receipt', '')}
+        ${row('data-go="coaching"', 'Coaching earnings', '')}
         ${row('href="receipts.html#history"', 'Past receipts', rc.count ? `${rc.count} receipts, ${inr(rc.all)} in all${rc.last ? `. Last: ${esc(rc.last.client)}, ${fDay(pDate(rc.last.date))}` : ''}` : '')}
       </div></section>
     <section class="sec"><div class="sec-h"><h3>Plans</h3></div>
       <div class="group">
         ${row('data-go="future"', 'Retirement', '')}
+        ${row('data-go="goals"', 'Goals', '')}
+        ${row('data-go="sips"', 'SIPs', '')}
+        ${row('data-go="bills"', 'Bills and subscriptions', '')}
+        ${row('data-go="tax"', 'Tax: 80C and capital gains', '')}
+        ${row('data-go="report"', 'Monthly report (PDF)', '')}
         ${row('data-go="budget"', 'Net-pay plan', '')}
+        ${row('data-go="lockset"', 'App lock and look', lockCfg() ? 'Lock on' : '')}
         ${row('data-go="settings"', 'Notifications and settings', pushStatus() === 'on' ? 'Notifications on' : '')}
       </div></section>
     <section class="sec"><div class="sec-h"><h3>Excel sheets</h3>${at ? `<span class="small">sent ${fDay(at).replace(/ \d{4}$/, '')}</span>` : ''}</div>
@@ -1424,7 +1968,9 @@ function viewAdd() {
   const a = state.add || (state.add = newAdd());
   const cats = catsFor(a.type);
   if (!cats.includes(a.category)) a.category = a.type === 'Expenses' && cats.includes('Cash') ? 'Cash' : (cats[0] || '');
-  return `<section class="card">
+  const qp = a.editId ? [] : quickPicks();
+  return `${qp.length ? `<div class="chips" id="add-quick" style="padding-top:0">${qp.map((e, i) => `<button class="chip" data-q="${i}">${esc((e.note || e.category).slice(0, 22))} ${inr(e.amount)}</button>`).join('')}</div>` : ''}
+    ${a.editId ? '<p class="small warn" style="margin:0 0 8px">Editing an entry that’s waiting for Excel</p>' : ''}<section class="card">
     <div class="seg" id="add-type">${['Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button data-t="${t}" class="${a.type === t ? 'on' : ''}">${t === 'Expenses' ? 'Spent' : t}</button>`).join('')}</div>
     <label class="f" for="add-amt">Amount (₹)</label>
     <input class="inp amount num" id="add-amt" inputmode="decimal" placeholder="0" value="${esc(a.amount)}" autocomplete="off">
@@ -1436,7 +1982,8 @@ function viewAdd() {
     <div class="pay" id="add-pay">${['Cash', 'UPI', 'Card', 'Other'].map(p => `<button class="chip ${a.paidWith === p ? 'on' : ''}" data-p="${p}">${p}</button>`).join('')}</div>
     <label class="f" for="add-note">Note</label>
     <input class="inp" id="add-note" maxlength="80" placeholder="e.g. Vegetables at market" value="${esc(a.note)}">
-    <button class="primary" id="add-save">Save entry</button>
+    <button class="primary" id="add-save">${a.editId ? 'Save changes' : 'Save entry'}</button>
+    ${a.editId ? '<button class="secondary" id="add-cancel">Cancel</button>' : ''}
     <p class="note">Use this for cash, or anything that won’t show up in a bank statement. Bank transactions arrive through your Excel sync, so adding them here too would count them twice.</p>
     <p class="note">Your entry waits on GitHub until Excel next opens or saves. Then it goes into Tracking as a “Manual entry” row, and totals update after the next send.</p>
   </section>`;
@@ -1447,6 +1994,9 @@ function bindAdd() {
     a.date = document.getElementById('add-date').value; a.note = document.getElementById('add-note').value; };
   document.querySelectorAll('#add-type button').forEach(b => b.onclick = () => { sync1(); a.type = b.dataset.t; a.category = ''; render(); });
   document.querySelectorAll('#add-pay .chip').forEach(b => b.onclick = () => { sync1(); a.paidWith = b.dataset.p; render(); });
+  const qp = quickPicks();
+  document.querySelectorAll('#add-quick .chip').forEach(b => b.onclick = () => { const e = qp[Number(b.dataset.q)]; Object.assign(a, { type: e.type, category: e.category, amount: String(e.amount), note: e.note || '', paidWith: e.paidWith || 'Cash', date: isoToday() }); render(); });
+  const ac = document.getElementById('add-cancel'); if (ac) ac.onclick = () => { state.add = newAdd(); state.tab = 'tx'; render(); };
   document.getElementById('add-save').onclick = async () => {
     sync1();
     const amt = Number(String(a.amount).replace(/[,₹\s]/g, ''));
@@ -1454,8 +2004,17 @@ function bindAdd() {
     if (!a.category) { toast('Pick a category'); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date)) { toast('Pick a date'); return; }
     const now = new Date(), stamp = now.toISOString().replace(/[-:]/g, '').slice(0, 15);
-    const entry = { id: `${stamp}-${Math.random().toString(36).slice(2, 7)}`, date: a.date, type: a.type, category: a.category,
-      amount: Math.round(amt * 100) / 100, paidWith: a.paidWith, note: a.note.trim().slice(0, 80), createdAt: now.toISOString() };
+    const entry = { id: a.editId || `${stamp}-${Math.random().toString(36).slice(2, 7)}`, date: a.date, type: a.type, category: a.category,
+      amount: Math.round(amt * 100) / 100, paidWith: a.paidWith, note: a.note.trim().slice(0, 80), createdAt: a.createdAt || now.toISOString(), ...(a.editId ? { editedAt: now.toISOString() } : {}) };
+    if (a.editId) {
+      try {
+        await GH.putJson(`inbox/${entry.id}.json`, entry, `Phone entry edited ${entry.id}`);
+        const sha = await GH.sha(`inbox/${entry.id}.json`);
+        state.pending = state.pending.map(p => p.id === entry.id ? { id: entry.id, sha, entry } : p); LS.set('pending', state.pending);
+        toast('Changes saved');
+      } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); return; }
+      state.add = newAdd(); state.tab = 'tx'; render(); return;
+    }
     const btn = document.getElementById('add-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const sha = await GH.putEntry(entry);
@@ -1589,9 +2148,14 @@ document.getElementById('btn-sync').onclick = () => sync({ toast: true });
 document.getElementById('btn-settings').onclick = () => { state.tab = 'more'; window.scrollTo(0, 0); render(); };
 window.addEventListener('online', () => sync());
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { if (!state.locked) LS.set('lastActive', Date.now()); return; }
+  if (lockCfg() && !state.locked && Date.now() - (LS.get('lastActive', 0) || 0) > LOCK_AFTER) showLock();
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
-{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'pfedit', 'settings'].includes(h) && state.cfg) state.tab = h; }
+{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'pfedit', 'sips', 'bills', 'goals', 'tax', 'report', 'coaching', 'import', 'lockset', 'settings'].includes(h) && state.cfg) state.tab = h; }
+applyTheme();
+if (window.matchMedia) matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
 render();
+if (lockCfg()) showLock();
 if (state.cfg) sync();
