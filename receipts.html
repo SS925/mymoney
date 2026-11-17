@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coaching receipts · MyMoney</title>
+<meta name="theme-color" content="#14121f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e4e2dc;
+    --accent:#2f6f5e; --accent-soft:#e6f0ec; --danger:#b3412f;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  header{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  header h1{font-size:20px;margin:0;font-weight:700}
+  header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .tabs{display:flex;gap:6px;background:#e9e7e1;padding:4px;border-radius:10px}
+  .tabs button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer}
+  .tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  main{padding:0 20px 40px;max-width:1200px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
+  .card + .card{margin-top:16px}
+  label{display:block;font-size:13px;font-weight:500;margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .items{width:100%;border-collapse:collapse;margin-top:6px}
+  .items th{font-size:12px;color:var(--muted);text-align:left;font-weight:500;padding:4px}
+  .items td{padding:3px}
+  .items td:nth-child(2),.items td:nth-child(3){width:90px}
+  .items td:last-child{width:34px}
+  .x{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px}
+  .x:hover{color:var(--danger)}
+  .btn{border:1px solid var(--line);background:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-weight:500;cursor:pointer;color:var(--ink)}
+  .btn:hover{background:#faf9f6}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.small{padding:6px 10px;font-size:13px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .sticky{position:sticky;top:12px}
+  /* Receipt */
+  #receipt{--rc:#14284b;--rc2:#c19a49;--rcsoft:#eef1f7;--rcink:#0d1b33;position:relative;background:#fff;color:#151515;padding:0 0 26px;border:1px solid #d6d3cc;border-radius:4px;font-size:14px;line-height:1.45;overflow:hidden}
+  #receipt.t-black{--rc:#1a1a1a;--rc2:#c9a24b;--rcsoft:#f2f2f0;--rcink:#111}
+  #receipt.t-maroon{--rc:#5e1626;--rc2:#c9a24b;--rcsoft:#f7eef0;--rcink:#3a0d17}
+  #receipt.t-green{--rc:#1f5a4b;--rc2:#c9a24b;--rcsoft:#eaf3ef;--rcink:#123a30}
+  #receipt.t-blue{--rc:#1d4ed8;--rc2:#93c5fd;--rcsoft:#eef3ff;--rcink:#13307f}
+  #receipt::after{content:"";position:absolute;inset:7px;border:1px solid var(--rc2);border-radius:2px;pointer-events:none}
+  #receipt > *:not(.r-top):not(.r-mark){margin-left:38px;margin-right:38px;position:relative}
+  .r-mark{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%) rotate(-24deg);font-family:"Playfair Display",serif;font-weight:700;font-size:130px;letter-spacing:.1em;color:var(--rc);opacity:.045;pointer-events:none;white-space:nowrap}
+  .r-top{display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--rc);color:#fff;padding:30px 38px 26px;border-bottom:5px solid var(--rc2)}
+  .r-brand{display:flex;align-items:center;gap:16px}
+  .r-mono{width:58px;height:58px;border-radius:50%;border:2px solid var(--rc2);display:flex;align-items:center;justify-content:center;font-family:"Playfair Display",serif;font-size:23px;font-weight:700;color:var(--rc2);flex:none;letter-spacing:.02em}
+  .r-from{font-family:"Playfair Display",serif;font-weight:700;font-size:22px;color:#fff;line-height:1.15}
+  .r-top .r-sub{color:rgba(255,255,255,.78);font-size:12.5px}
+  .r-sub{color:#4a4a4a;font-size:13px;white-space:pre-line}
+  .r-titlebox{text-align:right}
+  .r-title{font-family:"Playfair Display",serif;font-size:30px;font-weight:700;letter-spacing:.14em;color:var(--rc2);line-height:1}
+  .r-meta{font-size:13px;color:#fff;margin-top:8px}
+  .r-meta div{white-space:nowrap}
+  .r-meta b{color:rgba(255,255,255,.65);font-weight:500;margin-right:6px}
+  .r-to{margin-top:24px;margin-bottom:4px;display:flex;justify-content:space-between;gap:16px;align-items:flex-end}
+  .r-client{font-family:"Playfair Display",serif;font-weight:700;font-size:19px;color:var(--rcink)}
+  .r-period{text-align:right;font-size:13px;color:#333}
+  .r-period b{display:block;font-size:15px;color:var(--rcink)}
+  .r-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--rc);font-weight:700;margin-bottom:2px}
+  .r-table{width:calc(100% - 76px);border-collapse:collapse;margin-top:18px}
+  .r-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:#fff;text-align:left;background:var(--rc);padding:10px 10px;font-weight:700}
+  .r-table td{padding:13px 10px;border-bottom:1px solid #e2dfd8;vertical-align:top;color:#151515;font-weight:500}
+  .r-table tbody tr:nth-child(even) td{background:var(--rcsoft)}
+  .r-table .num{text-align:right;white-space:nowrap}
+  .r-total{display:flex;justify-content:flex-end;margin-top:0}
+  .r-total div{background:var(--rc);color:#fff;padding:12px 20px;font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:3px solid var(--rc2)}
+  .r-total b{color:var(--rc2);margin-left:18px;font-size:22px;letter-spacing:0;text-transform:none;font-family:"Playfair Display",serif}
+  .r-paid{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;font-weight:600;color:#151515}
+  .r-notes{margin-top:16px;font-size:13px;white-space:pre-line;color:#333}
+  .r-foot{margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+  .r-stamp{border:3px double var(--rc2);color:var(--rc);font-weight:800;font-size:15px;padding:6px 16px;border-radius:50px;transform:rotate(-8deg);letter-spacing:.18em;background:#fff}
+  .r-sign{text-align:center;font-size:12px;color:#555}
+  .r-sign .sig{font-family:"Playfair Display",serif;font-style:italic;font-size:20px;color:var(--rcink);padding:0 10px 2px}
+  .r-sign .line{border-top:1.5px solid var(--rc);padding-top:5px;min-width:180px;color:#151515;font-weight:600;font-size:12.5px}
+  .r-thanks{text-align:center;margin-top:22px;font-family:"Playfair Display",serif;font-style:italic;color:var(--rc);font-size:14px}
+  .r-inr{margin-top:16px;border:1.5px solid var(--rc2);background:var(--rcsoft);padding:12px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12.5px;color:#333;border-left:6px solid var(--rc)}
+  .r-inr .r-big{font-size:14px;font-weight:700;color:var(--rcink);text-transform:uppercase;letter-spacing:.06em}
+  .r-inr b{font-size:23px;color:var(--rc);font-family:"Playfair Display",serif}
+  .r-words{font-size:12px;color:#333;text-align:right;margin-top:6px;font-style:italic}
+  .r-logo{width:66px;height:66px;border-radius:10px;background:#fff;padding:6px;display:flex;align-items:center;justify-content:center;border:2px solid var(--rc2);flex:none}
+  .r-logo img{max-width:100%;max-height:100%;display:block}
+  .r-sign .sigimg{display:block;margin:0 auto 2px;max-height:56px;max-width:200px}
+  .imgrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .imgprev{width:120px;height:56px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:#fff;overflow:hidden}
+  .imgprev img{max-width:100%;max-height:100%}
+  #pad{width:100%;height:190px;border:1.5px dashed #bbb;border-radius:8px;touch-action:none;background:#fff;display:block;cursor:crosshair}
+  .sharebox a{display:block;text-align:center;text-decoration:none;margin-top:8px}
+  /* Layout: Stripe-style */
+  #receipt.L-stripe{padding:0 0 28px}
+  #receipt.L-stripe::after,#receipt.L-minimal::after,#receipt.L-geometric::after{display:none}
+  .L-stripe .r-mark,.L-minimal .r-mark{display:none}
+  .s-strip{height:8px;background:linear-gradient(90deg,var(--rc),var(--rc2))}
+  #receipt > .s-strip{margin:0 !important}
+  .s-head{text-align:center;padding-top:30px}
+  .s-brand{width:56px;height:56px;margin:0 auto 12px;border-radius:14px;background:var(--rc);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;overflow:hidden}
+  .s-brand img{max-width:100%;max-height:100%;background:#fff}
+  .s-title{font-size:22px;font-weight:700;color:#1a1f36}
+  .s-no{color:#6b7385;font-size:13px;margin-top:4px}
+  .s-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:26px}
+  .s-trio span,.s-sec{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7385;font-weight:600}
+  .s-trio b{display:block;font-size:16px;color:#1a1f36;margin-top:3px}
+  .s-sec{margin-top:24px;margin-bottom:8px}
+  .s-box{background:#f6f8fa;border-radius:8px;padding:6px 18px}
+  .s-billed{padding:14px 18px;display:flex;flex-direction:column;gap:2px;font-size:13px;color:#4a5264}
+  .s-billed b{font-size:15px;color:#1a1f36}
+  .s-line{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e6e9ef;color:#1a1f36;font-size:14px}
+  .s-line:last-child{border-bottom:0}
+  .s-line span:last-child{white-space:nowrap;font-weight:600}
+  .s-strong{font-weight:700;font-size:15px}
+  .s-inr span:last-child{color:var(--rc);font-size:18px}
+  .s-inr small{color:#6b7385;font-weight:400;font-size:12px}
+  .s-muted{color:#6b7385;font-size:13px}
+  .s-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:28px}
+  .s-contact{font-size:12.5px;color:#6b7385;max-width:55%}
+  /* Layout: Minimal */
+  #receipt.L-minimal{background:#fbf8f3;padding:0 0 30px;border-color:#e8e1d4}
+  .m-top{display:flex;justify-content:space-between;align-items:flex-start;padding-top:38px;gap:16px}
+  .m-title{font-family:"Playfair Display",serif;font-size:46px;font-weight:700;color:#111;line-height:1}
+  .m-title i{color:var(--rc2);font-style:normal}
+  .m-meta{font-size:13px;text-align:right;color:#111}
+  .m-meta span{color:#8a8173;margin-right:8px;text-transform:uppercase;font-size:10.5px;letter-spacing:.1em}
+  .m-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:30px;padding-top:18px;border-top:1px solid #111}
+  .m-k{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#8a8173;margin-bottom:4px}
+  .m-v{font-size:17px;font-weight:600;color:#111}
+  .m-v.sm{font-size:14px}
+  .m-s{font-size:13px;color:#555;white-space:pre-line}
+  .m-table{width:calc(100% - 76px);border-collapse:collapse;margin-top:28px}
+  .m-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#8a8173;text-align:left;padding:8px 0;border-bottom:1px solid #111;font-weight:600}
+  .m-table td{padding:14px 0;border-bottom:1px solid #e3dccf;color:#111}
+  .m-table .num{text-align:right;white-space:nowrap;padding-left:14px}
+  .m-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px;padding-bottom:10px;border-bottom:2px solid #111}
+  .m-total span{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#111;font-weight:600}
+  .m-total b{font-family:"Playfair Display",serif;font-size:30px;color:#111}
+  .m-inr{border-bottom:1px solid #e3dccf}
+  .m-inr b{color:var(--rc);font-size:26px}
+  .m-inr small{display:block;text-transform:none;letter-spacing:0;color:#8a8173;font-weight:400;font-size:12px;margin-top:2px}
+  .m-pay{border-top:1px solid #e3dccf;margin-top:22px}
+  .m-foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:34px}
+  .m-thanks{font-family:"Playfair Display",serif;font-style:italic;font-size:24px;color:#111}
+  .L-minimal .r-sign .line{border-top-color:#111}
+  /* Layout: Geometric */
+  #receipt.L-geometric{padding:0 0 30px}
+  .L-geometric .r-mark{display:none}
+  .g-art{position:absolute;pointer-events:none}
+  #receipt > .g-art{margin:0 !important;position:absolute !important}
+  .g-tr{top:0;right:0;width:220px;height:160px}
+  .g-bl{bottom:0;left:0;width:200px;height:120px}
+  .g-head{display:flex;align-items:center;gap:14px;padding-top:36px}
+  .g-brand{width:54px;height:54px;border-radius:50%;background:var(--rc);color:var(--rc2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;overflow:hidden;flex:none}
+  .g-brand img{max-width:80%;max-height:80%}
+  .g-brand:has(img){background:#fff;border:2px solid var(--rc)}
+  .g-name{font-size:20px;font-weight:800;color:var(--rcink)}
+  .g-title{font-size:30px;font-weight:800;letter-spacing:.06em;color:var(--rc);margin-top:26px}
+  .g-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
+  .g-cards div{border-left:4px solid var(--rc2);background:var(--rcsoft);padding:8px 12px;border-radius:0 6px 6px 0}
+  .g-cards span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--rc);font-weight:700}
+  .g-cards b{font-size:15px;color:#151515}
+  .g-table th{border-radius:0}
+  .g-sum{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .g-pill{background:var(--rc);color:#fff;border-radius:40px;padding:10px 22px;display:flex;align-items:center;gap:14px}
+  .g-pill span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .g-pill b{font-size:21px;color:var(--rc2)}
+  .g-pill2{background:#fff;color:var(--rcink);border:2px solid var(--rc2);border-radius:16px;flex-wrap:wrap;row-gap:0}
+  .g-pill2 b{color:var(--rc)}
+  .g-pill2 small{flex-basis:100%;font-size:11.5px;color:#555}
+  .g-foot{position:relative;z-index:1}
+  .layouts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+  .layouts button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px;font:inherit;text-align:left;cursor:pointer}
+  .layouts button b{display:block;font-size:14px}
+  .layouts button span{font-size:12px;color:var(--muted)}
+  .layouts button.on{border-color:var(--accent);background:var(--accent-soft)}
+  .quick{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .qstyles{display:flex;gap:4px;background:#e9e7e1;padding:4px;border-radius:10px;flex-wrap:wrap}
+  .qstyles button{border:0;background:transparent;padding:7px 11px;border-radius:7px;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .qstyles button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .qcolors{display:flex;gap:7px}
+  .qcolors button{width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;position:relative}
+  .qcolors button::after{content:"";position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:#c9a24b;border:1.5px solid #fff}
+  .qcolors button[data-t=blue]::after{background:#93c5fd}
+  .qcolors button.on{box-shadow:0 0 0 2px var(--ink)}
+  .themes{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .themes button{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+  .themes button.on{box-shadow:0 0 0 2px var(--ink)}
+  /* History */
+  .hist-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .hist-top input{max-width:320px}
+  .hist{width:100%;border-collapse:collapse}
+  .hist th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:8px;border-bottom:1px solid var(--line)}
+  .hist td{padding:10px 8px;border-bottom:1px solid #f0eee9}
+  .hist td.num{text-align:right;white-space:nowrap}
+  .hist .ops{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .empty{color:var(--muted);text-align:center;padding:30px}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:150px}
+  .stat span{display:block;font-size:12px;color:var(--muted)}
+  .stat b{font-size:20px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+  .toast.show{opacity:1}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:8;padding:20px}
+  .modal.show{display:flex}
+  .modal .box{background:#fff;border-radius:12px;padding:20px;max-width:380px;width:100%}
+  .modal .box p{margin:0 0 16px}
+  .hidden{display:none !important}
+  .sync{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+  .sync i{width:8px;height:8px;border-radius:50%;background:#bbb;display:inline-block}
+  .sync.ok i{background:#2f9e6e} .sync.busy i{background:#d9a320} .sync.err i{background:var(--danger)}
+  .sync.err{color:var(--danger);border-color:#efc9c2}
+  .steps{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13px;line-height:1.6}
+  .steps b{color:var(--ink)}
+  .msg{font-size:13px;margin-top:10px;padding:8px 10px;border-radius:8px;background:#f5f4f0}
+  .msg.ok{background:var(--accent-soft);color:var(--accent)} .msg.err{background:#fbeae6;color:var(--danger)}
+  .head-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+  /* ===== MyMoney look: app chrome only. #receipt (the document/PDF) keeps its own colours. ===== */
+  :root{--bg:#14121f;--card:#221f35;--ink:#ecebf5;--muted:#9c99b6;--line:#2f2b47;--accent:#7c5cff;--accent-soft:#2c2650;--danger:#ff6b6b;--field:#1c1a2b}
+  html,body{background:var(--bg)}
+  body{color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
+  header{position:sticky;top:0;z-index:20;background:rgba(20,18,31,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
+  header h1{font-size:19px;letter-spacing:-.01em}
+  .mm-back{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--ink);text-decoration:none;font-size:22px;margin-right:10px;flex:none}
+  .mm-title{display:flex;align-items:center}
+  main{padding:14px 16px 30px}
+  .card{border-radius:16px}
+  input,select,textarea{background:var(--field);color:var(--ink);border-color:var(--line);border-radius:10px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  input[type=date],input[type=month]{color-scheme:dark}
+  select option{background:#1c1a2b;color:var(--ink)}
+  .btn{background:var(--field);color:var(--ink);border-color:var(--line);border-radius:10px}
+  .btn:hover{background:#26233a}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tabs{background:var(--field);border:1px solid var(--line)}
+  .tabs button.on{background:var(--accent);color:#fff;box-shadow:none}
+  .layouts button{background:var(--field);color:var(--ink)}
+  .layouts button.on{background:var(--accent-soft);border-color:var(--accent)}
+  .qstyles{background:var(--field)}
+  .qstyles button.on{background:var(--accent);color:#fff;box-shadow:none}
+  .qcolors button,.themes button{border-color:var(--bg)}
+  .qcolors button.on,.themes button.on{box-shadow:0 0 0 2px #fff}
+  .hist th{border-bottom-color:var(--line)}
+  .hist td{border-bottom-color:#29263f}
+  .stat{border-radius:14px}
+  .modal .box{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .sync{background:var(--field);color:var(--ink);border-color:var(--line)}
+  .sync.err{border-color:#6b2a35}
+  .msg{background:var(--field)}
+  .msg.ok{background:#16352b;color:#3ddc97}
+  .msg.err{background:#3b1e26;color:#ffc4cc}
+  .steps b{color:var(--ink)}
+  .toast{background:#f1efff;color:#1b1830;bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .imgprev{background:#fff;color:#666}
+  #receipt{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  /* phones: never wider than the screen (date inputs and the items table used to push it to ~415px) */
+  @media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .grid>div{min-width:0}
+  input,select,textarea{min-width:0;max-width:100%}
+  .row>div{min-width:0}
+  .items{table-layout:fixed}
+  .items td:first-child input{width:100%}
+  .head-right{max-width:100%;min-width:0}
+  .tabs{overflow-x:auto;max-width:100%}
+  /* past receipts on phones: one block per receipt instead of a cramped table */
+  @media (max-width:600px){
+    .hist thead{display:none}
+    .hist,.hist tbody{display:block}
+    .hist tr{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"client client amt" "no month amt" "ops ops ops";gap:2px 8px;padding:11px 2px;border-bottom:1px solid #29263f}
+    .hist td{border:0 !important;padding:0 !important}
+    .hist td:nth-child(1){grid-area:no;color:var(--muted);font-size:12.5px}
+    .hist td:nth-child(2){grid-area:month;color:var(--muted);font-size:12.5px}
+    .hist td:nth-child(3){grid-area:client;font-weight:600}
+    .hist td:nth-child(4){grid-area:amt;align-self:center}
+    .hist td:nth-child(5){grid-area:ops;margin-top:6px}
+    .hist .ops{justify-content:flex-start}
+    .hist td.empty{grid-column:1/-1}
+    .stats .stat{flex:1;min-width:0;padding:10px 12px}
+    .stat b{font-size:17px}
+  }
+  /* bottom tabs, same as the rest of MyMoney */
+  .mm-tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:rgba(24,22,38,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mm-tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:11px;padding:5px 0;text-decoration:none}
+  .mm-tabs a.on{color:#fff} .mm-tabs a.on svg{color:var(--accent)}
+  .mm-tabs .mm-add svg{width:46px;height:46px;padding:11px;border-radius:15px;background:var(--accent);color:#fff;margin-top:-4px;box-shadow:0 6px 18px rgba(124,92,255,.45)}
+</style>
+</head>
+<body>
+<header>
+  <div class="mm-title">
+    <a class="mm-back" href="./#more" aria-label="Back to MyMoney">‹</a>
+    <div><h1>Coaching receipts</h1>
+    <p>Make a receipt, share the PDF, and find any old one later.</p></div>
+  </div>
+  <div class="head-right">
+    <button class="sync" id="syncPill" title="GitHub saving"><i></i><span>GitHub: not connected</span></button>
+    <div class="tabs">
+      <button id="tabNew" class="on">New receipt</button>
+      <button id="tabHist">Past receipts</button>
+      <button id="tabMe">My details</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- NEW RECEIPT -->
+  <section id="viewNew" class="grid">
+    <div>
+      <div class="card">
+        <h2>Receipt</h2>
+        <div class="row">
+          <div><label>Receipt no.</label><input id="fNo"></div>
+          <div><label>Date</label><input id="fDate" type="date"></div>
+        </div>
+        <label>Coaching month</label><input id="fMonth" type="month">
+        <div class="hint" id="monthHint"></div>
+        <label>Client name</label><input id="fClient" placeholder="e.g. Priya Sharma">
+        <label>Client phone / email (optional)</label><input id="fClientContact" placeholder="optional">
+      </div>
+
+      <div class="card">
+        <h2>What they paid for</h2>
+        <table class="items">
+          <thead><tr><th>Description</th><th>Qty</th><th>Amount</th><th></th></tr></thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+        <div class="actions" style="margin-top:8px"><button class="btn small" id="addItem">+ Add line</button></div>
+        <div class="row">
+          <div><label>Currency</label>
+            <select id="fCur"><option value="₹">₹ INR</option><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option></select>
+          </div>
+          <div><label>Discount (optional)</label><input id="fDisc" type="number" min="0" step="any" placeholder="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Payment</h2>
+        <div class="row">
+          <div><label>Paid via</label>
+            <select id="fMethod"><option>Remitly</option><option>UPI</option><option>Cash</option><option>Bank transfer</option><option>Card</option><option>PayPal</option><option>Other</option></select>
+          </div>
+          <div><label>Transaction ID (optional)</label><input id="fTxn" placeholder="optional"></div>
+        </div>
+        <div id="fxBox">
+          <div class="row">
+            <div><label id="fxLabel">Rate that day (₹ per $1)</label><input id="fFx" type="number" min="0" step="any" placeholder="e.g. 84.25"></div>
+            <div><label>Rupees credited (₹)</label><input id="fInr" type="number" min="0" step="any" placeholder="from Remitly"></div>
+          </div>
+          <div class="hint">Type either one from your Remitly receipt and the other fills in by itself.</div>
+        </div>
+        <label>Note (optional)</label><textarea id="fNotes" placeholder="e.g. Thank you! Next session on Monday."></textarea>
+        <div class="actions">
+          <button class="btn primary" id="btnSave">Save receipt</button>
+          <button class="btn" id="btnShare">Share PDF</button>
+          <button class="btn" id="btnPdf">Download PDF</button>
+          <button class="btn" id="btnCopy">Copy as text</button>
+          <button class="btn" id="btnClear">Start fresh</button>
+        </div>
+        <div class="hint" id="editHint"></div>
+      </div>
+    </div>
+
+    <div class="sticky">
+      <div class="quick">
+        <div class="qstyles" id="qLayout">
+          <button data-l="classic">Classic</button>
+          <button data-l="stripe">Stripe-style</button>
+          <button data-l="geometric">Geometric</button>
+          <button data-l="minimal">Minimal</button>
+        </div>
+        <div class="qcolors" id="qTheme">
+          <button data-t="navy" title="Navy" style="background:#14284b"></button>
+          <button data-t="black" title="Black" style="background:#1a1a1a"></button>
+          <button data-t="maroon" title="Maroon" style="background:#5e1626"></button>
+          <button data-t="green" title="Green" style="background:#1f5a4b"></button>
+          <button data-t="blue" title="Blue" style="background:#1d4ed8"></button>
+        </div>
+      </div>
+      <div id="receipt"></div>
+      <div class="hint">This is exactly how your PDF will look.</div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="viewHist" class="hidden">
+    <div class="stats">
+      <div class="stat"><span>Receipts</span><b id="sCount">0</b></div>
+      <div class="stat"><span>Received this month (₹)</span><b id="sMonth">0</b></div>
+      <div class="stat"><span>Received all time (₹)</span><b id="sAll">0</b></div>
+    </div>
+    <div class="card">
+      <div class="hist-top">
+        <input id="search" placeholder="Search client, receipt no, description…">
+        <span style="flex:1"></span>
+        <button class="btn small" id="btnExport">Back up all</button>
+        <label class="btn small" style="margin:0">Restore backup<input type="file" id="fileImport" accept=".json,application/json" class="hidden"></label>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="hist">
+          <thead><tr><th>No.</th><th>Month</th><th>Client</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+          <tbody id="histRows"></tbody>
+        </table>
+      </div>
+      <div class="hint">Receipts are saved in this browser. Use “Back up all” now and then so you never lose them.</div>
+    </div>
+  </section>
+
+  <!-- MY DETAILS -->
+  <section id="viewMe" class="hidden">
+    <div class="card" style="max-width:560px">
+      <h2>My details (shown on every receipt)</h2>
+      <label>Your name</label><input id="mName" placeholder="e.g. Sairam Akhil">
+      <label>What you do (optional)</label><input id="mRole" placeholder="e.g. Fitness Coach, Career Coaching">
+      <label>Phone / email / UPI ID (optional)</label><textarea id="mContact" placeholder="One per line"></textarea>
+      <label>Receipt number starts with</label><input id="mPrefix" placeholder="R-">
+      <div class="row">
+        <div><label>Monthly fee</label><input id="mRate" type="number" min="0" step="any" placeholder="750"></div>
+        <div><label>Paid in</label><select id="mCur"><option value="$">$ USD</option><option value="₹">₹ INR</option><option value="€">€ EUR</option><option value="£">£ GBP</option></select></div>
+      </div>
+      <label>Usually paid via</label><select id="mMethod"><option>Remitly</option><option>UPI</option><option>Cash</option><option>Bank transfer</option><option>Card</option><option>PayPal</option><option>Other</option></select>
+      <label>Description on receipt</label><input id="mDesc" placeholder="Monthly coaching (Mon–Fri)">
+      <label>Default receipt style (you can also change it per receipt above the preview)</label>
+      <div class="layouts" id="mLayout">
+        <button data-l="classic"><b>Classic premium</b><span>Dark header, gold frame, serif</span></button>
+        <button data-l="stripe"><b>Modern (Stripe-style)</b><span>Amount, date &amp; method up top</span></button>
+        <button data-l="minimal"><b>Minimal</b><span>Warm paper, lots of white space</span></button>
+        <button data-l="geometric"><b>Geometric</b><span>Bold shapes and colour cards</span></button>
+      </div>
+      <label>Default receipt colour</label>
+      <div class="themes" id="mTheme">
+        <button data-t="navy" title="Navy & gold" style="background:linear-gradient(135deg,#14284b 60%,#c19a49 60%)"></button>
+        <button data-t="black" title="Black & gold" style="background:linear-gradient(135deg,#1a1a1a 60%,#c9a24b 60%)"></button>
+        <button data-t="maroon" title="Maroon & gold" style="background:linear-gradient(135deg,#5e1626 60%,#c9a24b 60%)"></button>
+        <button data-t="green" title="Green & gold" style="background:linear-gradient(135deg,#1f5a4b 60%,#c9a24b 60%)"></button>
+        <button data-t="blue" title="Bright blue" style="background:linear-gradient(135deg,#1d4ed8 60%,#93c5fd 60%)"></button>
+      </div>
+      <label>Logo (optional — replaces your initials)</label>
+      <div class="imgrow">
+        <div class="imgprev" id="logoPrev">No logo</div>
+        <label class="btn small" style="margin:0">Upload<input type="file" id="logoFile" accept="image/*" class="hidden"></label>
+        <button class="btn small" id="logoDel">Remove</button>
+      </div>
+      <label>Signature (optional)</label>
+      <div class="imgrow">
+        <div class="imgprev" id="sigPrev">No signature</div>
+        <button class="btn small" id="sigDraw">Draw</button>
+        <label class="btn small" style="margin:0">Upload photo<input type="file" id="sigFile" accept="image/*" class="hidden"></label>
+        <button class="btn small" id="sigDel">Remove</button>
+      </div>
+      <div class="hint">Photo of your signature on white paper works — the background is cleaned off automatically.</div>
+      <div class="actions"><button class="btn primary" id="btnMeSave">Save my details</button></div>
+      <div class="hint">No business name needed — just your own name.</div>
+    </div>
+
+    <div class="card" style="max-width:560px">
+      <h2>Save receipts to GitHub</h2>
+      <div class="hint" style="margin-top:0">Every receipt you save is stored in your <b>private</b> GitHub repo, so only you can see it and it shows up on all your devices.</div>
+      <div class="row">
+        <div><label>GitHub username</label><input id="gOwner" placeholder="SS925"></div>
+        <div><label>Private repo for receipts</label><input id="gRepo" placeholder="coaching-receipts-data"></div>
+      </div>
+      <label>GitHub key (token)</label><input id="gToken" type="password" autocomplete="off" placeholder="github_pat_…">
+      <div class="actions">
+        <button class="btn primary" id="btnGhConnect">Connect &amp; save</button>
+        <button class="btn" id="btnGhMM">Use my MyMoney key</button>
+        <button class="btn" id="btnGhOff">Disconnect this device</button>
+      </div>
+      <div class="msg hidden" id="ghMsg"></div>
+      <ol class="steps">
+        <li>On GitHub, create a <b>private</b> repo named <b>coaching-receipts-data</b> (tick “Add a README”).</li>
+        <li>Go to <b>github.com/settings/personal-access-tokens/new</b> (Settings → Developer settings → Fine-grained tokens → Generate new token).</li>
+        <li>Name it “Receipt app”. Under <b>Repository access</b> pick <b>Only select repositories</b> → <b>coaching-receipts-data</b>.</li>
+        <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
+        <li>Click <b>Generate token</b>, copy it, paste it above and tap <b>Connect &amp; save</b>. Do this once on each device.</li>
+      </ol>
+      <div class="hint">Already use MyMoney? Your MyMoney key works here too once it can open <b>coaching-receipts-data</b>:
+        on GitHub open <b>Settings → Developer settings → Fine-grained tokens</b>, edit your MyMoney token, add
+        <b>coaching-receipts-data</b> under <b>Repository access</b>, save, then tap <b>Use my MyMoney key</b>.</div>
+      <div class="hint">Keys stay only on this phone.</div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="box"><p id="modalText"></p><div class="actions" style="justify-content:flex-end;margin:0"><button class="btn" id="modalNo">Cancel</button><button class="btn primary" id="modalYes">Delete</button></div></div></div>
+<div class="modal" id="padModal"><div class="box" style="max-width:560px">
+  <p><b>Draw your signature</b> with your finger or mouse</p>
+  <canvas id="pad"></canvas>
+  <div class="actions" style="justify-content:flex-end"><button class="btn" id="padClear">Clear</button><button class="btn" id="padCancel">Cancel</button><button class="btn primary" id="padUse">Use signature</button></div>
+</div></div>
+<div class="modal" id="shareModal"><div class="box sharebox">
+  <p id="shareText"></p>
+  <button class="btn primary" id="shareNow" style="width:100%">Send PDF</button>
+  <a class="btn" id="shareWa" href="#" target="_blank" rel="noopener">Open WhatsApp with receipt text</a>
+  <a class="btn" id="shareMail" href="#" target="_blank" rel="noopener">Open email with receipt text</a>
+  <button class="btn" id="shareClose" style="width:100%;margin-top:8px">Close</button>
+</div></div>
+<div class="toast" id="toast"></div>
+<nav class="mm-tabs" aria-label="MyMoney"><a href="./#home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Home</span></a><a href="./#tx"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Activity</span></a><a href="./#add" class="mm-add" aria-label="Add entry"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a><a href="./#budget"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9h9"/></svg><span>Budget</span></a><a href="./#more" class="on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>More</span></a></nav>
+
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const KEY_R = 'crm_receipts_v1', KEY_ME = 'crm_me_v1';
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  };
+  let receipts = store.get(KEY_R, []);
+  let me = store.get(KEY_ME, {name:'', role:'', contact:'', prefix:'R-', rate:'', desc:''});
+  const KEY_GH = 'crm_github_v1', KEY_T = 'crm_deleted_v1';
+  let gh = store.get(KEY_GH, {owner:'SS925', repo:'coaching-receipts-data', token:''});
+  let tomb = store.get(KEY_T, []);
+  let editingId = null;
+  let downloads = null;
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(d => { downloads = d; }).catch(()=>{});
+  }
+
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function today(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+  function fmtDate(s){ if(!s) return ''; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+  function money(cur, n){ const v = Number(n)||0; const loc = cur==='₹' ? 'en-IN' : 'en-US'; return cur + v.toLocaleString(loc,{minimumFractionDigits: v%1?2:0, maximumFractionDigits:2}); }
+
+  // Indian-style amount in words (for ₹)
+  function words(num){
+    num = Math.floor(Number(num)||0); if(num===0) return 'Zero';
+    const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    const two=n=> n<20?a[n]:b[Math.floor(n/10)]+(n%10?' '+a[n%10]:'');
+    const three=n=> (n>=100? a[Math.floor(n/100)]+' Hundred'+(n%100?' '+two(n%100):'') : two(n));
+    let out=[]; const cr=Math.floor(num/1e7); num%=1e7; const lk=Math.floor(num/1e5); num%=1e5; const th=Math.floor(num/1000); num%=1000;
+    if(cr) out.push(three(cr)+' Crore'); if(lk) out.push(two(lk)+' Lakh'); if(th) out.push(two(th)+' Thousand'); if(num) out.push(three(num));
+    return out.join(' ');
+  }
+
+  function nextNo(){
+    const p = me.prefix || 'R-';
+    let max = 0;
+    receipts.forEach(r=>{ if(String(r.no).startsWith(p)){ const n=parseInt(String(r.no).slice(p.length),10); if(n>max) max=n; } });
+    return p + String(max+1).padStart(3,'0');
+  }
+
+  // ---------- Per-receipt look ----------
+  var curLayout = 'classic', curTheme = 'navy';
+  function setLook(l, t){
+    curLayout = l||curLayout; curTheme = t||curTheme;
+    document.querySelectorAll('#qLayout button').forEach(b=>b.classList.toggle('on', b.dataset.l===curLayout));
+    document.querySelectorAll('#qTheme button').forEach(b=>b.classList.toggle('on', b.dataset.t===curTheme));
+  }
+  document.querySelectorAll('#qLayout button').forEach(b=>b.onclick=()=>{ setLook(b.dataset.l); render(); });
+  document.querySelectorAll('#qTheme button').forEach(b=>b.onclick=()=>{ setLook(null, b.dataset.t); render(); });
+
+  // ---------- Monthly coaching helpers ----------
+  const DEF = {rate:750, cur:'$', method:'Remitly', desc:'Monthly coaching (Mon–Fri)'};
+  const thisMonth = () => today().slice(0,7);
+  function monthName(ym){ if(!ym) return ''; const [y,m]=ym.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'}); }
+  function weekdays(ym){ if(!ym) return 0; const [y,m]=ym.split('-').map(Number); let n=0; const d=new Date(y,m-1,1); while(d.getMonth()===m-1){ const w=d.getDay(); if(w>0&&w<6) n++; d.setDate(d.getDate()+1); } return n; }
+  function monthDesc(ym){ return `${me.desc||DEF.desc} — ${monthName(ym)} (${weekdays(ym)} days)`; }
+  function nextMonth(ym){ const [y,m]=(ym||thisMonth()).split('-').map(Number); const d=new Date(y,m,1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+  const inrOf = r => r.cur==='₹' ? (r.total||0) : (Number(r.inr)||0);
+  const round = (n,d) => Math.round(n*10**d)/10**d;
+  function fxFrom(which){
+    const total = readForm().total;
+    if(which==='fx'){ const fx=parseFloat($('fFx').value); $('fInr').value = (fx && total) ? round(fx*total,2) : ''; }
+    else { const inr=parseFloat($('fInr').value); $('fFx').value = (inr && total) ? round(inr/total,4) : ''; }
+  }
+
+  // ---------- Items ----------
+  function addRow(it){
+    it = it || {desc: me.desc||DEF.desc, qty:1, rate: me.rate||DEF.rate};
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><input class="iDesc" placeholder="e.g. Coaching session"></td><td><input class="iQty" type="number" min="0" step="any"></td><td><input class="iRate" type="number" min="0" step="any"></td><td><button class="x" title="Remove">×</button></td>`;
+    tr.querySelector('.iDesc').value = it.desc; tr.querySelector('.iQty').value = it.qty; tr.querySelector('.iRate').value = it.rate;
+    tr.querySelector('.x').onclick = ()=>{ tr.remove(); if(!$('itemRows').children.length) addRow(); render(); };
+    tr.querySelectorAll('input').forEach(i=>i.addEventListener('input', ()=>{ if($('fFx').value) fxFrom('fx'); render(); }));
+    $('itemRows').appendChild(tr);
+  }
+  function readItems(){
+    return [...$('itemRows').children].map(tr=>({
+      desc: tr.querySelector('.iDesc').value.trim(),
+      qty: parseFloat(tr.querySelector('.iQty').value)||0,
+      rate: parseFloat(tr.querySelector('.iRate').value)||0
+    })).filter(i=>i.desc || i.qty*i.rate);
+  }
+
+  function readForm(){
+    const items = readItems();
+    const sub = items.reduce((s,i)=>s+i.qty*i.rate,0);
+    const disc = parseFloat($('fDisc').value)||0;
+    return {
+      no: $('fNo').value.trim(), date: $('fDate').value, client: $('fClient').value.trim(),
+      clientContact: $('fClientContact').value.trim(), items, cur: $('fCur').value, disc,
+      total: Math.max(0, sub-disc), sub, method: $('fMethod').value, txn: $('fTxn').value.trim(), notes: $('fNotes').value.trim(),
+      layout: curLayout, theme: curTheme,
+      month: $('fMonth').value, fx: $('fCur').value==='₹' ? 0 : (parseFloat($('fFx').value)||0), inr: $('fCur').value==='₹' ? 0 : (parseFloat($('fInr').value)||0)
+    };
+  }
+  function fillForm(r){
+    $('fNo').value=r.no; $('fDate').value=r.date; $('fClient').value=r.client; $('fClientContact').value=r.clientContact||'';
+    $('fCur').value=r.cur||DEF.cur; $('fDisc').value=r.disc||''; $('fMethod').value=r.method||DEF.method; $('fTxn').value=r.txn||''; $('fNotes').value=r.notes||'';
+    $('fMonth').value=r.month||''; $('fFx').value=r.fx||''; $('fInr').value=r.inr||'';
+    setLook(r.layout||me.layout||'classic', r.theme||me.theme||'navy');
+    $('itemRows').innerHTML=''; (r.items.length?r.items:[null]).forEach(addRow);
+    render();
+  }
+  function freshForm(){
+    editingId=null;
+    const m = thisMonth();
+    fillForm({no:nextNo(), date:today(), month:m, client:'', clientContact:'', items:[{desc:monthDesc(m), qty:1, rate:me.rate||DEF.rate}], cur: me.cur||DEF.cur, disc:'', method: me.method||DEF.method, txn:'', notes:'', fx:'', inr:''});
+    $('editHint').textContent='';
+  }
+
+  // ---------- Receipt preview ----------
+  function render(){
+    const r = readForm();
+    $('monthHint').textContent = r.month ? `${monthName(r.month)}: ${weekdays(r.month)} coaching days (Mon–Fri)` : '';
+    $('fxBox').classList.toggle('hidden', r.cur==='₹');
+    $('fxLabel').textContent = `Rate that day (₹ per ${r.cur}1)`;
+    const rows = r.items.length ? r.items.map(i=>`<tr><td>${esc(i.desc)||'—'}</td><td class="num">${i.qty}</td><td class="num">${money(r.cur,i.rate)}</td><td class="num">${money(r.cur,i.qty*i.rate)}</td></tr>`).join('')
+      : `<tr><td colspan="4" style="color:#aaa">Add what the client paid for</td></tr>`;
+    const discRow = r.disc ? `<tr><td colspan="3" class="num" style="color:#6b6b70">Discount</td><td class="num">− ${money(r.cur,r.disc)}</td></tr>` : '';
+    const initials = (me.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || '✦';
+    const L = r.layout||'classic';
+    $('receipt').className = 't-'+(r.theme||'navy')+' L-'+L;
+    const ctx = {r, rows, discRow, initials};
+    $('receipt').innerHTML = (LAYOUTS[L]||LAYOUTS.classic)(ctx);
+  }
+  // ---------- Receipt layouts ----------
+  const brandMark = (initials, cls) => me.logo ? `<div class="${cls||'r-logo'}"><img src="${me.logo}" alt=""></div>` : `<div class="${cls?cls+' mono':'r-mono'}">${esc(initials)}</div>`;
+  const sigBlock = () => `<div class="r-sign">${me.sig?`<img class="sigimg" src="${me.sig}" alt="">`:`<div class="sig">${esc(me.name)||'&nbsp;'}</div>`}<div class="line">${esc(me.name)||'&nbsp;'}${me.role?' · '+esc(me.role):''}</div></div>`;
+  const inrLine = r => (r.cur!=='₹' && r.inr) ? `at ₹${r.fx?r.fx:round(r.inr/(r.total||1),2)} per ${r.cur}1${r.fx?` on ${fmtDate(r.date)}`:''}${r.method?` · via ${esc(r.method)}`:''}` : '';
+  const amountWords = r => r.cur==='₹' ? (r.total?`Rupees ${words(r.total)} only`:'') : (r.inr?`Rupees ${words(r.inr)} only`:'');
+  const LAYOUTS = {
+    classic: ({r, rows, discRow, initials}) => {
+    return `
+      <div class="r-mark">PAID</div>
+      <div class="r-top">
+        <div class="r-brand">
+          ${brandMark(initials)}
+          <div>
+            <div class="r-from">${esc(me.name)||'<span style="opacity:.5">Your name</span>'}</div>
+            ${me.role?`<div class="r-sub">${esc(me.role)}</div>`:''}
+            ${me.contact?`<div class="r-sub">${esc(me.contact)}</div>`:''}
+          </div>
+        </div>
+        <div class="r-titlebox">
+          <div class="r-title">RECEIPT</div>
+          <div class="r-meta">
+            <div><b>No.</b>${esc(r.no)}</div>
+            <div><b>Date</b>${fmtDate(r.date)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="r-to">
+        <div>
+          <div class="r-label">Received from</div>
+          <div class="r-client">${esc(r.client)||'<span style="color:#bbb">Client name</span>'}</div>
+          ${r.clientContact?`<div class="r-sub">${esc(r.clientContact)}</div>`:''}
+        </div>
+        ${r.month?`<div class="r-period"><div class="r-label">Coaching period</div><b>${monthName(r.month)}</b>Monday to Friday · ${weekdays(r.month)} days</div>`:''}
+      </div>
+      <table class="r-table">
+        <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+        <tbody>${rows}${discRow}</tbody>
+      </table>
+      <div class="r-total"><div>Total paid <b>${money(r.cur,r.total)}</b></div></div>
+      ${r.cur==='₹' && r.total ? `<div class="r-words">Rupees ${words(r.total)} only</div>`:''}
+      ${r.cur!=='₹' && r.inr ? `<div class="r-inr"><div><span class="r-big">Credited in India</span>${r.fx?`<br>at ₹${r.fx} per ${r.cur}1 on ${fmtDate(r.date)}`:''}${r.method?` · via ${esc(r.method)}`:''}</div><b>${money('₹', r.inr)}</b></div>
+      <div class="r-words">Rupees ${words(r.inr)} only</div>`:''}
+      <div class="r-paid">
+        <div><div class="r-label">Paid via</div>${esc(r.method)}</div>
+        ${r.txn?`<div><div class="r-label">Transaction ID</div>${esc(r.txn)}</div>`:''}
+      </div>
+      ${r.notes?`<div class="r-notes">${esc(r.notes)}</div>`:''}
+      <div class="r-foot">
+        <div class="r-stamp">PAID</div>
+        <div class="r-sign">${me.sig?`<img class="sigimg" src="${me.sig}" alt="">`:`<div class="sig">${esc(me.name)||'&nbsp;'}</div>`}<div class="line">${esc(me.name)||'&nbsp;'}${me.role?' · '+esc(me.role):''}</div></div>
+      </div>
+      <div class="r-thanks">Thank you for your trust.</div>`;
+    },
+    stripe: ({r, rows, discRow, initials}) => `
+      <div class="s-strip"></div>
+      <div class="s-head">
+        ${brandMark(initials,'s-brand')}
+        <div class="s-title">Receipt from ${esc(me.name)||'Your name'}</div>
+        <div class="s-no">Receipt #${esc(r.no)}</div>
+      </div>
+      <div class="s-trio">
+        <div><span>Amount paid</span><b>${money(r.cur,r.total)}</b></div>
+        <div><span>Date paid</span><b>${fmtDate(r.date)}</b></div>
+        <div><span>Payment method</span><b>${esc(r.method)}</b></div>
+      </div>
+      <div class="s-sec">Billed to</div>
+      <div class="s-box s-billed"><b>${esc(r.client)||'Client name'}</b>${r.clientContact?`<span>${esc(r.clientContact)}</span>`:''}${r.month?`<span>Coaching period: ${monthName(r.month)} · Mon–Fri · ${weekdays(r.month)} days</span>`:''}</div>
+      <div class="s-sec">Summary</div>
+      <div class="s-box">
+        ${r.items.map(i=>`<div class="s-line"><span>${esc(i.desc)}${i.qty!==1?` × ${i.qty}`:''}</span><span>${money(r.cur,i.qty*i.rate)}</span></div>`).join('')}
+        ${r.disc?`<div class="s-line"><span>Discount</span><span>− ${money(r.cur,r.disc)}</span></div>`:''}
+        <div class="s-line s-strong"><span>Amount paid</span><span>${money(r.cur,r.total)}</span></div>
+        ${r.cur!=='₹'&&r.inr?`<div class="s-line s-inr"><span>Credited in India<br><small>${inrLine(r)}</small></span><span>${money('₹',r.inr)}</span></div>`:''}
+        ${r.txn?`<div class="s-line s-muted"><span>Transaction ID</span><span>${esc(r.txn)}</span></div>`:''}
+      </div>
+      ${amountWords(r)?`<div class="r-words">${amountWords(r)}</div>`:''}
+      ${r.notes?`<div class="r-notes">${esc(r.notes)}</div>`:''}
+      <div class="s-foot">
+        <div class="s-contact">${me.contact?`Questions? Contact ${esc(me.contact).replace(/\n/g,' · ')}`:'Thank you for your payment.'}</div>
+        ${sigBlock()}
+      </div>`,
+    minimal: ({r, rows, discRow, initials}) => `
+      <div class="m-top">
+        <div class="m-title">Receipt<i>.</i></div>
+        <div class="m-meta"><div><span>No.</span>${esc(r.no)}</div><div><span>Date</span>${fmtDate(r.date)}</div>${r.month?`<div><span>Period</span>${monthName(r.month)}</div>`:''}</div>
+      </div>
+      <div class="m-cols">
+        <div><div class="m-k">From</div><div class="m-v">${esc(me.name)||'Your name'}</div>${me.role?`<div class="m-s">${esc(me.role)}</div>`:''}${me.contact?`<div class="m-s">${esc(me.contact)}</div>`:''}</div>
+        <div><div class="m-k">Received from</div><div class="m-v">${esc(r.client)||'Client name'}</div>${r.clientContact?`<div class="m-s">${esc(r.clientContact)}</div>`:''}${r.month?`<div class="m-s">Monday to Friday · ${weekdays(r.month)} days</div>`:''}</div>
+      </div>
+      <table class="m-table"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>${rows}${discRow}</tbody></table>
+      <div class="m-total"><span>Total paid</span><b>${money(r.cur,r.total)}</b></div>
+      ${r.cur!=='₹'&&r.inr?`<div class="m-total m-inr"><span>Credited in India<small>${inrLine(r)}</small></span><b>${money('₹',r.inr)}</b></div>`:''}
+      ${amountWords(r)?`<div class="r-words">${amountWords(r)}</div>`:''}
+      <div class="m-cols m-pay"><div><div class="m-k">Paid via</div><div class="m-v sm">${esc(r.method)}</div></div>${r.txn?`<div><div class="m-k">Transaction ID</div><div class="m-v sm">${esc(r.txn)}</div></div>`:'<div></div>'}</div>
+      ${r.notes?`<div class="r-notes">${esc(r.notes)}</div>`:''}
+      <div class="m-foot"><div class="m-thanks">Thank you.</div>${sigBlock()}</div>`,
+    geometric: ({r, rows, discRow, initials}) => `
+      <svg class="g-art g-tr" viewBox="0 0 220 160" aria-hidden="true"><polygon points="220,0 220,160 60,0" fill="var(--rc)"/><polygon points="220,0 220,95 125,0" fill="var(--rc2)"/><circle cx="70" cy="30" r="10" fill="var(--rc2)" opacity=".6"/></svg>
+      <svg class="g-art g-bl" viewBox="0 0 200 120" aria-hidden="true"><polygon points="0,120 0,10 150,120" fill="var(--rc)" opacity=".9"/><polygon points="0,120 0,60 80,120" fill="var(--rc2)"/></svg>
+      <div class="g-head">
+        ${brandMark(initials,'g-brand')}
+        <div><div class="g-name">${esc(me.name)||'Your name'}</div>${me.role?`<div class="r-sub">${esc(me.role)}</div>`:''}${me.contact?`<div class="r-sub">${esc(me.contact)}</div>`:''}</div>
+      </div>
+      <div class="g-title">PAYMENT RECEIPT</div>
+      <div class="g-cards">
+        <div><span>Receipt no.</span><b>${esc(r.no)}</b></div>
+        <div><span>Date</span><b>${fmtDate(r.date)}</b></div>
+        <div><span>Received from</span><b>${esc(r.client)||'Client name'}</b></div>
+        ${r.month?`<div><span>Coaching period</span><b>${monthName(r.month)}</b></div>`:''}
+      </div>
+      <table class="r-table g-table"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>${rows}${discRow}</tbody></table>
+      <div class="g-sum">
+        <div class="g-pill"><span>Total paid</span><b>${money(r.cur,r.total)}</b></div>
+        ${r.cur!=='₹'&&r.inr?`<div class="g-pill g-pill2"><span>Credited in India</span><b>${money('₹',r.inr)}</b><small>${inrLine(r)}</small></div>`:''}
+      </div>
+      ${amountWords(r)?`<div class="r-words">${amountWords(r)}</div>`:''}
+      <div class="r-paid"><div><div class="r-label">Paid via</div>${esc(r.method)}</div>${r.txn?`<div><div class="r-label">Transaction ID</div>${esc(r.txn)}</div>`:''}</div>
+      ${r.notes?`<div class="r-notes">${esc(r.notes)}</div>`:''}
+      <div class="r-foot g-foot"><div></div>${sigBlock()}</div>`
+  };
+  function _unused(){
+  }
+
+  // ---------- Save / PDF / copy ----------
+  function validate(r){
+    if(!me.name){ toast('Add your name in “My details” first'); show('Me'); return false; }
+    if(!r.client){ toast('Add the client name'); $('fClient').focus(); return false; }
+    if(!r.items.length){ toast('Add at least one line'); return false; }
+    return true;
+  }
+  function saveReceipt(silent){
+    const r = readForm(); if(!validate(r)) return null;
+    if(editingId){
+      const i = receipts.findIndex(x=>x.id===editingId);
+      if(i>=0) receipts[i] = {...receipts[i], ...r, updated: Date.now()};
+    } else {
+      if(receipts.some(x=>x.no===r.no)) r.no = nextNo(), $('fNo').value=r.no;
+      editingId = 'r'+Date.now()+Math.random().toString(36).slice(2,6);
+      receipts.unshift({id: editingId, created: Date.now(), updated: Date.now(), ...r});
+    }
+    const cur = JSON.stringify(r);
+    const changed = cur !== lastSaved[editingId];
+    lastSaved[editingId] = cur;
+    const ok = store.set(KEY_R, receipts);
+    $('editHint').textContent = 'Saved as '+r.no+'. Changes you make now update this receipt.';
+    if(!silent) toast(gh.token ? 'Receipt saved — sending to GitHub' : (ok ? 'Receipt saved' : 'Saved for now (this browser can’t keep it after closing)'));
+    renderHist();
+    if(changed) sync(`Receipt ${r.no} – ${r.client}${r.month?' – '+monthName(r.month):''} – ${money(r.cur,r.total)}${r.inr&&r.cur!=='₹'?' (₹'+r.inr+')':''}`);
+    return r;
+  }
+
+  async function makePdfBlob(){
+    // Render a copy of the receipt at a fixed desktop width so the PDF is the same on phone and computer
+    const src = $('receipt');
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:absolute;left:-12000px;top:0;width:760px;background:#fff;';
+    const clone = src.cloneNode(true);
+    holder.appendChild(clone); document.body.appendChild(holder);
+    try{
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+      await Promise.all([...clone.querySelectorAll('img')].map(im => im.decode ? im.decode().catch(()=>{}) : null));
+      const canvas = await html2canvas(clone, {scale:2.5, backgroundColor:'#ffffff', windowWidth:1280, scrollX:0, scrollY:0, x:0, y:0, width:clone.offsetWidth, height:clone.offsetHeight});
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({unit:'mm', format:'a4'});
+      const PW = 210, PH = 297, M = 10;
+      const ratio = canvas.height / canvas.width;
+      let w = PW - M*2, h = w * ratio;
+      if(h > PH - M*2){ h = PH - M*2; w = h / ratio; }   // shrink to fit one page
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (PW - w)/2, M, w, h);
+      return pdf.output('blob');
+    } finally { holder.remove(); }
+  }
+  function pdfName(r){ return `Receipt ${r.no} - ${r.client}.pdf`.replace(/[\\/:*?"<>|]/g,''); }
+  async function deliver(blob, name){
+    if(downloads){
+      try{ await downloads.save({filename:name, data:blob}); toast('PDF saved'); return true; }
+      catch(e){ if(!(e && e.code==='declined')) toast('Could not save the PDF here'); return false; }
+    }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000); toast('PDF downloaded'); return true;
+  }
+  async function downloadPdf(){
+    const r = saveReceipt(true); if(!r) return;
+    if(!window.html2canvas || !window.jspdf){ toast('PDF tools are still loading, try again in a moment'); return; }
+    try{ await deliver(await makePdfBlob(), pdfName(r)); }
+    catch(e){ toast('Something went wrong making the PDF'); }
+  }
+  let shareFile = null;
+  async function shareNow(){
+    try{ await navigator.share({files:[shareFile], title: shareFile.name}); $('shareModal').classList.remove('show'); return 'ok'; }
+    catch(e){ if(e && e.name==='AbortError') return 'cancel'; return e && e.name==='NotAllowedError' ? 'gesture' : 'fail'; }
+  }
+  async function sharePdf(){
+    const r = saveReceipt(true); if(!r) return;
+    if(!window.html2canvas || !window.jspdf){ toast('PDF tools are still loading, try again in a moment'); return; }
+    let blob;
+    try{ toast('Making PDF…'); blob = await makePdfBlob(); }catch(e){ toast('Something went wrong making the PDF'); return; }
+    shareFile = new File([blob], pdfName(r), {type:'application/pdf'});
+    const text = asText(r);
+    $('shareWa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
+    $('shareMail').href = 'mailto:?subject=' + encodeURIComponent(`Receipt ${r.no} – ${monthName(r.month)||fmtDate(r.date)}`) + '&body=' + encodeURIComponent(text);
+    const canShare = !!(navigator.canShare && navigator.canShare({files:[shareFile]}));
+    $('shareNow').classList.toggle('hidden', !canShare);
+    if(canShare){
+      const res = await shareNow();
+      if(res==='ok' || res==='cancel') return;
+      $('shareText').textContent = 'Your PDF is ready. Tap “Send PDF” and pick WhatsApp, Gmail or any app.';
+    } else {
+      await deliver(blob, shareFile.name);
+      $('shareText').textContent = 'The PDF has been saved to your device. Open WhatsApp or email below and attach it — the receipt details are already typed in.';
+    }
+    $('shareModal').classList.add('show');
+  }
+  $('shareNow').onclick = async ()=>{ const res = await shareNow(); if(res==='fail' || res==='gesture'){ await deliver(shareFile, shareFile.name); $('shareNow').classList.add('hidden'); $('shareText').textContent='Sharing isn’t available here, so the PDF was saved instead. Attach it in WhatsApp or email below.'; } };
+  $('shareClose').onclick = ()=>$('shareModal').classList.remove('show');
+  function asText(r){
+    const lines = [`RECEIPT ${r.no}`, `Date: ${fmtDate(r.date)}`, ...(r.month?[`Coaching period: ${monthName(r.month)} (Mon–Fri)`]:[]), `From: ${me.name}`, `Received from: ${r.client}`, ''];
+    r.items.forEach(i=>lines.push(`${i.desc} — ${i.qty} × ${money(r.cur,i.rate)} = ${money(r.cur,i.qty*i.rate)}`));
+    if(r.disc) lines.push(`Discount: − ${money(r.cur,r.disc)}`);
+    lines.push('', `Total paid: ${money(r.cur,r.total)}`, `Paid via: ${r.method}${r.txn?' (Txn: '+r.txn+')':''}`);
+    if(r.cur!=='₹' && r.inr) lines.push(`Credited in India: ${money('₹',r.inr)}${r.fx?' (at ₹'+r.fx+' per '+r.cur+'1)':''}`);
+    if(r.notes) lines.push('', r.notes);
+    return lines.join('\n');
+  }
+  async function copyText(){
+    const r = readForm(); if(!validate(r)) return;
+    try{ await navigator.clipboard.writeText(asText(r)); toast('Copied — paste it in WhatsApp or email'); }
+    catch(e){ toast('Copy is blocked here — select the text from the receipt instead'); }
+  }
+
+  // ---------- History ----------
+  function renderHist(){
+    const q = $('search').value.trim().toLowerCase();
+    const list = receipts.filter(r=> !q || [r.no,r.client,r.clientContact,...r.items.map(i=>i.desc)].join(' ').toLowerCase().includes(q));
+    $('histRows').innerHTML = list.length ? list.map(r=>`
+      <tr>
+        <td>${esc(r.no)}</td><td>${r.month?monthName(r.month):fmtDate(r.date)}</td><td>${esc(r.client)}</td><td class="num">${money(r.cur,r.total)}${r.cur!=='₹'&&r.inr?`<br><span style="color:var(--muted);font-size:13px">${money('₹',r.inr)}</span>`:''}</td>
+        <td><div class="ops">
+          <button class="btn small" data-op="open" data-id="${r.id}">Open</button>
+          <button class="btn small" data-op="dup" data-id="${r.id}">Repeat for client</button>
+          <button class="btn small" data-op="del" data-id="${r.id}">Delete</button>
+        </div></td>
+      </tr>`).join('') : `<tr><td colspan="5" class="empty">${receipts.length?'No match':'No receipts yet — make your first one in “New receipt”.'}</td></tr>`;
+    // stats in rupees actually received
+    const ym = thisMonth();
+    $('sCount').textContent = receipts.length;
+    $('sMonth').textContent = money('₹', round(receipts.filter(r=>(r.month||(r.date||'').slice(0,7))===ym).reduce((s,r)=>s+inrOf(r),0),2));
+    $('sAll').textContent = money('₹', round(receipts.reduce((s,r)=>s+inrOf(r),0),2));
+  }
+  $('histRows').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const r = receipts.find(x=>x.id===b.dataset.id); if(!r) return;
+    if(b.dataset.op==='open'){ editingId=r.id; fillForm(r); $('editHint').textContent='Opened '+r.no+'. Download the PDF again or edit and save.'; show('New'); }
+    if(b.dataset.op==='dup'){ editingId=null; const nm = nextMonth(r.month); const items = (r.items.length===1 && r.month) ? [{...r.items[0], desc: monthDesc(nm)}] : r.items;
+      fillForm({...r, items, month: r.month?nm:'', no:nextNo(), date:today(), txn:'', fx:'', inr:''}); $('editHint').textContent='Next month for '+r.client+' — add the Remitly rate or rupees credited, then save.'; show('New'); }
+    if(b.dataset.op==='del'){ confirmBox(`Delete receipt ${r.no} for ${r.client}?`, ()=>{ receipts=receipts.filter(x=>x.id!==r.id); tomb.push(r.id); store.set(KEY_T,tomb); store.set(KEY_R,receipts); if(editingId===r.id) freshForm(); renderHist(); toast('Deleted'); sync(`Delete receipt ${r.no} – ${r.client}`); }); }
+  });
+  $('search').addEventListener('input', renderHist);
+
+  function confirmBox(text, yes){
+    $('modalText').textContent=text; $('modal').classList.add('show');
+    $('modalYes').onclick=()=>{ $('modal').classList.remove('show'); yes(); };
+    $('modalNo').onclick=()=>$('modal').classList.remove('show');
+  }
+
+  // Backup / restore
+  $('btnExport').onclick = async ()=>{
+    if(!receipts.length){ toast('Nothing to back up yet'); return; }
+    const data = JSON.stringify({me, receipts}, null, 2);
+    const name = `receipts-backup-${today()}.json`;
+    if(downloads){ try{ await downloads.save({filename:name, data}); toast('Backup saved'); }catch(e){ if(!e||e.code!=='declined') toast('Could not save backup here'); } }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.download=name; a.click(); toast('Backup downloaded'); }
+  };
+  $('fileImport').onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    f.text().then(t=>{
+      const d = JSON.parse(t);
+      if(!Array.isArray(d.receipts)) throw 0;
+      const ids = new Set(receipts.map(r=>r.id));
+      d.receipts.forEach(r=>{ if(!ids.has(r.id)) receipts.push(r); });
+      receipts.sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.created||0)-(a.created||0));
+      if(d.me && !me.name){ me = d.me; store.set(KEY_ME, me); loadMe(); }
+      store.set(KEY_R, receipts); renderHist(); render(); toast('Backup restored'); sync('Restore receipts from backup');
+    }).catch(()=>toast('That file isn’t a receipts backup'));
+    e.target.value='';
+  };
+
+  // ---------- My details ----------
+  function loadMe(){ $('mName').value=me.name||''; $('mRole').value=me.role||''; $('mContact').value=me.contact||''; $('mPrefix').value=me.prefix||'R-'; $('mRate').value=me.rate||''; $('mDesc').value=me.desc||''; $('mCur').value=me.cur||DEF.cur; $('mMethod').value=me.method||DEF.method; pickTheme(me.theme||'navy'); pickLayout(me.layout||'classic'); if(typeof showImgs==='function') showImgs(); }
+  let layoutSel='classic';
+  function pickLayout(l){ layoutSel=l; document.querySelectorAll('#mLayout button').forEach(b=>b.classList.toggle('on', b.dataset.l===l)); }
+  document.querySelectorAll('#mLayout button').forEach(b=>b.onclick=()=>{ pickLayout(b.dataset.l); me = {...me, layout:b.dataset.l}; if(!editingId) setLook(b.dataset.l); render(); });
+  let themeSel='navy';
+  function pickTheme(t){ themeSel=t; document.querySelectorAll('#mTheme button').forEach(b=>b.classList.toggle('on', b.dataset.t===t)); }
+  document.querySelectorAll('#mTheme button').forEach(b=>b.onclick=()=>{ pickTheme(b.dataset.t); me = {...me, theme:b.dataset.t}; if(!editingId) setLook(null, b.dataset.t); render(); });
+  $('btnMeSave').onclick = ()=>{
+    me = {name:$('mName').value.trim(), role:$('mRole').value.trim(), contact:$('mContact').value.trim(), prefix:$('mPrefix').value.trim()||'R-', rate:$('mRate').value, desc:$('mDesc').value.trim(), cur:$('mCur').value, method:$('mMethod').value, theme: themeSel, layout: layoutSel, logo: me.logo||'', sig: me.sig||'', updated: Date.now()};
+    store.set(KEY_ME, me); toast('Your details are saved'); sync('Update my details');
+    if(!editingId && !$('fClient').value) freshForm(); else render();
+    show('New');
+  };
+
+  // ---------- Logo & signature ----------
+  function loadImg(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=fr.result; }; fr.onerror=rej; fr.readAsDataURL(file); }); }
+  function fit(src, maxW, maxH){ const w=src.width, h=src.height; const k=Math.min(1, maxW/w, maxH/h); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*k)); c.height=Math.max(1,Math.round(h*k)); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return c; }
+  function trim(c, pad){
+    const ctx=c.getContext('2d'); const d=ctx.getImageData(0,0,c.width,c.height).data;
+    let x0=c.width, y0=c.height, x1=-1, y1=-1;
+    for(let y=0;y<c.height;y++) for(let x=0;x<c.width;x++){ if(d[(y*c.width+x)*4+3]>20){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+    if(x1<0) return null;
+    pad=pad||6; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(c.width-1,x1+pad); y1=Math.min(c.height-1,y1+pad);
+    const o=document.createElement('canvas'); o.width=x1-x0+1; o.height=y1-y0+1; o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height); return o;
+  }
+  function inkify(c){ // turn a photo of a signature into dark ink on a transparent background
+    const ctx=c.getContext('2d'); const img=ctx.getImageData(0,0,c.width,c.height); const p=img.data; const n=p.length/4;
+    const lum=new Float32Array(n); for(let i=0;i<n;i++) lum[i]=0.299*p[i*4]+0.587*p[i*4+1]+0.114*p[i*4+2];
+    const sorted=Array.from(lum).sort((a,b)=>a-b); const bg=sorted[Math.floor(n*0.85)], ink=sorted[Math.floor(n*0.01)]; const range=Math.max(40,bg-ink);
+    for(let i=0;i<n;i++){ const t=(bg-lum[i])/range; const a=Math.max(0,Math.min(1,(t-0.3)/0.4))*(p[i*4+3]/255); p[i*4]=18;p[i*4+1]=26;p[i*4+2]=48;p[i*4+3]=Math.round(a*255); }
+    ctx.putImageData(img,0,0); return c;
+  }
+  function setImage(kind, dataUrl){
+    me = {...me, [kind]: dataUrl||'', updated: Date.now()};
+    store.set(KEY_ME, me); showImgs(); render();
+    sync(dataUrl ? (kind==='sig'?'Add signature':'Add logo') : (kind==='sig'?'Remove signature':'Remove logo'));
+  }
+  function showImgs(){
+    $('logoPrev').innerHTML = me.logo ? `<img src="${me.logo}" alt="">` : 'No logo';
+    $('sigPrev').innerHTML = me.sig ? `<img src="${me.sig}" alt="">` : 'No signature';
+  }
+  $('logoFile').onchange = async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{ const c=fit(await loadImg(f), 240, 240); setImage('logo', c.toDataURL('image/png')); toast('Logo added'); }
+    catch(err){ toast('Couldn’t read that image'); }
+  };
+  $('sigFile').onchange = async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{ const c=trim(inkify(fit(await loadImg(f), 900, 500)), 6); if(!c){ toast('Couldn’t find a signature in that photo'); return; } setImage('sig', fit(c, 500, 170).toDataURL('image/png')); toast('Signature added'); }
+    catch(err){ toast('Couldn’t read that image'); }
+  };
+  $('logoDel').onclick = ()=>setImage('logo','');
+  $('sigDel').onclick = ()=>setImage('sig','');
+
+  // drawing pad
+  const pad=$('pad'); let pctx=null, drawing=false, inked=false, last=null;
+  function padReset(){ const r=pad.getBoundingClientRect(); const k=2; pad.width=Math.round(r.width*k); pad.height=Math.round(r.height*k); pctx=pad.getContext('2d'); pctx.lineCap='round'; pctx.lineJoin='round'; pctx.strokeStyle='#121a30'; pctx.lineWidth=5; inked=false; }
+  function pt(e){ const r=pad.getBoundingClientRect(); return {x:(e.clientX-r.left)*pad.width/r.width, y:(e.clientY-r.top)*pad.height/r.height}; }
+  pad.addEventListener('pointerdown', e=>{ drawing=true; last=pt(e); pad.setPointerCapture(e.pointerId); pctx.beginPath(); pctx.arc(last.x,last.y,2.4,0,Math.PI*2); pctx.fillStyle='#121a30'; pctx.fill(); inked=true; e.preventDefault(); });
+  pad.addEventListener('pointermove', e=>{ if(!drawing) return; const p=pt(e); pctx.beginPath(); pctx.moveTo(last.x,last.y); pctx.lineTo(p.x,p.y); pctx.stroke(); last=p; e.preventDefault(); });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>pad.addEventListener(t, ()=>{ drawing=false; }));
+  $('sigDraw').onclick = ()=>{ $('padModal').classList.add('show'); requestAnimationFrame(padReset); };
+  $('padClear').onclick = padReset;
+  $('padCancel').onclick = ()=>$('padModal').classList.remove('show');
+  $('padUse').onclick = ()=>{
+    if(!inked){ toast('Draw your signature first'); return; }
+    const c=trim(pad, 8); if(!c){ toast('Draw your signature first'); return; }
+    setImage('sig', fit(c, 500, 170).toDataURL('image/png')); $('padModal').classList.remove('show'); toast('Signature added');
+  };
+
+  // ---------- GitHub saving ----------
+  const lastSaved = {};
+  const b64enc = s => { const by = new TextEncoder().encode(s); let bin=''; for(let i=0;i<by.length;i+=0x8000) bin += String.fromCharCode.apply(null, by.subarray(i,i+0x8000)); return btoa(bin); };
+  const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')), c=>c.charCodeAt(0)));
+  const FILE = 'receipts.json';
+
+  function setPill(state, text){
+    const p=$('syncPill'); p.className='sync '+(state||''); p.querySelector('span').textContent=text;
+  }
+  function ghMsg(text, kind){ const m=$('ghMsg'); m.textContent=text; m.className='msg '+(kind||''); m.classList.toggle('hidden', !text); }
+  async function ghFetch(method, body){
+    const url = `https://api.github.com/repos/${encodeURIComponent(gh.owner)}/${encodeURIComponent(gh.repo)}/contents/${FILE}`;
+    return fetch(url, {method, cache:'no-store', headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+gh.token,'X-GitHub-Api-Version':'2022-11-28', ...(body?{'Content-Type':'application/json'}:{})}, body: body?JSON.stringify(body):undefined});
+  }
+  function ghError(res){
+    const s = res.status;
+    if(s===401) return 'GitHub says the key is wrong or has expired. Make a new key and paste it again.';
+    if(s===403) return 'The key can’t write to that repo. Set “Contents” to “Read and write” when making the key.';
+    if(s===404) return `Can’t find ${gh.owner}/${gh.repo}. Check the username and repo name, and that the key was given access to that repo.`;
+    return 'GitHub problem (code '+s+'). Try again in a minute.';
+  }
+  function stamp(x){ return x.updated || x.created || 0; }
+  function merge(remote){
+    const dead = new Set([...(tomb||[]), ...(remote.deleted||[])]);
+    const map = new Map();
+    [...(remote.receipts||[]), ...receipts].forEach(r=>{
+      if(!r || !r.id || dead.has(r.id)) return;
+      const ex = map.get(r.id);
+      if(!ex || stamp(r) >= stamp(ex)) map.set(r.id, r);
+    });
+    receipts = [...map.values()].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.created||0)-(a.created||0));
+    tomb = [...dead];
+    if(remote.me && remote.me.name && (!me.name || (remote.me.updated||0) > (me.updated||0))){ me = remote.me; loadMe(); }
+    store.set(KEY_R, receipts); store.set(KEY_T, tomb); store.set(KEY_ME, me);
+  }
+
+  let syncing = null, pendingMsg = null;
+  function sync(message){
+    if(!gh.token){ setPill('', 'GitHub: not connected'); return Promise.resolve(false); }
+    if(syncing){ pendingMsg = message || pendingMsg || 'Update receipts'; return syncing; }
+    setPill('busy', 'Saving to GitHub…');
+    syncing = (async ()=>{
+      for(let attempt=0; attempt<3; attempt++){
+        let sha = null, remoteText = '', remote = {};
+        let g;
+        try{ g = await ghFetch('GET'); }
+        catch(e){ throw new Error('Can’t reach GitHub from here. Check your internet, or open the app from your GitHub link.'); }
+        if(g.status===200){ const j = await g.json(); sha = j.sha; remoteText = b64dec(j.content||''); try{ remote = JSON.parse(remoteText||'{}'); }catch(e){ remote = {}; } }
+        else if(g.status!==404) throw new Error(ghError(g));
+        merge(remote);
+        const text = JSON.stringify({app:'coaching-receipt-maker', version:1, me, receipts, deleted:tomb}, null, 2) + '\n';
+        if(text === remoteText) return true;
+        const p = await ghFetch('PUT', {message: message || 'Sync receipts', content: b64enc(text), ...(sha?{sha}:{})});
+        if(p.ok) return true;
+        if(p.status===409 || (p.status===422 && sha)) continue; // changed elsewhere meanwhile: re-read and retry
+        throw new Error(ghError(p));
+      }
+      throw new Error('GitHub was busy. Try again.');
+    })().then(()=>{
+      setPill('ok', 'Saved to GitHub'); ghMsg('');
+      renderHist();
+      if(!editingId && !$('fClient').value) $('fNo').value = nextNo(), render();
+      return true;
+    }).catch(e=>{
+      setPill('err', 'GitHub: not saved — tap'); ghMsg(e.message, 'err'); return false;
+    }).finally(()=>{
+      syncing = null;
+      if(pendingMsg){ const m = pendingMsg; pendingMsg = null; sync(m); }
+    });
+    return syncing;
+  }
+  function loadGh(){ $('gOwner').value = gh.owner||''; $('gRepo').value = gh.repo||''; $('gToken').value = gh.token||''; }
+  $('btnGhConnect').onclick = async ()=>{
+    gh = {owner:$('gOwner').value.trim()||'SS925', repo:$('gRepo').value.trim()||'coaching-receipts-data', token:$('gToken').value.trim()};
+    if(!gh.token){ ghMsg('Paste your GitHub key first.', 'err'); return; }
+    store.set(KEY_GH, gh);
+    ghMsg('Connecting…');
+    const ok = await sync('Connect receipt app');
+    if(ok) ghMsg(`Connected. ${receipts.length} receipt${receipts.length===1?'':'s'} saved in ${gh.owner}/${gh.repo}.`, 'ok');
+  };
+  // Reuse the GitHub key MyMoney already has on this phone (it needs access to the receipts repo too)
+  async function tryMyMoneyKey(manual){
+    const mm = store.get('mm.cfg', null);
+    if(!mm || !mm.token){ if(manual) ghMsg('MyMoney isn’t connected on this phone yet – open MyMoney → ⚙ first.', 'err'); return false; }
+    const prev = gh;
+    gh = {owner: prev.owner || mm.owner || 'SS925', repo: prev.repo || 'coaching-receipts-data', token: mm.token, fromMyMoney: true};
+    if(manual) ghMsg('Connecting with your MyMoney key…');
+    const ok = await sync('Connect receipts (MyMoney key)');
+    if(ok){ store.set(KEY_GH, gh); loadGh(); if(!manual && me.name && !$('viewMe').classList.contains('hidden')) show('New'); ghMsg(`Connected with your MyMoney key. ${receipts.length} receipt${receipts.length===1?'':'s'} in ${gh.owner}/${gh.repo}.`, 'ok'); return true; }
+    gh = prev; loadGh(); setPill('', 'GitHub: not connected');
+    ghMsg(`Your MyMoney key can’t open ${gh.owner||'SS925'}/${gh.repo||'coaching-receipts-data'} yet. Add that repo to the key on GitHub (see below), or paste a separate key.`, manual ? 'err' : '');
+    return false;
+  }
+  $('btnGhMM').onclick = ()=>tryMyMoneyKey(true);
+  $('btnGhOff').onclick = ()=>{ gh = {...gh, token:''}; store.set(KEY_GH, gh); loadGh(); setPill('', 'GitHub: not connected'); ghMsg('This device is disconnected. Your receipts on GitHub are untouched.'); };
+  $('syncPill').onclick = ()=>{ if(gh.token && !$('syncPill').classList.contains('err')) sync('Sync receipts'); else show('Me'); };
+
+  // ---------- Tabs ----------
+  function show(v){
+    ['New','Hist','Me'].forEach(n=>{ $('view'+n).classList.toggle('hidden', n!==v); $('tab'+n).classList.toggle('on', n===v); });
+    if(v==='Hist') renderHist();
+    window.scrollTo(0,0);
+  }
+  $('tabNew').onclick=()=>show('New'); $('tabHist').onclick=()=>show('Hist'); $('tabMe').onclick=()=>show('Me');
+
+  // wire up
+  ['fNo','fDate','fClient','fClientContact','fCur','fDisc','fMethod','fTxn','fNotes'].forEach(id=>$(id).addEventListener('input', render));
+  $('fDisc').addEventListener('input', ()=>{ if($('fFx').value){ fxFrom('fx'); render(); } });
+  $('fFx').addEventListener('input', ()=>{ fxFrom('fx'); render(); });
+  $('fInr').addEventListener('input', ()=>{ fxFrom('inr'); render(); });
+  let prevMonth = null;
+  $('fMonth').addEventListener('focus', ()=>{ prevMonth = $('fMonth').value; });
+  $('fMonth').addEventListener('change', ()=>{
+    const first = $('itemRows').querySelector('.iDesc'); const m = $('fMonth').value;
+    if(first && m && (!first.value.trim() || first.value === monthDesc(prevMonth||'') || first.value.startsWith(me.desc||DEF.desc))) first.value = monthDesc(m);
+    prevMonth = m; render();
+  });
+  $('addItem').onclick=()=>{ addRow(); render(); };
+  $('btnSave').onclick=()=>saveReceipt();
+  $('btnPdf').onclick=downloadPdf;
+  $('btnShare').onclick=sharePdf;
+  $('btnCopy').onclick=copyText;
+  $('btnClear').onclick=freshForm;
+
+  loadMe(); loadGh(); freshForm(); renderHist();
+  if(!me.name) show('Me');
+  if(gh.token) sync('Sync receipts'); else tryMyMoneyKey(false);
+  if(location.hash === '#history') show('Hist');
+})();
+</script>
+</body>
+</html>
