@@ -384,3 +384,7 @@ body.viewer .rowbtn{pointer-events:none}
 .tab[hidden]{display:none}
 body.viewer .tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
 body.viewer .tabs a.tab{display:none}
+/* row buttons only after tapping the transaction */
+.tx .link-btn{display:none;margin-right:14px}
+.tx.open .link-btn{display:inline-block}
+.link-btn.blue{color:var(--blue1)}

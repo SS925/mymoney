@@ -527,9 +527,9 @@ function txRow(t, compact) {
     <div class="mid"><div class="t1">${esc(d.title)}${t._recat ? '<span class="badge">Category change waiting for Excel</span>' : ''}${t._pending ? `<span class="badge">${t._pending === 'outbox' ? 'Not uploaded' : 'Waiting for Excel'}</span>` : ''}</div>
     <div class="t2">${compact ? fDay(pDate(t.Date)).replace(/ \d{4}$/, '') + ', ' : ''}${esc(t.Category)}</div>
     <div class="t3">${esc(fullDetails(t))}<br>${esc(t.Type)}, ${esc(d.src)}, ${fDay(pDate(t.Date))}</div>
-    ${t._pending === 'pending' && !compact ? `<button class="link-btn" data-edit="${esc(t._id)}">Edit</button> <button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
+    ${t._pending === 'pending' && !compact ? `<button class="link-btn blue" data-edit="${esc(t._id)}">Edit</button> <button class="link-btn" data-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove</button>` : ''}
     ${t._pending === 'outbox' && !compact ? `<button class="link-btn" data-delout="${esc(t._id)}">Remove</button>` : ''}
-    ${!t._pending && !compact && /^bank:/i.test(String(t.Details || '')) ? `<button class="link-btn" data-recat="${esc(txKey(t))}">Change category</button>` : ''}</div>
+    ${!t._pending && !compact && /^bank:/i.test(String(t.Details || '')) ? `<button class="link-btn blue" data-recat="${esc(txKey(t))}">Change category</button>` : ''}</div>
     <div class="amt num ${cls}">${sign}${inr(Math.abs(a))}</div></div>`;
 }
 function viewTx() {
