@@ -13,7 +13,8 @@ const state = {
   data: LS.get('data', null),        // snapshot from Excel
   fetchedAt: LS.get('fetchedAt', null),
   sheets: LS.get('sheets', null),
-  plan: LS.get('plan', null),          // net-pay plan {savings, limits:{cat:amt}}
+  plan: LS.get('plan', null),
+  retireSaved: LS.get('retireSaved', null), retireEdit: null,          // net-pay plan {savings, limits:{cat:amt}}
   budgetMode: LS.get('budgetMode', 'plan'), planEdit: null,   // every sheet as Excel shows it
   sheet: null, sheetQ: '', choice: {},   // choice[sheet] = {label, v}
   sheetMode: ['fold', 'tiles', 'table'].includes(LS.get('sheetMode2', 'fold')) ? LS.get('sheetMode2', 'fold') : 'fold', fold: {},
@@ -187,6 +188,7 @@ async function sync(opts = {}) {
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
     try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
+    try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
     await refreshPending();
     if (opts.toast) toast('Up to date');
   } catch (e) {
@@ -255,6 +257,12 @@ function render() {
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
   if (state.tab === 'budget') bindBudget();
+  if (state.tab === 'future') {
+    if (state.retireEdit) bindRetireEdit();
+    const ed = document.getElementById('rp-edit');
+    if (ed) ed.onclick = () => { const s = retireInputs(); const sv = retirePending() && state.retireSaved ? state.retireSaved.values : {};
+      state.retireEdit = { x: { ...s.x, ...sv }, b: s.b }; render(); window.scrollTo(0, 0); };
+  }
   const ha = document.querySelector('[data-homeall]'); if (ha) ha.onclick = () => { state.homeAlertsAll = !state.homeAlertsAll; render(); };
   const hh = document.querySelector('[data-health]'); if (hh) hh.onclick = () => { state.healthOpen = !state.healthOpen; render(); };
   document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
@@ -603,7 +611,107 @@ function projChart(rows) {
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected net worth vs amount needed to retire">${g}</svg>
   <div class="legend"><span><i style="background:var(--violet)"></i>Projected net worth</span><span><i style="background:var(--amber)"></i>Needed to retire</span></div>`;
 }
+/* Same formulas as Goal Planner C16:C28 */
+function retirePlan(x, b) {
+  const Y = Math.max(0, x.retire - x.age), N = Math.max(0, x.until - x.retire);
+  const costR = x.cost * Math.pow(1 + x.inf, Y);                               // C18
+  const rr = (1 + x.ra) / (1 + x.inf) - 1;                                     // C19
+  const corpus = costR * 12 * (rr ? (1 - Math.pow(1 + rr, -N)) / rr * (1 + rr) : N);   // C20 PV(...,1)
+  const epfFV = b.epfToday * Math.pow(1 + b.epfRate, Y);                       // C24
+  const ie = b.epfRate / 12;
+  const epfFut = b.epfMonthly * (ie ? (Math.pow(1 + ie, Y * 12) - 1) / ie : Y * 12);   // C25 FV
+  const need = Math.max(0, corpus - epfFV - epfFut);                           // C26
+  const i = x.rb / 12, n = Y * 12;
+  const sipFlat = n ? (i ? need * i / (Math.pow(1 + i, n) - 1) : need / n) : 0;       // C27 PMT
+  const grow = Math.abs(x.rb - x.step) < 1e-9 ? Y * Math.pow(1 + x.rb, Y - 1)
+    : (Math.pow(1 + x.rb, Y) - Math.pow(1 + x.step, Y)) / (x.rb - x.step);
+  const sipStart = Y ? need / (12 * grow) : 0;                                  // C28
+  const atPace = (x.invest || 0) * 12 * grow + epfFV + epfFut;                 // your pace, same step-up model
+  return { Y, N, costR, rr, corpus, epfFV, epfFut, need, sipFlat, sipStart, atPace, gap: corpus - atPace };
+}
+
+/* Goal Planner inputs, read from the sheet Excel sends (so the editor starts from your real plan) */
+const RETIRE_FIELDS = [
+  { k: 'retire', label: 'Retire at age', row: 'Retirement age', min: 35, max: 75, step: 1, fmt: v => `${v}` },
+  { k: 'until', label: 'Money should last until age', row: 'Plan money until age', min: 70, max: 100, step: 1, fmt: v => `${v}` },
+  { k: 'cost', label: 'Monthly living cost today', row: 'Monthly living cost today', min: 10000, max: 400000, step: 5000, fmt: v => inr(v) },
+  { k: 'invest', label: 'You invest each month', row: null, min: 0, max: 300000, step: 1000, fmt: v => inr(v), hint: 'Only for this what-if. Excel takes it from your SIPs.' },
+  { k: 'step', label: 'Raise investing each year by', row: 'Yearly SIP step-up', min: 0, max: .25, step: .01, fmt: v => pct(v) },
+  { k: 'rb', label: 'Return before retirement', row: 'Return before retirement', min: .04, max: .16, step: .005, fmt: v => pct(v) },
+  { k: 'ra', label: 'Return after retirement', row: 'Return after retirement', min: .03, max: .12, step: .005, fmt: v => pct(v) },
+  { k: 'inf', label: 'Inflation', row: 'Inflation (yearly)', min: .03, max: .10, step: .005, fmt: v => pct(v) },
+  { k: 'age', label: 'Your age now', row: 'Current age', min: 18, max: 65, step: 1, fmt: v => `${v}` },
+];
+function sheetRowValue(sheetName, label) {
+  const sh = sheetList().find(s => s.name === sheetName); if (!sh) return null;
+  const r = sh.rows.find(x => (x.c.find(t => t) || '').trim().toLowerCase().startsWith(label.toLowerCase()));
+  if (!r) return null;
+  const vals = r.c.filter(t => t); const t = vals[1]; if (t == null) return null;
+  const num = Number(String(t).replace(/[₹,\s]/g, '').replace(/%$/, ''));
+  return isFinite(num) ? (/%\s*$/.test(t) ? num / 100 : num) : null;
+}
+function retireInputs() {
+  const k = kpis(), g = l => sheetRowValue('Goal Planner', l);
+  const x = { age: g('Current age') ?? n(k.current_age) ?? 31, retire: g('Retirement age') ?? n(k.retire_age) ?? 60, until: g('Plan money until age') ?? 85,
+    inf: g('Inflation (yearly)') ?? .06, rb: g('Return before retirement') ?? .11, ra: g('Return after retirement') ?? .07,
+    cost: g('Monthly living cost today') ?? 80000, step: g('Yearly SIP step-up') ?? .10, invest: Math.round(n(k.invest_actual_month) || 0) };
+  const b = { epfToday: g('EPF + PPF today') ?? 0, epfRate: g('EPF interest rate') ?? .0825, epfMonthly: g('Monthly EPF going in') ?? 0 };
+  return { x, b };
+}
+function retirePending() {
+  const s = state.retireSaved; if (!s || !s.id) return false;
+  return !(state.data && state.data.retireApplied === s.id);
+}
+function viewRetireEdit() {
+  const e = state.retireEdit;
+  return `<section class="card"><h2>Change your retirement plan</h2>
+    <p class="small muted" style="margin:0">Slide to see the effect straight away. Save to Excel to make it your plan.</p>
+    ${RETIRE_FIELDS.map(f => `<div class="rf"><div class="row"><label for="rf-${f.k}">${f.label}</label><b class="num" id="rv-${f.k}">${f.fmt(e.x[f.k])}</b></div>
+      <input type="range" id="rf-${f.k}" data-k="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" value="${e.x[f.k]}">
+      ${f.hint ? `<p class="small muted" style="margin:2px 0 0">${f.hint}</p>` : ''}</div>`).join('')}
+  </section>
+  <section class="card" id="rp-res">${retireResults(e.x, e.b)}</section>
+  <button class="primary" id="rp-save">Save to Excel</button>
+  <button class="secondary" id="rp-reset">Reset to Excel’s values</button>
+  <button class="secondary" id="rp-cancel">Cancel</button>
+  <p class="note">Excel writes these into Goal Planner the next time the workbook opens, or when you run AppLinkNow, then recalculates the whole plan. Your monthly investing isn’t saved; Excel works it out from your SIPs.</p>`;
+}
+function retireResults(x, b) {
+  const r = retirePlan(x, b), ok = r.gap <= 0;
+  return `<p class="hero-k" style="margin:0;color:var(--muted)">You’ll need at ${x.retire}</p>
+    <h2 class="num" style="margin:2px 0 4px;font-size:34px;font-weight:600">${cr(r.corpus)}</h2>
+    <p class="small muted" style="margin:0">To spend ${inr(r.costR)} a month from ${x.retire} until ${x.until}, rising with inflation.</p>
+    <div class="kv" style="margin-top:12px"><span>Investing ${inr(x.invest)} a month, +${pct(x.step)} a year</span><b class="num ${ok ? 'good' : 'bad'}">${cr(r.atPace)}</b></div>
+    <p class="small ${ok ? 'good' : 'bad'}" style="margin:6px 0 8px">${ok ? `On track, ${cr(-r.gap)} more than you need.` : `Short by ${cr(r.gap)}.`}</p>
+    <div class="kv"><span>Start SIP at, then raise ${pct(x.step)} a year</span><b class="num">${inr(r.sipStart)}</b></div>
+    <div class="kv"><span>Or the same SIP every month</span><b class="num">${inr(r.sipFlat)}</b></div>
+    <div class="kv"><span class="muted">EPF and PPF at ${x.retire}</span><span class="num">${cr(r.epfFV + r.epfFut)}</span></div>
+    <div class="kv"><span class="muted">Still needed from your investments</span><span class="num">${cr(r.need)}</span></div>`;
+}
+function bindRetireEdit() {
+  const e = state.retireEdit;
+  document.querySelectorAll('#main-rf input[type=range], input[type=range][data-k]').forEach(inp => inp.oninput = () => {
+    e.x[inp.dataset.k] = Number(inp.value);
+    const f = RETIRE_FIELDS.find(z => z.k === inp.dataset.k); document.getElementById('rv-' + f.k).textContent = f.fmt(e.x[f.k]);
+    if (e.x.until <= e.x.retire) { e.x.until = e.x.retire + 1; document.getElementById('rf-until').value = e.x.until; document.getElementById('rv-until').textContent = e.x.until; }
+    if (e.x.retire <= e.x.age) { e.x.retire = e.x.age + 1; document.getElementById('rf-retire').value = e.x.retire; document.getElementById('rv-retire').textContent = e.x.retire; }
+    document.getElementById('rp-res').innerHTML = retireResults(e.x, e.b);
+  });
+  document.getElementById('rp-cancel').onclick = () => { state.retireEdit = null; render(); window.scrollTo(0, 0); };
+  document.getElementById('rp-reset').onclick = () => { const s = retireInputs(); state.retireEdit = { x: s.x, b: s.b }; render(); };
+  document.getElementById('rp-save').onclick = async () => {
+    const btn = document.getElementById('rp-save'); btn.disabled = true; btn.textContent = 'Saving…';
+    const v = {}; RETIRE_FIELDS.filter(f => f.row).forEach(f => { v[f.k] = e.x[f.k]; });
+    const saved = { id: 'r' + Date.now().toString(36), values: v, savedAt: new Date().toISOString() };
+    try {
+      await GH.putJson('settings/retirement.json', saved, 'Retirement plan from the app');
+      state.retireSaved = saved; LS.set('retireSaved', saved); state.retireEdit = null;
+      toast('Saved. Excel updates Goal Planner next time it opens'); render(); window.scrollTo(0, 0);
+    } catch (err) { btn.disabled = false; btn.textContent = 'Save to Excel'; toast(err.message || 'Couldn’t reach GitHub – try again'); }
+  };
+}
 function viewFuture() {
+  if (state.retireEdit) return viewRetireEdit();
   const k = kpis(), rows = tbl('AppProjection').filter(r => r.Year !== '' && r.Year != null);
   const ageR = n(k.retire_age) || 60;
   const pick = rows.filter((r, i) => i === 0 || n(r.Age) % 5 === 0 || n(r.Age) === ageR);
@@ -611,7 +719,9 @@ function viewFuture() {
   return `<section class="hero">
     <p class="hero-k">Net worth at ${ageR}</p>
     <h2 class="hero-v num">${cr(k.nw_at_60)}</h2>
-    <p class="hero-s"><b>${cr(k.nw_at_60_today)}</b> in today’s money. <span class="${tone(k.retire_status)}">${esc(k.retire_status)}</span></p></section>
+    <p class="hero-s"><b>${cr(k.nw_at_60_today)}</b> in today’s money. <span>${esc(k.retire_status)}</span></p></section>
+  ${retirePending() ? `<p class="banner" style="margin:14px 0 0">Your new plan is saved. Excel applies it next time the workbook opens; these figures update after that.</p>` : ''}
+  <button class="primary" id="rp-edit">Change plan</button>
   <section class="sec"><div class="sec-h"><h3>Retirement checks</h3></div>
     <div class="kv"><span>Earliest retirement</span><span>${isFinite(ea) ? 'Age ' + ea : esc(k.earliest_retire_age)} <span class="small ${tone(k.earliest_retire_status)}">${esc(k.earliest_retire_status)}</span></span></div>
     <div class="kv"><span>Money lasts until</span><span>${esc(k.money_lasts)} <span class="small ${tone(k.money_lasts_status)}">${esc(k.money_lasts_status)}</span></span></div>

@@ -254,3 +254,11 @@ table.proj th{color:var(--muted);font-weight:500}
 .brow .meter.thin.over>i{background:var(--bad)}
 .meter>i{background:var(--blue2)}
 .avatar[hidden]{display:none}
+
+/* retirement editor */
+.rf{padding:12px 0 6px;border-bottom:1px solid var(--hair)}
+.rf .row{font-size:14.5px}
+.rf label{color:var(--text)}
+.rf input[type=range]{width:100%;margin:10px 0 4px;accent-color:var(--blue2);height:28px}
+#rp-res .kv span{font-size:14px}
+#rp-res .kv b{white-space:nowrap;margin-left:10px}
