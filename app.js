@@ -1589,16 +1589,29 @@ function viewTrends() {
 /* ======================================================================
    Monthly report (print → Save as PDF)
    ====================================================================== */
+function reportMonths() {                                 // every month that has transactions, newest first
+  const set = new Set(tbl('AppRecent').map(t => String(t.Date).slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)));
+  tbl('AppMonthly').forEach(r => { const m = String(r.Month).slice(0, 7); if (/^\d{4}-\d{2}$/.test(m)) set.add(m); });
+  return [...set].sort().reverse();
+}
 function viewReport() {
-  const months = tbl('AppMonthly').map(r => String(r.Month).slice(0, 7)).filter(Boolean);
-  const mk = state.reportMonth && months.includes(state.reportMonth) ? state.reportMonth : months[months.length - 1] || String(kpis().month || '').slice(0, 7);
-  const row = tbl('AppMonthly').find(r => String(r.Month).startsWith(mk)) || {};
+  const all = reportMonths(), years = [...new Set(all.map(m => m.slice(0, 4)))];
+  let yr = state.reportYear && years.includes(state.reportYear) ? state.reportYear : (state.reportMonth || all[0] || '').slice(0, 4);
+  if (!years.includes(yr)) yr = years[0];
+  const inYear = all.filter(m => m.startsWith(yr));
+  const mk = state.reportMonth && inYear.includes(state.reportMonth) ? state.reportMonth : inYear[0] || String(kpis().month || '').slice(0, 7);
   const tx = tbl('AppRecent').filter(t => String(t.Date).startsWith(mk));
+  const sumT = ty => tx.filter(t => t.Type === ty).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  const xr = tbl('AppMonthly').find(r => String(r.Month).startsWith(mk));
+  const row = xr || { Income: sumT('Income'), Spending: sumT('Expenses'), Saved: sumT('Savings') };
+  if (!xr) row.LeftOver = row.Income - row.Spending - row.Saved;
   const cats = {}; tx.filter(t => t.Type === 'Expenses').forEach(t => { cats[t.Category] = (cats[t.Category] || 0) + Math.abs(n(t.Amount)); });
   const top = Object.entries(cats).sort((a, b) => b[1] - a[1]);
   const inc = {}; tx.filter(t => t.Type === 'Income').forEach(t => { inc[t.Category] = (inc[t.Category] || 0) + Math.abs(n(t.Amount)); });
   const k = kpis(), d = pDate(mk + '-01'), hs = invHoldings();
-  return `<div class="noprint"><label class="f" for="rp-m">Month</label><select class="inp" id="rp-m">${months.slice().reverse().map(m => `<option value="${m}" ${m === mk ? 'selected' : ''}>${fMon(pDate(m + '-01'))}</option>`).join('')}</select>
+  return `<div class="noprint"><div class="row2">
+        <div><label class="f" for="rp-y">Year</label><select class="inp" id="rp-y">${years.map(y => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+        <div><label class="f" for="rp-m">Month</label><select class="inp" id="rp-m">${inYear.map(m => `<option value="${m}" ${m === mk ? 'selected' : ''}>${MONF[Number(m.slice(5)) - 1]}</option>`).join('')}</select></div></div>
       <button class="primary" id="rp-print" style="margin-top:12px">Save as PDF / print</button></div>
     <article class="report">
       <h1>MyMoney – ${d ? MONF[d.getMonth()] + ' ' + d.getFullYear() : ''}</h1><p class="small muted">${esc(userName())} · made ${fDay(new Date())}</p>
@@ -1612,7 +1625,8 @@ function viewReport() {
     </article>`;
 }
 function bindReport() {
-  const s = document.getElementById('rp-m'); if (s) s.onchange = () => { state.reportMonth = s.value; render(); };
+  const y = document.getElementById('rp-y'); if (y) y.onchange = () => { state.reportYear = y.value; state.reportMonth = null; render(); };
+  const s = document.getElementById('rp-m'); if (s) s.onchange = () => { state.reportMonth = s.value; state.reportYear = s.value.slice(0, 4); render(); };
   const p = document.getElementById('rp-print'); if (p) p.onclick = () => window.print();
 }
 
