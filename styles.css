@@ -287,3 +287,12 @@ table.proj th{color:var(--muted);font-weight:500}
 .fab span{font-size:18px}
 .rc{display:flex;align-items:center;gap:18px}
 #rq-save{margin-top:14px}
+
+/* Investments: buy / sell form and holdings */
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.row2 .inp{min-width:0}
+.linkbtn{background:none;border:0;padding:4px 0 0;color:var(--blue2);font:inherit;font-size:13px;cursor:pointer}
+#tr-results{margin-top:6px;max-height:300px;overflow:auto}
+#tr-results .navrow .nt{font-size:14px}
+.kv.hold > span:first-child{min-width:0;overflow-wrap:anywhere}
+.kv > .num{white-space:nowrap}

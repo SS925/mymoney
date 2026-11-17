@@ -23,6 +23,9 @@ const state = {
   tab: 'home', lastError: null, syncing: false,
   tx: { q: '', type: 'All', year: 'All', month: 'All', cat: 'All', limit: 100 },
   add: null,
+  trades: LS.get('trades', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
+  prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
+  trade: null,
 };
 
 /* ---------------- GitHub ---------------- */
@@ -189,6 +192,8 @@ async function sync(opts = {}) {
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
     try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
     try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
+    try { await refreshTrades(); } catch (e) { /* optional */ }
     await refreshPending();
     if (opts.toast) toast('Up to date');
   } catch (e) {
@@ -232,8 +237,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -252,7 +257,7 @@ function render() {
       <button class="secondary" onclick="sync({toast:true})">Try again</button></div>`;
     return;
   }
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet };
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade };
   v.innerHTML = views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -260,6 +265,8 @@ function render() {
   if (state.tab === 'budget') bindBudget();
   if (state.tab === 'salary') bindSalary();
   if (state.tab === 'money') bindMoney();
+  if (state.tab === 'invest') bindInvest();
+  if (state.tab === 'trade') bindTrade();
   document.querySelectorAll('[data-sheet-open]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheetOpen; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   if (state.tab === 'future') {
     if (state.retireEdit) bindRetireEdit();
@@ -891,11 +898,208 @@ function viewInvest() {
     ${mix.length ? `<section class="sec box"><div class="sec-h"><h3>Asset allocation</h3></div>
       <div class="stack">${mix.map((x, i) => `<i style="width:${(x.v / mixTot * 100).toFixed(1)}%;background:${MIXC[i]}"></i>`).join('')}</div>
       <div class="dlegend">${mix.map((x, i) => `<span><i style="background:${MIXC[i]}"></i>${esc(x.name.replace(/\s*\(.*$/, ''))} <em>${esc(x.pc || '')}</em></span>`).join('')}</div></section>` : ''}
-    <section class="sec box"><div class="sec-h"><h3>Holdings</h3></div>
+    ${viewInvestFunds()}
+    ${viewInvestPf()}
+    <section class="sec box"><div class="sec-h"><h3>All investments</h3></div>
       ${hold.map(h => `<div class="kv"><span>${esc(h.name)}${h.inv ? `<br><span class="small muted">Invested ${inr(h.inv)}</span>` : ''}</span>
         <span class="num" style="text-align:right">${inr(h.v)}${h.g ? `<br><span class="small ${num(h.g) >= 0 ? 'good' : 'bad'}">+${esc(h.g)}</span>` : ''}</span></div>`).join('')}</section>
     <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>
     <button class="secondary" data-sheet-open="Savings Schemes">PF, PPF and FDs in Excel</button>`;
+}
+
+/* ---------------- Investments: holdings at latest prices, buy / sell from the phone ---------------- */
+const INV_TYPES = ['Equity MF', 'Index fund', 'ELSS (tax saver)', 'Small / Mid cap MF', 'Hybrid MF', 'Debt MF', 'Stock', 'ETF', 'Gold'];
+const INV_PLATFORMS = ['Groww', 'YES Bank SIP (auto-debit)', 'Paytm Money', 'Zerodha', 'INDmoney', 'Other'];
+function inv() { return (state.data && state.data.invest) || null; }
+function priceOf(code) {
+  const c = String(code || '').trim().toUpperCase(); if (!c || !state.prices) return null;
+  return (state.prices.prices || []).find(p => p.code === c) || null;
+}
+/* Holdings as Excel last sent them, plus buys/sells saved on the phone that Excel hasn't added yet,
+   valued at the latest price from prices.json (units × price). */
+function invHoldings() {
+  const x = inv(), list = [];
+  const find = nm => list.find(h => h.name.toLowerCase() === String(nm).trim().toLowerCase());
+  for (const h of (x && x.holdings) || []) list.push({ name: h.name, code: h.code || '', type: h.type || '', platform: h.platform || '',
+    units: Number(h.units) || 0, invested: Number(h.invested) || 0, xlValue: Number(h.value) || 0, pending: 0 });
+  const inExcel = new Set(((x && x.log) || []).map(r => r[5]));
+  for (const p of state.trades.filter(t => !inExcel.has(t.id)).slice().reverse()) {     // oldest first
+    const t = p.entry; let h = find(t.name);
+    if (!h) { h = { name: t.name, code: t.code || '', type: t.type || '', platform: t.platform || '', units: 0, invested: 0, xlValue: 0, pending: 0 }; list.push(h); }
+    if (!h.code && t.code) h.code = t.code;
+    if (t.side === 'Buy') { h.units += t.units; h.invested += t.amount; }
+    else { h.invested -= h.units > 0 ? h.invested * Math.min(1, t.units / h.units) : 0; h.units -= t.units; }
+    h.pending++;
+  }
+  for (const h of list) {
+    const p = priceOf(h.code);
+    h.price = p ? p.price : null; h.priceDate = p ? p.date : '';
+    h.value = p && h.units > 0 ? h.units * p.price : (h.pending ? Math.max(0, h.invested) : h.xlValue);
+    h.gain = h.value - h.invested;
+  }
+  return list.filter(h => h.units > 1e-6 || h.pending).sort((a, b) => b.value - a.value);
+}
+function tradeLog() {
+  const x = inv(), inExcel = new Set(((x && x.log) || []).map(r => r[5]));
+  const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true }));
+  for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], pending: false });
+  return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
+
+function viewInvestFunds() {
+  const hs = invHoldings(), tot = hs.reduce((s, h) => s + h.value, 0), invd = hs.reduce((s, h) => s + h.invested, 0);
+  const dates = hs.map(h => h.priceDate).filter(Boolean).sort();
+  const log = tradeLog().slice(0, 6);
+  return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${hs.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
+      ${hs.length ? hs.map(h => `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}</span></span>
+          <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`).join('')
+        + `<p class="small muted" style="margin:8px 0 0">Invested ${inr(invd)}. ${dates.length ? `Prices from ${fDay(pDate(dates[dates.length - 1]))}.` : 'Add a price code to get the latest price.'}</p>`
+        : `<p class="small muted" style="margin:4px 0 0">No buys or sells yet. Add your first one and it becomes a holding.</p>`}
+      <button class="primary" data-gotab="trade" style="margin-top:12px">Add buy / sell</button>
+    </section>
+    ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
+      ${log.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${esc(fDay(pDate(r.date)))} · ${esc(r.side)} ${fUnits(Number(r.units) || 0)} units${r.pending ? ' · waiting for Excel' : ''}</span></span>
+        <span class="num" style="text-align:right">${r.side === 'Sell' ? '+' : ''}${inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>` : ''}</span></div>`).join('')}</section>` : ''}`;
+}
+function viewInvestPf() {
+  const x = inv(); if (!x || !x.epf) return '';
+  const e = x.epf, p = x.ppf || {}, pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+  return `<section class="sec box"><div class="sec-h"><h3>PF and PPF</h3><span class="small">from your passbook</span></div>
+      <div class="kv"><span>EPF + EPS<br><span class="small muted">Passbook as of ${e.asOf ? esc(fDay(pDate(e.asOf))) : '–'}</span></span><span class="num" style="text-align:right">${inr(e.value)}<br><span class="small muted">EPS ${inr(e.epsTotal)}</span></span></div>
+      <div class="kv"><span>Into EPF each month<br><span class="small muted">You ${pc(e.yourRate)} = ${inr(e.youMonth)} · employer ${inr(e.employerMonth)} after EPS</span></span><span class="num" style="text-align:right">${inr(e.epfMonth)}<br><span class="small muted">EPS ${inr(e.epsMonth)}</span></span></div>
+      <div class="kv"><span>PPF<br><span class="small muted">${p.updated ? 'Updated ' + esc(fDay(pDate(p.updated))) : 'Balance you typed'}</span></span><span class="num">${inr(p.balance)}</span></div>
+      <p class="small muted" style="margin:8px 0 0">Change the balances, PF wage and PF % in Excel → Savings Schemes (blue cells).</p>
+    </section>`;
+}
+
+/* Add buy / sell */
+function newTrade() { return { side: 'Buy', kind: 'MF', name: '', code: '', type: 'Equity MF', units: '', price: '', amount: '', platform: 'Groww', date: isoToday(), note: '', results: [] }; }
+function viewTrade() {
+  const t = state.trade || (state.trade = newTrade());
+  const mine = invHoldings();
+  return `<section class="card">
+    <div class="seg" id="tr-side">${['Buy', 'Sell'].map(s => `<button data-v="${s}" class="${t.side === s ? 'on' : ''}">${s}</button>`).join('')}</div>
+    <div class="seg" id="tr-kind" style="margin-top:8px">${[['MF', 'Mutual fund'], ['Stock', 'Stock / ETF']].map(([k, l]) => `<button data-v="${k}" class="${t.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${mine.length ? `<label class="f">Your holdings</label><div class="pay" id="tr-mine">${mine.slice(0, 12).map((h, i) => `<button class="chip ${t.name === h.name ? 'on' : ''}" data-i="${i}">${esc(h.name.length > 28 ? h.name.slice(0, 27) + '…' : h.name)}</button>`).join('')}</div>` : ''}
+    <label class="f" for="tr-name">${t.kind === 'MF' ? 'Fund name' : 'Stock name'}</label>
+    <input class="inp" id="tr-name" autocomplete="off" placeholder="${t.kind === 'MF' ? 'Type 3+ letters to search, e.g. Parag Parikh' : 'e.g. Tata Motors'}" value="${esc(t.name)}">
+    <div id="tr-results" class="group" ${t.results.length ? '' : 'hidden'}>${t.results.map((r, i) => `<button class="navrow" data-r="${i}"><span class="nt">${esc(r.schemeName)}<br><span class="small muted">Code ${esc(r.schemeCode)}</span></span></button>`).join('')}</div>
+    <label class="f" for="tr-code">Price code</label>
+    <input class="inp" id="tr-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="${t.kind === 'MF' ? 'AMFI code – filled in when you pick a fund' : 'NSE symbol, e.g. TATAMOTORS'}" value="${esc(t.code)}">
+    <div class="row2">
+      <div><label class="f" for="tr-units">Units</label><input class="inp num" id="tr-units" inputmode="decimal" placeholder="0" value="${esc(t.units)}"></div>
+      <div><label class="f" for="tr-price">Price per unit (₹)</label><input class="inp num" id="tr-price" inputmode="decimal" placeholder="NAV / price" value="${esc(t.price)}"></div>
+    </div>
+    <label class="f" for="tr-amt">Amount (₹)</label>
+    <input class="inp amount num" id="tr-amt" inputmode="decimal" placeholder="0" value="${esc(t.amount)}">
+    <div class="row2">
+      <div><label class="f" for="tr-type">Type</label><select class="inp" id="tr-type">${INV_TYPES.map(x => `<option ${x === t.type ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label class="f" for="tr-plat">Platform</label><select class="inp" id="tr-plat">${INV_PLATFORMS.map(x => `<option ${x === t.platform ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+    </div>
+    <label class="f" for="tr-date">Date</label>
+    <input class="inp" id="tr-date" type="date" value="${esc(t.date)}" max="${isoToday()}">
+    <label class="f" for="tr-note">Note</label>
+    <input class="inp" id="tr-note" maxlength="80" placeholder="e.g. Monthly SIP" value="${esc(t.note)}">
+    <button class="primary" id="tr-save">Save ${t.side === 'Buy' ? 'buy' : 'sell'}</button>
+    <p class="note">Amount is what you paid (buy) or got back (sell). Each one is added as a new row in Excel’s buy/sell log on Stocks &amp; MF the next time the workbook opens.</p>
+  </section>`;
+}
+function bindTrade() {
+  const t = state.trade, $ = id => document.getElementById(id);
+  const read = () => { t.name = $('tr-name').value; t.code = $('tr-code').value.trim().toUpperCase(); t.units = $('tr-units').value; t.price = $('tr-price').value;
+    t.amount = $('tr-amt').value; t.type = $('tr-type').value; t.platform = $('tr-plat').value; t.date = $('tr-date').value; t.note = $('tr-note').value; };
+  const n = v => Number(String(v).replace(/[,₹\s]/g, ''));
+  document.querySelectorAll('#tr-side button').forEach(b => b.onclick = () => { read(); t.side = b.dataset.v; render(); });
+  document.querySelectorAll('#tr-kind button').forEach(b => b.onclick = () => { read(); t.kind = b.dataset.v; t.type = t.kind === 'MF' ? 'Equity MF' : 'Stock'; t.results = []; render(); });
+  const mine = invHoldings();
+  document.querySelectorAll('#tr-mine .chip').forEach(b => b.onclick = () => {
+    read(); const h = mine[Number(b.dataset.i)];
+    Object.assign(t, { name: h.name, code: h.code, type: h.type || t.type, platform: INV_PLATFORMS.includes(h.platform) ? h.platform : t.platform, results: [] });
+    t.kind = /^\d+$/.test(h.code) || /MF|fund|ELSS/i.test(h.type) ? 'MF' : 'Stock';
+    const p = priceOf(h.code); if (p && !t.price) t.price = String(p.price);
+    render();
+  });
+  // units × price = amount
+  $('tr-units').oninput = $('tr-price').oninput = () => { const u = n($('tr-units').value), p = n($('tr-price').value); if (u > 0 && p > 0) $('tr-amt').value = (Math.round(u * p * 100) / 100).toString(); };
+  $('tr-amt').oninput = () => { const u = n($('tr-units').value), a = n($('tr-amt').value); if (u > 0 && a > 0) $('tr-price').value = (Math.round(a / u * 10000) / 10000).toString(); };
+  // fund search (public mutual fund list)
+  let timer;
+  $('tr-name').oninput = () => {
+    if (t.kind !== 'MF') return;
+    clearTimeout(timer); const q = $('tr-name').value.trim();
+    if (q.length < 3) { $('tr-results').hidden = true; return; }
+    timer = setTimeout(async () => {
+      try {
+        const r = await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q));
+        const arr = (await r.json()) || [];
+        t.results = arr.filter(x => /direct/i.test(x.schemeName) === /direct/i.test(q) || !/direct|regular/i.test(q)).slice(0, 8);
+        if (!t.results.length) t.results = arr.slice(0, 8);
+        const box = $('tr-results'); if (!box) return;
+        box.innerHTML = t.results.map((x, i) => `<button class="navrow" data-r="${i}"><span class="nt">${esc(x.schemeName)}<br><span class="small muted">Code ${esc(x.schemeCode)}</span></span></button>`).join('');
+        box.hidden = !t.results.length; bindResults();
+      } catch (e) { /* offline or search unavailable: type the code yourself */ }
+    }, 350);
+  };
+  const bindResults = () => document.querySelectorAll('#tr-results [data-r]').forEach(b => b.onclick = () => {
+    read(); const x = t.results[Number(b.dataset.r)]; t.name = x.schemeName; t.code = String(x.schemeCode); t.results = [];
+    if (/elss|tax saver/i.test(x.schemeName)) t.type = 'ELSS (tax saver)'; else if (/index|nifty|sensex/i.test(x.schemeName)) t.type = 'Index fund';
+    else if (/small|mid ?cap/i.test(x.schemeName)) t.type = 'Small / Mid cap MF'; else if (/hybrid|balanced/i.test(x.schemeName)) t.type = 'Hybrid MF';
+    else if (/debt|liquid|gilt|bond/i.test(x.schemeName)) t.type = 'Debt MF';
+    render();
+  });
+  bindResults();
+  $('tr-save').onclick = async () => {
+    read();
+    const units = n(t.units), amount = n(t.amount);
+    if (!t.name.trim()) { toast('Enter the fund or stock name'); $('tr-name').focus(); return; }
+    if (!(units > 0)) { toast('Enter the units'); $('tr-units').focus(); return; }
+    if (!(amount > 0)) { toast('Enter the amount'); $('tr-amt').focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) { toast('Pick a date'); return; }
+    if (t.side === 'Sell') {
+      const h = invHoldings().find(x => x.name.toLowerCase() === t.name.trim().toLowerCase());
+      if (!h) { toast('Sell: pick one of your holdings'); return; }
+      if (units > h.units + 1e-6) { toast(`You have ${fUnits(h.units)} units – can’t sell more`); return; }
+    }
+    const now = new Date(), stamp = now.toISOString().replace(/[-:]/g, '').slice(0, 15);
+    const entry = { id: `${stamp}-${Math.random().toString(36).slice(2, 7)}`, date: t.date, side: t.side, name: t.name.trim().slice(0, 120),
+      code: t.code.slice(0, 20), type: t.type, units: Math.round(units * 10000) / 10000, amount: Math.round(amount * 100) / 100,
+      platform: t.platform, note: t.note.trim().slice(0, 80), createdAt: now.toISOString() };
+    const btn = $('tr-save'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await GH.putJson(`trades/${entry.id}.json`, entry, `${entry.side} ${entry.name}`);
+      state.trades.unshift({ id: entry.id, entry }); LS.set('trades', state.trades);
+      toast(`Saved. Excel adds it to Stocks & MF next time it opens`);
+      state.trade = null; state.tab = 'invest'; window.scrollTo(0, 0); render();
+    } catch (e) {
+      toast(e instanceof AppError ? e.message : 'Couldn’t reach GitHub – try again when you’re online');
+      btn.disabled = false; btn.textContent = `Save ${t.side === 'Buy' ? 'buy' : 'sell'}`;
+    }
+  };
+}
+function bindInvest() {
+  document.querySelectorAll('[data-trade-del]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.tradeDel; b.disabled = true;
+    try {
+      await GH.remove(`trades/${id}.json`, `Removed ${id}`);
+      state.trades = state.trades.filter(t => t.id !== id); LS.set('trades', state.trades); toast('Removed'); render();
+    } catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; }
+  });
+}
+async function refreshTrades() {
+  const r = await GH.call('GET', 'trades');
+  if (r.status === 404) { state.trades = []; LS.set('trades', []); return; }
+  if (!r.ok) return;
+  const files = (await r.json()).filter(f => f.type === 'file' && /\.json$/.test(f.name));
+  const known = Object.fromEntries(state.trades.map(t => [t.id, t])), out = [];
+  for (const f of files) {
+    const id = f.name.replace(/\.json$/, '');
+    let t = known[id];
+    if (!t) { try { t = { id, entry: await GH.getEntry(f.path) }; } catch (e) { continue; } }
+    out.push(t);
+  }
+  out.sort((a, b) => String(b.entry.createdAt || '').localeCompare(String(a.entry.createdAt || '')));
+  state.trades = out; LS.set('trades', out);
 }
 
 /* Retirement: ring + projection, quick sliders, savings today (format from the reference) */
@@ -1304,6 +1508,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) navigator.serviceWorker.register('sw.js').catch(() => {});
-{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'settings'].includes(h) && state.cfg) state.tab = h; }
+{ const h = location.hash.slice(1); if (['home', 'salary', 'money', 'invest', 'future', 'tx', 'budget', 'more', 'add', 'trade', 'settings'].includes(h) && state.cfg) state.tab = h; }
 render();
 if (state.cfg) sync();
