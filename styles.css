@@ -228,7 +228,7 @@ table.proj th{color:var(--muted);font-weight:500}
 .empty{text-align:center;color:var(--muted);padding:44px 10px}
 
 /* ---------- bottom tabs ---------- */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(6,1fr);padding:8px 10px calc(8px + var(--safe-b));background:rgba(13,15,18,.9);backdrop-filter:blur(12px);border-top:1px solid var(--hair)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(7,1fr);padding:8px 6px calc(8px + var(--safe-b));background:rgba(13,15,18,.9);backdrop-filter:blur(12px);border-top:1px solid var(--hair)}
 .tab{display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--faint);font-size:10.5px;padding:4px 0;cursor:pointer;text-decoration:none}
 .tab .ti{font-size:20px;line-height:22px;height:22px}
 .tab svg.ti{display:block}
@@ -420,3 +420,15 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 @media (hover:hover) and (pointer:fine){.subnav{flex-wrap:wrap;overflow:visible;margin:0 0 14px;padding:2px 0 4px}}
 /* phones: fade at the edge shows there is more to swipe to */
 @media not all and (pointer:fine){.subnav{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}}
+
+.bank-list{margin:14px 0 4px;border-top:1px solid rgba(255,255,255,.14)}
+.bank-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:15px}
+.bank-row small{color:rgba(255,255,255,.62);font-size:12px}
+.bank-row b{font-size:16px}
+.worth-row{position:relative;display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:12px 0 14px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.worth-row:last-child{border-bottom:0}
+.wr-t,.wr-v{display:flex;flex-direction:column;gap:2px}
+.wr-v{text-align:right;align-items:flex-end}
+.wr-t small,.wr-v small{font-size:12px;color:var(--muted)}
+.wr-v small.good{color:var(--good)} .wr-v small.bad{color:var(--bad)}
+.wr-bar{position:absolute;left:0;bottom:5px;height:3px;border-radius:2px;background:var(--blue1,#a9cdf5);opacity:.55}
