@@ -416,3 +416,7 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .cov th:first-child,.cov td:first-child{text-align:left}
 .cov td{text-align:center;padding:7px 6px;border-bottom:1px solid var(--line,#2b373b);white-space:nowrap}
 .cov tr:last-child td{border-bottom:0}
+/* computers (mouse): show every sub-tab, wrapped onto more lines instead of a hidden sideways scroll */
+@media (hover:hover) and (pointer:fine){.subnav{flex-wrap:wrap;overflow:visible;margin:0 0 14px;padding:2px 0 4px}}
+/* phones: fade at the edge shows there is more to swipe to */
+@media not all and (pointer:fine){.subnav{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}}

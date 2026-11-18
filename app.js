@@ -335,6 +335,9 @@ function render() {
     if (ed) ed.onclick = () => { const t = state.retireTry; state.retireEdit = { x: { ...t.x }, b: t.b }; render(); window.scrollTo(0, 0); };
   }
   const cm = document.querySelector('[data-covmore]'); if (cm) cm.onclick = () => { state.covMonths = (state.covMonths || 12) === 12 ? 24 : 12; render(); };
+  { const sn = document.querySelector('.subnav'), on = sn && sn.querySelector('.sn.on');      // keep the open sub-tab in view; mouse wheel scrolls sideways
+    if (on && sn.scrollWidth > sn.clientWidth) sn.scrollLeft = Math.max(0, on.offsetLeft - sn.offsetLeft - (sn.clientWidth - on.offsetWidth) / 2);
+    if (sn) sn.onwheel = e => { if (sn.scrollWidth > sn.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { sn.scrollLeft += e.deltaY; e.preventDefault(); } }; }
   const ha = document.querySelector('[data-homeall]'); if (ha) ha.onclick = () => { state.homeAlertsAll = !state.homeAlertsAll; render(); };
   const hh = document.querySelector('[data-health]'); if (hh) hh.onclick = () => { state.healthOpen = !state.healthOpen; render(); };
   document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
