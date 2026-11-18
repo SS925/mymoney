@@ -14,7 +14,7 @@ const state = {
   fetchedAt: LS.get('fetchedAt', null),
   sheets: LS.get('sheets', null),
   plan: LS.get('plan', null),
-  retireSaved: LS.get('retireSaved', null), retireEdit: null,          // net-pay plan {savings, limits:{cat:amt}}
+  retireSaved: LS.get('retireSaved', null), retireEdit: null, codeFixes: LS.get('codeFixes', { fixes: [] }), pcode: null,          // net-pay plan {savings, limits:{cat:amt}}
   budgetMode: LS.get('budgetMode', 'plan'), planEdit: null,   // every sheet as Excel shows it
   sheet: null, sheetQ: '', choice: {},   // choice[sheet] = {label, v}
   sheetMode: ['fold', 'tiles', 'table'].includes(LS.get('sheetMode2', 'fold')) ? LS.get('sheetMode2', 'fold') : 'fold', fold: {},
@@ -198,6 +198,7 @@ async function sync(opts = {}) {
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
     try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
     try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'settings/codes.json', { raw: true }); if (r.ok) { state.codeFixes = await r.json(); LS.set('codeFixes', state.codeFixes); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
     try { await refreshTrades(); } catch (e) { /* optional */ }
@@ -250,8 +251,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -278,7 +279,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, coverage: viewCoverage,
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -301,6 +302,7 @@ function render() {
   if (state.tab === 'report') bindReport();
   if (state.tab === 'coaching') bindCoaching();
   if (state.tab === 'import') bindImport();
+  if (state.tab === 'pcode') bindPcode();
   if (state.tab === 'lockset') bindLockSettings();
   if (state.tab === 'recat') bindRecat();
   if (state.tab === 'loans') bindLoans();
@@ -1049,6 +1051,7 @@ function invHoldings() {
     h.pending++;
   }
   for (const h of list) {
+    const fx = fixedCode(h.name); if (fx && fx !== h.code) { h.codeWas = h.code; h.code = fx; }
     const p = priceOf(h.code);
     h.price = p ? p.price : null; h.priceDate = p ? p.date : '';
     h.value = p && h.units > 0 ? h.units * p.price : (h.pending ? Math.max(0, h.invested) : h.xlValue);
@@ -1103,7 +1106,7 @@ function viewInvestFunds() {
   const log = tradeLog().slice(0, state.logAll ? 60 : 8);
   return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${hs.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
       ${(() => { const td = portfolioToday(); return td ? `<p class="small" style="margin:-4px 0 8px">Today <b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} (${pctTxt(td.pct, 2)})</b></p>` : ''; })()}
-      ${hs.length ? hs.map(h => { const st = holdingStats(h); return `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${st.day != null ? `<span class="${st.day >= 0 ? 'good' : 'bad'}">${st.day >= 0 ? '▲' : '▼'} ${inr(Math.abs(st.day))} today</span> · ` : ''}${st.xirr != null ? `XIRR ${pctTxt(st.xirr)} · ` : ''}${st.divTot ? `dividends ${inr(st.divTot)} · ` : ''}${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}</span></span>
+      ${hs.length ? hs.map(h => { const st = holdingStats(h); return `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${st.day != null ? `<span class="${st.day >= 0 ? 'good' : 'bad'}">${st.day >= 0 ? '▲' : '▼'} ${inr(Math.abs(st.day))} today</span> · ` : ''}${st.xirr != null ? `XIRR ${pctTxt(st.xirr)} · ` : ''}${st.divTot ? `dividends ${inr(st.divTot)} · ` : ''}${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}<br><button class="linkbtn" data-hcode="${esc(h.name)}">Price code ${esc(h.code || 'missing')}${h.codeWas != null ? ' (changed)' : ''}</button></span></span>
           <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`; }).join('')
         + `<p class="small muted" style="margin:8px 0 0">Invested ${inr(invd)}. ${dates.length ? `Prices from ${fDay(pDate(dates[dates.length - 1]))}.` : 'Add a price code to get the latest price.'}</p>`
         : `<p class="small muted" style="margin:4px 0 0">No buys or sells yet. Add your first one and it becomes a holding.</p>`}
@@ -1112,7 +1115,7 @@ function viewInvestFunds() {
     ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
       ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${r.bonus || (r.pending && r.side === 'Buy' && !(Number(r.amount) > 0)) ? 'Bonus / split +' : esc(r.side) + ' '}${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
         <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
-          : r.row && !r.deleting ? `<br><button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
+          : r.row && !r.deleting ? `<br><button class="linkbtn" data-log-edit="${esc(r.row)}">Edit</button> · <button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
       ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}</section>` : ''}`;
 }
 function viewInvestPf() {
@@ -1245,7 +1248,7 @@ function viewTrade() {
     <input class="inp" id="tr-date" type="date" value="${esc(t.date)}" max="${isoToday()}">
     <label class="f" for="tr-note">Note</label>
     <input class="inp" id="tr-note" maxlength="80" placeholder="e.g. Monthly SIP" value="${esc(t.note)}">
-    <button class="primary" id="tr-save">${t.editId ? 'Save changes' : `Save ${t.side === 'Buy' ? 'buy' : 'sell'}`}</button>
+    <button class="primary" id="tr-save">${t.editId || t.replaceRow ? 'Save changes' : `Save ${t.side === 'Buy' ? 'buy' : 'sell'}`}</button>
     <p class="note">Amount is what you paid (buy) or got back (sell). Each one is added as a new row in Excel’s buy/sell log on Stocks &amp; MF the next time the workbook opens.</p>
   </section>`;
 }
@@ -1338,6 +1341,7 @@ function bindTrade() {
     if (t.side === 'Sell') {
       const h = invHoldings().find(x => x.name.toLowerCase() === t.name.trim().toLowerCase());
       if (h && t.editId) { const old = state.trades.find(x => x.id === t.editId); if (old && old.entry.side === 'Sell') h.units += old.entry.units; }
+      if (h && t.replaceRow && t.replaceRow.side === 'Sell' && t.replaceRow.name.toLowerCase() === h.name.toLowerCase()) h.units += t.replaceRow.units;
       if (!h) { toast('Sell: pick one of your holdings'); return; }
       if (units > h.units + 1e-6) { toast(`You have ${fUnits(h.units)} units – can’t sell more`); return; }
     }
@@ -1349,6 +1353,11 @@ function bindTrade() {
     try {
       await GH.putJson(`trades/${entry.id}.json`, entry, `${entry.side} ${entry.name}`);
       state.trades = [{ id: entry.id, entry }, ...state.trades.filter(x => x.id !== entry.id)]; LS.set('trades', state.trades);
+      if (t.replaceRow) {                                   // edited an Excel row: remove the old one
+        const d = { id: uid('d'), ...t.replaceRow, createdAt: new Date().toISOString() };
+        await GH.putJson(`tradedel/${d.id}.json`, d, `Replace row ${d.row} ${d.name}`); state.tradeDels.push({ id: d.id, entry: d }); LS.set('tradeDels', state.tradeDels);
+        state.trade = null; state.tab = 'invest'; toast('Changes saved – Excel updates the row next time it opens'); window.scrollTo(0, 0); render(); return;
+      }
       if (t.editId) toast('Changes saved'); else toastUndo(`${entry.side} saved`, async () => { await GH.remove(`trades/${entry.id}.json`, 'Undo'); state.trades = state.trades.filter(x => x.id !== entry.id); LS.set('trades', state.trades); });
       state.trade = null; state.tab = 'invest'; window.scrollTo(0, 0); render();
     } catch (e) {
@@ -1377,6 +1386,11 @@ function bindInvest() {
   });
   const de = document.getElementById('log-del-empty'); if (de) de.onclick = () => { if (!confirmInline(de)) { de.textContent = 'Tap again to delete the empty rows'; return; } deleteLogRows(logRows().filter(r => r.empty && !r.deleting)); };
   document.querySelectorAll('[data-trade-edit]').forEach(b => b.onclick = () => editTrade(b.dataset.tradeEdit));
+  document.querySelectorAll('[data-log-edit]').forEach(b => b.onclick = () => { const r = tradeLog().find(x => !x.pending && String(x.row) === b.dataset.logEdit); if (r) editLogRow(r); });
+  document.querySelectorAll('[data-hcode]').forEach(b => b.onclick = () => { const h = invHoldings().find(x => x.name === b.dataset.hcode); if (!h) return;
+    const mf = /^\d+$/.test(h.code || '') || /MF|fund|ELSS|index/i.test(h.type || '');
+    state.pcode = { name: h.name, kind: mf ? 'MF' : 'Stock', q: h.name.replace(/\s*-?\s*direct.*$/i, '').replace(/\s*\(.*?\)/g, '').trim(), results: [], busy: false };
+    state.tab = 'pcode'; window.scrollTo(0, 0); render(); searchPcode(); });
   document.querySelectorAll('[data-trade-del]').forEach(b => b.onclick = async () => {
     const id = b.dataset.tradeDel; b.disabled = true;
     try {
@@ -1601,6 +1615,16 @@ function editPending(id) {
   const e = p.entry;
   state.add = { type: e.type, amount: String(e.amount), category: e.category, date: e.date, paidWith: e.paidWith || 'Cash', note: e.note || '', editId: id, createdAt: e.createdAt };
   state.tab = 'add'; window.scrollTo(0, 0); render();
+}
+/* Edit a row that's already in Excel: saves the changed buy/sell and asks Excel to delete the old row */
+function editLogRow(r) {
+  const h = invHoldings().find(x => x.name.toLowerCase() === String(r.name).toLowerCase()) || {};
+  const units = Number(r.units) || 0, amount = Number(r.amount) || 0, code = h.code || '';
+  state.trade = { side: r.side, kind: /^\d+$/.test(code) || /MF|fund|ELSS|index/i.test(h.type || '') ? 'MF' : 'Stock', name: r.name, code, type: h.type || 'Equity MF',
+    units: String(units), price: units ? String(Math.round(amount / units * 10000) / 10000) : '', amount: String(amount), platform: h.platform || 'Groww',
+    date: String(r.date).slice(0, 10), note: '', results: [], bonus: r.side === 'Buy' && !(amount > 0) && units > 0,
+    replaceRow: { row: r.row, date: String(r.date).slice(0, 10), name: r.name, units, amount, side: r.side } };
+  state.tab = 'trade'; window.scrollTo(0, 0); render();
 }
 function editTrade(id) {
   const t = state.trades.find(x => x.id === id); if (!t) return;
@@ -1895,6 +1919,59 @@ async function findMfCode(name, nav) {
     } catch (e) { return null; }       // offline: codes can be added later with Edit
   }
   return null;
+}
+/* Change a holding's price code in the app: saved to settings/codes.json, Excel applies it (AppLink 2026-11-18d+) */
+function fixedCode(name) { const f = ((state.codeFixes && state.codeFixes.fixes) || []).find(x => String(x.name).toLowerCase() === String(name).toLowerCase()); return f ? String(f.code) : ''; }
+async function searchPcode() {
+  const pc = state.pcode; if (!pc) return; const q = pc.q.trim(); if (q.length < 2) { pc.results = []; render(); return; }
+  pc.busy = true;
+  try {
+    if (pc.kind === 'MF') {
+      const arr = await (await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q))).json();
+      pc.results = (arr || []).filter(x => !/idcw|dividend|bonus|segregated/i.test(x.schemeName)).sort((a, b) => (/direct/i.test(b.schemeName) - /direct/i.test(a.schemeName))).slice(0, 10)
+        .map(x => ({ code: String(x.schemeCode), name: x.schemeName, nav: null }));
+      pc.results.forEach(async r => { try { const j = await (await fetch(`https://api.mfapi.in/mf/${r.code}/latest`)).json(); r.nav = Number(j.data[0].nav) || null; } catch (e) {} if (state.pcode === pc && state.tab === 'pcode') render(); });
+    } else {
+      const list = await stockList(); pc.results = searchStocks(list, q).slice(0, 10).map(x => ({ code: String(x.schemeCode), name: x.schemeName, nav: (priceOf(x.schemeCode) || {}).price || null }));
+    }
+  } catch (e) { pc.results = []; toast('Search isn’t reachable – type the code instead'); }
+  pc.busy = false; if (state.pcode === pc && state.tab === 'pcode') render();
+}
+function viewPcode() {
+  const pc = state.pcode; if (!pc) { state.tab = 'invest'; return viewInvest(); }
+  const h = invHoldings().find(x => x.name === pc.name) || {}, paid = h.units > 0 && h.invested > 0 ? h.invested / h.units : 0, p = priceOf(h.code);
+  const near = v => paid && v ? v / paid > 0.4 && v / paid < 2.5 : true;
+  return `<section class="card"><h2 style="margin-top:0">${esc(pc.name)}</h2>
+    <div class="kv"><span>Price code now</span><b>${esc(h.code || '–')}${p ? ` · ₹${p.price}` : ''}</b></div>
+    ${paid ? `<div class="kv"><span>You paid on average</span><b>₹${paid.toFixed(2)} a unit</b></div>` : ''}
+    <label class="f" for="pc-q">Search ${pc.kind === 'MF' ? 'funds' : 'stocks'}</label>
+    <input class="inp" id="pc-q" value="${esc(pc.q)}" autocomplete="off">
+    <div class="seg" id="pc-kind" style="margin-top:8px">${[['MF', 'Mutual fund'], ['Stock', 'Stock / ETF']].map(([k, l]) => `<button data-v="${k}" class="${pc.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="group" style="margin-top:10px">${pc.busy ? '<p class="small muted">Searching…</p>' : pc.results.length ? pc.results.map((r, i) => `<button class="kv pick" data-pc="${i}" style="width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:10px 0;cursor:pointer"><span>${esc(r.name)}<br><span class="small muted">Code ${esc(r.code)}${r.code === h.code ? ' · current' : ''}</span></span><b class="num ${r.nav && !near(r.nav) ? 'warn' : ''}">${r.nav ? '₹' + r.nav : ''}</b></button>`).join('') : '<p class="small muted">No match – change the search words, or type the code below.</p>'}</div>
+    ${paid ? '<p class="small muted">Pick the one whose price is close to what you paid – a very different price means a different fund.</p>' : ''}
+    <label class="f" for="pc-code">Or type the code</label>
+    <div class="row2"><input class="inp" id="pc-code" placeholder="${pc.kind === 'MF' ? 'AMFI code, e.g. 120586' : 'NSE symbol or BSE:code'}" autocapitalize="characters"><button class="secondary" id="pc-save" style="margin:0">Use this code</button></div>
+    <p class="note">The app uses the new code straight away. Excel changes it on Stocks &amp; MF the next time the workbook opens on the PC.</p></section>`;
+}
+function bindPcode() {
+  const pc = state.pcode; if (!pc) return; const $ = id => document.getElementById(id); let tm;
+  $('pc-q').oninput = e => { pc.q = e.target.value; clearTimeout(tm); tm = setTimeout(searchPcode, 400); };
+  document.querySelectorAll('#pc-kind button').forEach(b => b.onclick = () => { pc.kind = b.dataset.v; searchPcode(); });
+  const save = async code => {
+    code = String(code || '').trim().toUpperCase(); if (!code) { toast('Pick a result or type a code'); return; }
+    const fixes = ((state.codeFixes && state.codeFixes.fixes) || []).filter(x => String(x.name).toLowerCase() !== pc.name.toLowerCase()).concat([{ name: pc.name, code }]);
+    try {
+      await GH.putJson('settings/codes.json', { fixes }, `Price code ${pc.name} -> ${code}`);
+      state.codeFixes = { fixes }; LS.set('codeFixes', state.codeFixes);
+      if (!priceOf(code) && /^\d+$/.test(code)) {             // show the value now; the daily price job keeps it fresh
+        try { const j = await (await fetch(`https://api.mfapi.in/mf/${code}/latest`)).json(); const d = j.data[0], [dd, mm, yy] = d.date.split('-');
+          state.prices = state.prices || { prices: [], prev: {} }; state.prices.prices = state.prices.prices.filter(x => x.code !== code).concat([{ code, price: Number(d.nav), date: `${yy}-${mm}-${dd}`, name: j.meta && j.meta.scheme_name || '' }]); } catch (e) {}
+      }
+      state.pcode = null; state.tab = 'invest'; toast('Price code changed – Excel takes it next time it opens'); window.scrollTo(0, 0); render();
+    } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); }
+  };
+  document.querySelectorAll('[data-pc]').forEach(b => b.onclick = () => save(pc.results[Number(b.dataset.pc)].code));
+  $('pc-save').onclick = () => save($('pc-code').value);
 }
 function viewImport() {
   const im = state.imp || (state.imp = { text: '', rows: [], date: isoToday(), kind: 'Stock' });
