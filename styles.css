@@ -433,3 +433,7 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .wr-v small.good{color:var(--good)} .wr-v small.bad{color:var(--bad)}
 .wr-bar{position:absolute;left:0;bottom:5px;height:3px;border-radius:2px;background:var(--blue1,#a9cdf5);opacity:.55}
 .dot-c{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px}
+.loan-form{padding-top:4px}
+.loan-more{margin-top:12px}
+.loan-more summary{cursor:pointer;color:var(--muted);padding:4px 0}
+.linkbtn.bad{color:var(--bad)}
