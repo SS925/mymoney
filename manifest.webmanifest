@@ -49,9 +49,9 @@
       ]
     },
     {
-      "name": "All transactions",
-      "short_name": "Transactions",
-      "url": "./#tx",
+      "name": "At a glance",
+      "short_name": "Glance",
+      "url": "./#glance",
       "icons": [
         {
           "src": "icon-192.png",
