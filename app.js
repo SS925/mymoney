@@ -279,7 +279,7 @@ function render() {
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
   const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, coverage: viewCoverage,
-    mix: viewMix, alerts: () => viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
+    mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -1060,6 +1060,37 @@ function tradeLog() {
   for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], row: r[6], pending: false,
     empty: !(Number(r[3]) > 0 && (Number(r[4]) > 0 || r[1] === 'Buy')), bonus: Number(r[3]) > 0 && !(Number(r[4]) > 0), deleting: r[6] != null && dels.has(r[6]) });
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+/* Long-term gain watch: every stock you hold, lots older than 1 year (FIFO), worth more than they cost.
+   The notification job does the same check on every price update and tells you once per crossing. */
+function longTermWatch() {
+  const isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
+  const log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const now = new Date(), yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  return invHoldings().filter(h => h.units > 1e-6 && isStock(h)).map(h => {
+    const lots = [];
+    for (const r of log.filter(r => String(r.name).toLowerCase() === h.name.toLowerCase())) {
+      if (r.side === 'Buy') { lots.push({ date: String(r.date).slice(0, 10), units: Number(r.units), cost: Number(r.amount) || 0 }); continue; }
+      let u = Number(r.units);
+      while (u > 1e-9 && lots.length) { const l = lots[0], take = Math.min(u, l.units); l.cost -= l.cost * take / l.units; l.units -= take; u -= take; if (l.units < 1e-9) lots.shift(); }
+    }
+    const old = lots.filter(l => pDate(l.date) < yearAgo), young = lots.filter(l => pDate(l.date) >= yearAgo);
+    const units = old.reduce((s, l) => s + l.units, 0), cost = old.reduce((s, l) => s + l.cost, 0);
+    const value = h.price != null && units > 0 ? units * h.price : null;
+    const nx = young[0] ? pDate(young[0].date) : null;
+    return { h, units, cost, value, gain: value != null ? value - cost : null,
+      next: nx ? new Date(nx.getFullYear() + 1, nx.getMonth(), nx.getDate() + 1) : null, nextUnits: young[0] ? young[0].units : 0 };
+  }).sort((a, b) => (b.gain || -1e12) - (a.gain || -1e12));
+}
+function viewLongTerm() {
+  const w = longTermWatch(); if (!w.length) return '';
+  const ready = w.filter(x => x.gain > 0);
+  return `<section class="sec box"><div class="sec-h"><h3>Long-term gain watch</h3><span class="small muted">automatic</span></div>
+    <p class="small muted" style="margin:-4px 0 8px">Every stock you hold is watched. When shares you’ve held for more than a year are worth more than you paid, your phone gets a notification straight after the next price update (hourly while the market is open).</p>
+    ${ready.length ? `<p class="small good" style="margin:0 0 8px">${ready.length} stock${ready.length === 1 ? '' : 's'} in long-term gain now.</p>` : ''}
+    ${w.map(x => `<div class="kv"><span>${esc(x.h.name)}<br><span class="small muted">${x.units > 0 ? `${fUnits(x.units)} of ${fUnits(x.h.units)} shares over 1 year · cost ${inr(x.cost)}` : 'No shares over 1 year yet'}${x.next ? ` · ${fUnits(x.nextUnits)} more turn 1 year on ${fDay(x.next)}` : ''}</span></span>
+      <span class="num" style="text-align:right">${x.gain == null ? '<span class="muted">–</span>' : `<b class="${x.gain >= 0 ? 'good' : 'bad'}">${x.gain >= 0 ? '+' : '−'}${inr(Math.abs(x.gain))}</b><br><span class="small muted">${x.cost > 0 ? ((x.gain / x.cost) * 100).toFixed(1) + '%' : ''}</span>`}</span></div>`).join('')}
+  </section>`;
 }
 function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
 
