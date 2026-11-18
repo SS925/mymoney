@@ -250,8 +250,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -278,7 +278,8 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList };
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck,
+    mix: viewMix, alerts: () => viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -289,7 +290,14 @@ function render() {
   if (state.tab === 'invest') bindInvest();
   if (state.tab === 'trade') bindTrade();
   if (state.tab === 'pfedit') bindPfEdit();
-  if (['sips', 'bills', 'goals'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) bindGoals(); }
+  if (['sips', 'bills', 'goals', 'cards', 'others', 'documents', 'alerts'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) { bindGoals(); bindEduCalc(); } }
+  if (state.tab === 'subs') bindSubs();
+  if (state.tab === 'nospend') bindNoSpend();
+  if (state.tab === 'habits') bindHabits();
+  if (state.tab === 'dupes') bindDupes();
+  if (state.tab === 'mix') bindMix();
+  if (state.tab === 'regime') bindRegime();
+  if (state.tab === 'emergency') bindEmergency();
   if (state.tab === 'report') bindReport();
   if (state.tab === 'coaching') bindCoaching();
   if (state.tab === 'import') bindImport();
@@ -334,11 +342,11 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
-  invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['tax', 'Tax'], ['import', 'Import']],
-  future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance']],
+  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
+  invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
+  future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
-const VIEW_SUBS = new Set(['sheets', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
+const VIEW_SUBS = new Set(['sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
 function viewerMay(t) { const a = famAllowed(); return a.includes(t) || (VIEW_SUBS.has(t) && (a.includes(groupOf(t)) || ['family', 'lockset', 'settings', 'more'].includes(t))); }
 function groupOf(tab) { return MAIN_TABS.includes(tab) ? tab : (NAV_OF[tab] || 'home'); }
 function subnav() {
@@ -348,7 +356,7 @@ function subnav() {
 const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['trade', '📈', 'Buy / sell'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax'], ['pfedit', '🏛', 'PF / PPF'],
   ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
-  ['coaching', '🎓', 'Coaching'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family'], ['more', '⋯', 'More']];
+  ['coaching', '🎓', 'Coaching'], ['regime', '⚖', 'Tax regime'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
 function viewShortcuts() {
   return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
     ${SHORTCUTS.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
@@ -497,6 +505,7 @@ function viewHome() {
     ${qa('data-gotab="invest"', IC.invest, 'Invest')}
     ${qa('data-gotab="future"', IC.retire, 'Retirement')}
   </div>
+  ${(() => { const td = portfolioToday(); return td ? `<button class="today-strip" data-gotab="invest"><span>Stocks & funds today</span><b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} · ${pctTxt(td.pct, 2)}</b></button>` : ''; })()}
   ${viewShortcuts()}
   ${(() => { const d = tokenDays(); return d != null && d <= 14 ? `<section class="sec box warnbox"><div class="sec-h"><h3>GitHub token ${d < 0 ? 'has expired' : `expires in ${d} day${d === 1 ? '' : 's'}`}</h3></div><p class="small" style="margin:0">Make a new token on GitHub (same settings), then paste it in More → Notifications and settings and in Excel’s AppLink module.</p></section>` : ''; })()}
   ${viewLowBalance()}
@@ -1010,7 +1019,8 @@ const INV_PLATFORMS = ['Groww', 'YES Bank SIP (auto-debit)', 'Paytm Money', 'Zer
 function inv() { return (state.data && state.data.invest) || null; }
 function priceOf(code) {
   const c = String(code || '').trim().toUpperCase(); if (!c || !state.prices) return null;
-  return (state.prices.prices || []).find(p => p.code === c) || null;
+  const p = (state.prices.prices || []).find(x => x.code === c); if (!p) return null;
+  const prev = (state.prices.prev || {})[c]; return prev ? { ...p, prev } : p;
 }
 /* Holdings as Excel last sent them, plus buys/sells saved on the phone that Excel hasn't added yet,
    valued at the latest price from prices.json (units × price). */
@@ -1056,8 +1066,9 @@ function viewInvestFunds() {
   const dates = hs.map(h => h.priceDate).filter(Boolean).sort();
   const log = tradeLog().slice(0, state.logAll ? 60 : 8);
   return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${hs.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
-      ${hs.length ? hs.map(h => `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}</span></span>
-          <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`).join('')
+      ${(() => { const td = portfolioToday(); return td ? `<p class="small" style="margin:-4px 0 8px">Today <b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} (${pctTxt(td.pct, 2)})</b></p>` : ''; })()}
+      ${hs.length ? hs.map(h => { const st = holdingStats(h); return `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${st.day != null ? `<span class="${st.day >= 0 ? 'good' : 'bad'}">${st.day >= 0 ? '▲' : '▼'} ${inr(Math.abs(st.day))} today</span> · ` : ''}${st.xirr != null ? `XIRR ${pctTxt(st.xirr)} · ` : ''}${st.divTot ? `dividends ${inr(st.divTot)} · ` : ''}${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}</span></span>
+          <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`; }).join('')
         + `<p class="small muted" style="margin:8px 0 0">Invested ${inr(invd)}. ${dates.length ? `Prices from ${fDay(pDate(dates[dates.length - 1]))}.` : 'Add a price code to get the latest price.'}</p>`
         : `<p class="small muted" style="margin:4px 0 0">No buys or sells yet. Add your first one and it becomes a holding.</p>`}
       <button class="primary" data-gotab="trade" style="margin-top:12px">Add buy / sell</button>
@@ -1089,7 +1100,7 @@ function viewPfEdit() {
   const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, s = (balPending() || {}).values || {};
   const f = state.pfEdit || (state.pfEdit = {
     epf: s.epf ?? e.epfPassbook ?? '', eps: s.eps ?? e.epsPassbook ?? '', asOf: s.asOf ?? e.asOf ?? isoToday(), inv: s.epfInvested ?? e.invested ?? '',
-    ppf: s.ppf ?? p.balance ?? '', ppfDate: s.ppfDate ?? p.updated ?? isoToday(),
+    ppf: s.ppf ?? p.balance ?? '', ppfDate: s.ppfDate ?? p.updated ?? isoToday(), ppfInv: s.ppfInvested ?? p.invested ?? '',
     wage: s.wage ?? e.wage ?? 25000, you: +(((s.yourRate ?? e.yourRate ?? 0.12) * 100).toFixed(2)), er: +(((s.employerRate ?? e.employerRate ?? 0.12) * 100).toFixed(2)) });
   const m = pfMonthly(Number(f.wage) || 0, (Number(f.you) || 0) / 100, (Number(f.er) || 0) / 100, Number(e.epsCap) || 25000, Number(e.epsRate) || 0.0833);
   const val = v => v === '' || v == null ? '' : String(Math.round(Number(v) * 100) / 100);
@@ -1110,6 +1121,8 @@ function viewPfEdit() {
     <h2 style="margin-top:0">PPF</h2>
     <label class="f" for="pf-ppf">PPF balance (₹)</label>
     <input class="inp num" id="pf-ppf" inputmode="decimal" value="${esc(val(f.ppf))}" placeholder="Balance in your passbook">
+    <label class="f" for="pf-ppfinv">Total invested so far (₹)</label>
+    <input class="inp num" id="pf-ppfinv" inputmode="decimal" value="${esc(val(f.ppfInv))}" placeholder="Your figure – used for gain and return">
     <label class="f" for="pf-ppfd">Balance date</label>
     <input class="inp" id="pf-ppfd" type="date" value="${esc(f.ppfDate || '')}" max="${isoToday()}">
   </section>
@@ -1134,7 +1147,7 @@ function viewPfEdit() {
 function bindPfEdit() {
   const f = state.pfEdit, $ = id => document.getElementById(id), e = (inv() || {}).epf || {};
   const n = v => { const t = String(v).replace(/[,₹\s%]/g, ''); return t === '' ? null : Number(t); };
-  const read = () => { f.epf = $('pf-epf').value; f.eps = $('pf-eps').value; f.inv = $('pf-inv').value; f.asOf = $('pf-asof').value; f.ppf = $('pf-ppf').value;
+  const read = () => { f.epf = $('pf-epf').value; f.eps = $('pf-eps').value; f.inv = $('pf-inv').value; f.ppfInv = $('pf-ppfinv').value; f.asOf = $('pf-asof').value; f.ppf = $('pf-ppf').value;
     f.ppfDate = $('pf-ppfd').value; f.wage = $('pf-wage').value; f.you = $('pf-you').value; f.er = $('pf-er').value; };
   const live = () => {
     read();
@@ -1145,7 +1158,7 @@ function bindPfEdit() {
   $('pf-cancel').onclick = () => { state.pfEdit = null; state.tab = 'invest'; window.scrollTo(0, 0); render(); };
   $('pf-save').onclick = async () => {
     read();
-    const v = { epf: n(f.epf), eps: n(f.eps), epfInvested: n(f.inv), asOf: f.asOf, ppf: n(f.ppf), ppfDate: f.ppfDate, wage: n(f.wage), yourRate: n(f.you), employerRate: n(f.er) };
+    const v = { epf: n(f.epf), eps: n(f.eps), epfInvested: n(f.inv), ppfInvested: n(f.ppfInv), asOf: f.asOf, ppf: n(f.ppf), ppfDate: f.ppfDate, wage: n(f.wage), yourRate: n(f.you), employerRate: n(f.er) };
     for (const [k, label] of [['epf', 'EPF balance'], ['eps', 'EPS balance'], ['ppf', 'PPF balance'], ['wage', 'PF wage']])
       if (v[k] == null || !(v[k] >= 0) || Number.isNaN(v[k])) { toast(`Enter the ${label}`); return; }
     if (!(v.yourRate > 0 && v.yourRate <= 50) || !(v.employerRate >= 0 && v.employerRate <= 50)) { toast('PF % should be between 0 and 50'); return; }
@@ -1153,6 +1166,7 @@ function bindPfEdit() {
     v.yourRate = Math.round(v.yourRate * 100) / 10000; v.employerRate = Math.round(v.employerRate * 100) / 10000;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.ppfDate || '')) delete v.ppfDate;
     if (v.epfInvested == null || !(v.epfInvested >= 0)) delete v.epfInvested;
+    if (v.ppfInvested == null || !(v.ppfInvested >= 0)) delete v.ppfInvested;
     const saved = { id: 'b' + Date.now().toString(36), ...v, values: v, savedAt: new Date().toISOString() };
     const btn = $('pf-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
@@ -1293,7 +1307,7 @@ function bindTrade() {
     try {
       await GH.putJson(`trades/${entry.id}.json`, entry, `${entry.side} ${entry.name}`);
       state.trades = [{ id: entry.id, entry }, ...state.trades.filter(x => x.id !== entry.id)]; LS.set('trades', state.trades);
-      toast(`Saved. Excel adds it to Stocks & MF next time it opens`);
+      if (t.editId) toast('Changes saved'); else toastUndo(`${entry.side} saved`, async () => { await GH.remove(`trades/${entry.id}.json`, 'Undo'); state.trades = state.trades.filter(x => x.id !== entry.id); LS.set('trades', state.trades); });
       state.trade = null; state.tab = 'invest'; window.scrollTo(0, 0); render();
     } catch (e) {
       toast(e instanceof AppError ? e.message : 'Couldn’t reach GitHub – try again when you’re online');
@@ -1351,7 +1365,7 @@ async function refreshTrades() {
 const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
 async function loadDocs() {
   for (const k of Object.keys(DOCS)) {
-    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family/.test(k) ? {} : []; }
+    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax/.test(k) ? {} : []; }
     catch (e) { /* keep the copy on this phone */ }
   }
   LS.set('docs', state.docs);
@@ -1408,7 +1422,7 @@ const DOC_FIELDS = {
   bills: [['name', 'Name', 'text', 'e.g. Rent, Netflix, LIC, HDFC credit card'], ['amount', 'Amount (₹) – leave empty if it changes, like a card bill', 'num'], ['every', 'How often', 'sel', ['Monthly', 'Yearly']],
     ['day', 'Due day of the month', 'num', '1–31'], ['month', 'Due month (yearly bills)', 'selm'], ['keyword', 'Text in the bank details', 'text', 'e.g. NETFLIX, LIC, CRED, rent payee name'], ['account', 'Paid from', 'acct']],
   goals: [['name', 'Goal', 'text', 'e.g. Emergency fund, Car, Trip'], ['target', 'Target amount (₹)', 'num'], ['date', 'Target date', 'month'],
-    ['saved', 'Saved so far (₹)', 'num'], ['monthly', 'Putting in each month (₹)', 'num'], ['ret', 'Expected return (% a year)', 'num', 'e.g. 7 for FD/debt, 12 for equity']],
+    ['saved', 'Saved so far, outside the investments below (₹)', 'num'], ['links', 'Investments set aside for this goal', 'links'], ['monthly', 'Putting in each month (₹)', 'num'], ['ret', 'Expected return (% a year)', 'num', 'e.g. 7 for FD/debt, 12 for equity']],
 };
 const DOC_NAME = { sips: 'SIP', bills: 'bill', goals: 'goal' };
 function viewDocForm(kind) {
@@ -1417,6 +1431,8 @@ function viewDocForm(kind) {
     const v = it[k] ?? '';
     if (type === 'sel') return `<label class="f">${label}</label><div class="seg" data-sel="${k}">${hint.map(o => `<button data-v="${o}" class="${v === o ? 'on' : ''}">${o}</button>`).join('')}</div>`;
     if (type === 'acct') { const ac = bankAccounts().map(a => a.name); return ac.length ? `<label class="f" for="df-${k}">${label}</label><select class="inp" id="df-${k}"><option value="">Not set</option>${ac.map(a => `<option ${v === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>` : ''; }
+    if (type === 'links') { const opts = linkOptions(), on = new Set(it.links || []); return opts.length ? `<label class="f">${label}</label><div class="group" style="padding:4px 14px">${opts.map(o => `<label class="tick"><input type="checkbox" data-link="${esc(o)}" ${on.has(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>` : ''; }
+    if (type === 'date') return `<label class="f" for="df-${k}">${label}</label><input class="inp" id="df-${k}" type="date" value="${esc(v)}">`;
     if (type === 'selm') return it.every === 'Yearly' ? `<label class="f" for="df-${k}">${label}</label><select class="inp" id="df-${k}">${MONF.map((m, i) => `<option value="${i + 1}" ${Number(v) === i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select>` : '';
     return `<label class="f" for="df-${k}">${label}</label><input class="inp ${type === 'num' ? 'num' : ''}" id="df-${k}" ${type === 'num' ? 'inputmode="decimal"' : ''} ${type === 'month' ? 'type="month"' : ''} value="${esc(v)}" placeholder="${esc(hint || '')}">`;
   };
@@ -1428,12 +1444,13 @@ function viewDocForm(kind) {
 }
 function bindDocForm(kind) {
   const e = state.docEdit, it = e.item, $ = id => document.getElementById(id);
-  const read = () => DOC_FIELDS[kind].forEach(([k, , type]) => { const el = $('df-' + k); if (el) it[k] = type === 'num' ? el.value.replace(/[,₹\s%]/g, '') : el.value.trim(); });
+  const read = () => { DOC_FIELDS[kind].forEach(([k, , type]) => { const el = $('df-' + k); if (el) it[k] = type === 'num' ? el.value.replace(/[,₹\s%]/g, '') : el.value.trim(); });
+    if (DOC_FIELDS[kind].some(f => f[2] === 'links')) it.links = [...document.querySelectorAll('[data-link]')].filter(i => i.checked).map(i => i.dataset.link); };
   document.querySelectorAll('[data-sel] button').forEach(b => b.onclick = () => { read(); it[b.parentElement.dataset.sel] = b.dataset.v; render(); });
   $('df-cancel').onclick = () => { state.docEdit = null; render(); };
   const save = async (list, msg) => {
     const old = state.docs[kind]; state.docs[kind] = list;
-    try { await saveDoc(kind, msg); state.docEdit = null; toast('Saved'); }
+    try { await saveDoc(kind, msg); state.docEdit = null; toastUndo(/^Delete/.test(msg) ? 'Deleted' : 'Saved', async () => { state.docs[kind] = old; await saveDoc(kind, 'Undo'); }); }
     catch (err) { state.docs[kind] = old; toast(err.message || 'Couldn’t reach GitHub – try again'); }
     render();
   };
@@ -1444,7 +1461,9 @@ function bindDocForm(kind) {
     for (const [k, label, type] of DOC_FIELDS[kind]) if (type === 'num' && it[k] !== '' && !(Number(it[k]) >= 0)) { toast(`Check ${label.toLowerCase()}`); return; }
     if (kind === 'sips' && !(Number(it.amount) > 0)) { toast('Enter the amount'); return; }
     if (kind === 'bills' && !(Number(it.amount) > 0) && !String(it.keyword || '').trim()) { toast('Enter the amount, or the bank text if the amount changes'); return; }
-    if (kind !== 'goals' && !(Number(it.day) >= 1 && Number(it.day) <= 31)) { toast('Enter the day (1–31)'); return; }
+    if ((kind === 'sips' || kind === 'bills') && !(Number(it.day) >= 1 && Number(it.day) <= 31)) { toast('Enter the day (1–31)'); return; }
+    if (kind === 'alerts' && !String(it.code || '').trim()) { toast('Enter the price code'); return; }
+    if (kind === 'alerts') it.code = String(it.code).trim().toUpperCase();
     if (kind === 'goals' && !(Number(it.target) > 0)) { toast('Enter the target amount'); return; }
     if (kind === 'goals' && !/^\d{4}-\d{2}$/.test(it.date || '')) { toast('Pick the target date'); return; }
     const clean = { ...it }; DOC_FIELDS[kind].forEach(([k, , type]) => { if (type === 'num') clean[k] = clean[k] === '' ? null : Number(clean[k]); });
@@ -1491,7 +1510,7 @@ function viewBills() {
 
 /* Goals with what-if */
 function goalCalc(g, extra) {
-  const r = (Number(g.ret) || 0) / 1200, saved = Number(g.saved) || 0, pm = (Number(g.monthly) || 0) + (extra || 0), target = Number(g.target) || 0;
+  const r = (Number(g.ret) || 0) / 1200, saved = (Number(g.saved) || 0) + linkedValue(g), pm = (Number(g.monthly) || 0) + (extra || 0), target = Number(g.target) || 0;
   const [y, m] = String(g.date || '').split('-').map(Number), now = new Date();
   const months = Math.max(0, (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth()));
   const fv = (n) => r ? saved * Math.pow(1 + r, n) + pm * (Math.pow(1 + r, n) - 1) / r : saved + pm * n;
@@ -1512,13 +1531,14 @@ function viewGoals() {
   return `${xlBlock}${gs.length ? '' : `<section class="hero"><p class="hero-k" style="margin-top:0">Goals</p><h2 class="hero-v" style="font-size:24px">Plan for what’s next</h2><p class="hero-s" style="margin:0">An emergency fund, a car, a trip – see how much to put in each month and when you’ll get there.</p></section>`}
     ${gs.map(g => { const c = goalCalc(g), x = extra[g.id] || 0, w = goalCalc(g, x), ok = c.atDate >= (Number(g.target) || 0);
       return `<section class="sec box"><div class="sec-h"><h3>${esc(g.name)}</h3><button data-doc-edit="goals:${esc(g.id)}">Edit</button></div>
-        <div class="row"><span class="num"><b>${inr(g.saved)}</b> of ${inr(g.target)}</span><span class="small muted">by ${esc(fMon(pDate(g.date + '-01')))}</span></div>
+        <div class="row"><span class="num"><b>${inr((Number(g.saved) || 0) + linkedValue(g))}</b> of ${inr(g.target)}</span><span class="small muted">by ${esc(fMon(pDate(g.date + '-01')))}</span></div>
         <div class="meter" style="margin:8px 0"><i style="width:${(c.pct * 100).toFixed(1)}%"></i></div>
         <p class="small ${ok ? 'good' : 'warn'}" style="margin:0">${ok ? `On track – about ${inr(c.atDate)} by then` : `Short by ${inr((Number(g.target) || 0) - c.atDate)} at ${inr(g.monthly || 0)} a month. Need ${inr(c.need)} a month`}</p>
         <label class="f" for="gx-${esc(g.id)}">What if I add more each month? <b class="num" id="gxv-${esc(g.id)}">+${inr(x)}</b></label>
         <input type="range" id="gx-${esc(g.id)}" data-gx="${esc(g.id)}" min="0" max="${Math.max(5000, Math.ceil((c.need || 10000) * 2 / 1000) * 1000)}" step="500" value="${x}">
         <p class="small muted" id="gxr-${esc(g.id)}" style="margin:4px 0 0">${goalWhatIf(g, x)}</p></section>`; }).join('')}
     <button class="primary" data-doc-add="goals">＋ Add a goal</button>
+    ${viewEduCalc()}
     <p class="note">Goals are kept in your data repo (app/goals.json). Update “saved so far” whenever you check.</p>`;
 }
 function goalWhatIf(g, x) { const w = goalCalc(g, x); return `At ${inr((Number(g.monthly) || 0) + x)} a month you reach ${inr(g.target)} in ${esc(monthsLabel(w.reach))}` + (x ? '' : ' – move the slider to try more'); }
@@ -1982,7 +2002,7 @@ function bindRecat() {
     try {
       await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`);
       state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats);
-      toast('Saved. Excel adds the rule next time it opens'); state.recat = null; state.tab = 'tx'; render();
+      toastUndo('Category change saved', async () => { await GH.remove(`recat/${entry.id}.json`, 'Undo'); state.recats = state.recats.filter(x => x.id !== entry.id); LS.set('recats', state.recats); }); state.recat = null; state.tab = 'tx'; render();
     } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); }
   };
 }
@@ -2389,7 +2409,7 @@ function bindYear() { document.querySelectorAll('[data-yr]').forEach(b => b.oncl
 /* ======================================================================
    Family view: view-only phones, limited to the screens you choose (app/family.json)
    ====================================================================== */
-const FAMILY_SCREENS = [['home', 'Home'], ['salary', 'Salary'], ['money', 'Money'], ['invest', 'Invest'], ['future', 'Retire'], ['goals', 'Goals'], ['bills', 'Bills'], ['tx', 'Transactions']];
+const FAMILY_SCREENS = [['home', 'Home'], ['salary', 'Salary'], ['money', 'Money'], ['invest', 'Invest'], ['future', 'Retire'], ['goals', 'Goals'], ['bills', 'Bills'], ['tx', 'Transactions'], ['emergency', 'Emergency card'], ['documents', 'Documents']];
 function isViewer() { return !!(state.cfg && state.cfg.viewOnly); }
 function famAllowed() { const f = state.docs.family || {}; return Array.isArray(f.screens) && f.screens.length ? f.screens : ['home', 'money', 'future', 'goals']; }
 function viewFamily() {
@@ -2495,6 +2515,436 @@ function viewSheetsList() {
   return `<p class="small muted" style="margin:0 0 8px">Every sheet as Excel shows it${at ? `, sent ${fDay(at)}` : ''}. The app’s own screens already use the figures from these.</p>
     ${list.length ? `<div class="group">${list.map(s => row(`data-sheet="${esc(s.name)}"`, esc(s.name) + (s.hidden ? ' <span class="small muted">(hidden in Excel)</span>' : ''))).join('')}</div>`
       : `<p class="small muted">No sheets yet. Run AppLinkNow in Excel, then tap ⟳.</p>`}`;
+}
+
+/* ======================================================================
+   Round 5: investments (dividends, XIRR, day change, alerts, mix, other investments),
+   spending tools, tax tools, life & convenience
+   ====================================================================== */
+const STOP_WORDS = /^(LIMITED|LTD|INDIA|INDIAN|THE|AND|OF|CORPORATION|CORP|COMPANY|INDUSTRIES|FUND|PLAN|DIRECT|GROWTH)$/i;
+function nameKey(nm) { return String(nm || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !STOP_WORDS.test(w))[0] || ''; }
+/* Dividends from bank data (category Dividend), matched to a holding by its first distinctive word */
+function dividendsFor(h) {
+  const k = nameKey(h.name), code = String(h.code || '').toUpperCase();
+  return tbl('AppRecent').filter(t => t.Type === 'Income' && /dividend/i.test(t.Category) && (() => { const d = String(t.Details).toUpperCase(); return (k && d.includes(k)) || (code && !/^\d+$/.test(code) && d.includes(code)); })());
+}
+/* XIRR from dated cash flows: [{d: Date, v: number}] (money out negative) */
+function xirr(flows) {
+  if (flows.length < 2 || !flows.some(f => f.v < 0) || !flows.some(f => f.v > 0)) return null;
+  const t0 = flows[0].d, yrs = f => (f.d - t0) / (365 * DAY);
+  const npv = r => flows.reduce((s, f) => s + f.v / Math.pow(1 + r, yrs(f)), 0);
+  let lo = -0.99, hi = 10, flo = npv(lo), fhi = npv(hi);
+  if (flo * fhi > 0) return null;
+  for (let i = 0; i < 100; i++) { const mid = (lo + hi) / 2, fm = npv(mid); if (Math.abs(fm) < 0.01) return mid; if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; } }
+  return (lo + hi) / 2;
+}
+function holdingStats(h) {
+  const flows = [];
+  for (const r of tradeLog()) { if (String(r.name).toLowerCase() !== h.name.toLowerCase() || r.empty || r.deleting) continue; const d = pDate(r.date); if (!d) continue; flows.push({ d, v: (r.side === 'Sell' ? 1 : -1) * (Number(r.amount) || 0) }); }
+  const divs = dividendsFor(h), divTot = divs.reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  divs.forEach(t => { const d = pDate(t.Date); if (d) flows.push({ d, v: Math.abs(n(t.Amount)) }); });
+  flows.sort((a, b) => a.d - b.d);
+  const first = flows.length ? flows[0].d : null;
+  if (h.value > 0) flows.push({ d: new Date(), v: h.value });
+  const days = first ? (Date.now() - first) / DAY : 0;
+  const p = priceOf(h.code), day = p && p.prev > 0 && h.units > 0 ? h.units * (p.price - p.prev) : null;
+  return { divTot, xirr: days >= 30 ? xirr(flows) : null, day, dayPct: p && p.prev > 0 ? (p.price - p.prev) / p.prev : null };
+}
+function portfolioToday() {
+  let d = 0, base = 0, any = false;
+  for (const h of invHoldings()) { const p = priceOf(h.code); if (p && p.prev > 0 && h.units > 0) { d += h.units * (p.price - p.prev); base += h.units * p.prev; any = true; } }
+  return any ? { d, pct: base ? d / base : 0 } : null;
+}
+function pctTxt(x, digits = 1) { return `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(digits)}%`; }
+
+/* ---- generic lists kept in app/*.json ---- */
+Object.assign(DOCS, { cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
+Object.assign(DOC_NAME, { cards: 'card offer', others: 'investment', documents: 'document', alerts: 'price alert' });
+const OTHER_TYPES = ['FD', 'NPS', 'Sovereign Gold Bond', 'Bond', 'RD', 'Gold', 'Other'];
+Object.assign(DOC_FIELDS, {
+  cards: [['name', 'Card', 'text', 'e.g. HDFC Millennia'], ['cat', 'Best for (category)', 'text', 'e.g. Food Online, Shopping, Fuel'], ['offer', 'Offer', 'text', 'e.g. 5% cashback on Swiggy'], ['cap', 'Monthly cap (₹)', 'num', 'optional']],
+  others: [['name', 'Name', 'text', 'e.g. SBI FD 2027, NPS Tier 1, SGB 2023-24 Series III'], ['type', 'Type', 'sel', OTHER_TYPES], ['invested', 'Invested (₹)', 'num'], ['value', 'Value now (₹)', 'num', 'from the statement'],
+    ['start', 'Start date', 'date'], ['maturity', 'Maturity date', 'date', 'optional'], ['rate', 'Interest / return (% a year)', 'num', 'optional'], ['note', 'Note', 'text', 'e.g. interest paid every 6 months']],
+  documents: [['name', 'Document', 'text', 'e.g. Passport, Car insurance, PAN card'], ['where', 'Kept where', 'text', 'e.g. Blue file, DigiLocker, bank locker'], ['number', 'Number (last 4 only)', 'text', 'optional'], ['expiry', 'Expires / renews on', 'date', 'optional – you get a reminder 30 days before']],
+  alerts: [['name', 'Stock or fund', 'text'], ['code', 'Price code', 'text', 'e.g. ITC or BSE:500325'], ['above', 'Tell me when it goes above (₹)', 'num', 'optional'], ['below', 'Tell me when it goes below (₹)', 'num', 'optional']],
+});
+function viewDocKind(kind) {
+  if (state.docEdit) return viewDocForm(kind);
+  const list = state.docs[kind] || [];
+  const rows = {
+    cards: it => [it.name, `${it.cat || ''}${it.offer ? ' · ' + it.offer : ''}`, it.cap ? 'cap ' + inr(it.cap) : ''],
+    others: it => [it.name, `${it.type || ''}${it.maturity ? ' · matures ' + fDay(pDate(it.maturity)) : ''}${it.rate ? ' · ' + it.rate + '%' : ''}`, inr(it.value || it.invested)],
+    documents: it => [it.name, `${it.where || ''}${it.number ? ' · …' + it.number : ''}`, it.expiry ? (() => { const dl = Math.round((pDate(it.expiry) - dayOnly(new Date())) / DAY); return dl < 0 ? 'expired' : dl <= 30 ? `${dl} days left` : fDay(pDate(it.expiry)); })() : ''],
+    alerts: it => [it.name, `${it.code}${priceOf(it.code) ? ' · now ₹' + priceOf(it.code).price : ''}`, [it.above ? '↑ ' + inr(it.above) : '', it.below ? '↓ ' + inr(it.below) : ''].filter(Boolean).join(' ')],
+  }[kind];
+  const intro = { cards: 'Note which card gives which offer. When you add a card spend, the app suggests the best card for that category.',
+    others: 'FDs, NPS, gold bonds and anything else not in your other lists. You get a reminder before each maturity date.',
+    documents: 'Where each important document is kept, and when it expires. You get a reminder 30 days before.',
+    alerts: 'Get a notification when a stock or fund crosses a price. Moves of 5% or more in a day are always alerted.' }[kind];
+  return `<p class="small muted" style="margin:0 0 10px">${intro}</p>
+    ${kind === 'others' ? viewFdLadder() : ''}
+    <section class="sec box"><div class="sec-h"><h3>${list.length} saved</h3><button data-doc-add="${kind}">＋ Add</button></div>
+      ${list.map(it => { const [a, b, c] = rows(it); return `<button class="kv rowbtn" data-doc-edit="${kind}:${esc(it.id)}"><span>${esc(a)}<br><span class="small muted">${esc(b)}</span></span><span class="num small">${esc(c)}</span></button>`; }).join('') || '<p class="small muted">Nothing yet.</p>'}</section>`;
+}
+function viewFdLadder() {
+  const fx = fdRows().filter(f => f.Status === 'Active').map(f => ({ name: f.name, when: pDate(String(f['Maturity date'] || '').replace(/(\d{1,2}) (\w{3}) (\d{2})$/, (m, d, mo, y) => `20${y}-${String(MON.findIndex(x => x === mo) + 1).padStart(2, '0')}-${d.padStart(2, '0')}`)), amt: num(f['Maturity value']), src: 'Excel' }));
+  const ot = (state.docs.others || []).filter(o => o.maturity).map(o => ({ name: o.name, when: pDate(o.maturity), amt: Number(o.value || o.invested) || 0, src: o.type }));
+  const all = [...fx, ...ot].filter(x => x.when).sort((a, b) => a.when - b.when); if (!all.length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Maturity ladder</h3></div>${all.map(x => `<div class="kv"><span>${esc(fDay(x.when))}<br><span class="small muted">${esc(x.name)} · ${esc(x.src)}</span></span><span class="num">${inr(x.amt)}</span></div>`).join('')}</section>`;
+}
+
+/* ---- rebalance helper (target mix in app/profile.json) ---- */
+function currentMix() {
+  const hs = invHoldings(), e = (inv() || {}).epf || {}, ppf = Number(((inv() || {}).ppf || {}).balance) || 0;
+  const fds = fdRows().filter(f => f.Status === 'Active').reduce((s, f) => s + num(f['Value now']), 0);
+  let eq = 0, safe = (Number(e.value) || 0) + ppf + fds, gold = 0;
+  for (const h of hs) { if (/gold/i.test(h.type)) gold += h.value; else if (/debt/i.test(h.type)) safe += h.value; else eq += h.value; }
+  for (const o of state.docs.others || []) { const v = Number(o.value || o.invested) || 0; if (/gold/i.test(o.type)) gold += v; else if (/NPS/i.test(o.type)) { eq += v * 0.5; safe += v * 0.5; } else safe += v; }
+  return { eq, safe, gold, tot: eq + safe + gold };
+}
+function viewMix() {
+  const m = currentMix(), t = (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000;
+  const after = m.tot + add, need = { eq: Math.max(0, after * t.eq / 100 - m.eq), safe: Math.max(0, after * t.safe / 100 - m.safe), gold: Math.max(0, after * t.gold / 100 - m.gold) };
+  const ns = need.eq + need.safe + need.gold || 1, split = k => Math.round(add * need[k] / ns / 100) * 100;
+  const row = (k, l) => `<div class="brow"><div class="row"><span>${l}</span><span class="num small"><b>${m.tot ? Math.round(m[k] / m.tot * 100) : 0}%</b> now · target ${t[k]}%</span></div><div class="meter thin"><i style="width:${m.tot ? (m[k] / m.tot * 100).toFixed(1) : 0}%"></i></div></div>`;
+  return `<section class="sec box"><div class="sec-h"><h3>Your mix now</h3><span class="small num">${inr(m.tot)}</span></div>
+      ${row('eq', 'Equity (stocks, equity funds, half of NPS)')}${row('safe', 'Safe (EPF, PPF, FDs, debt funds)')}${row('gold', 'Gold')}</section>
+    <section class="sec box"><div class="sec-h"><h3>Where should the next money go?</h3></div>
+      <label class="f" for="mx-add">Amount to invest (₹)</label><input class="inp num" id="mx-add" inputmode="numeric" value="${add}">
+      <div class="kv"><span>Equity</span><b class="num">${inr(split('eq'))}</b></div><div class="kv"><span>Safe</span><b class="num">${inr(split('safe'))}</b></div><div class="kv"><span>Gold</span><b class="num">${inr(split('gold'))}</b></div></section>
+    <section class="card"><h2 style="margin-top:0">Target mix</h2>
+      <div class="row2" style="grid-template-columns:repeat(3,minmax(0,1fr))">${[['eq', 'Equity %'], ['safe', 'Safe %'], ['gold', 'Gold %']].map(([k, l]) => `<div><label class="f" for="mt-${k}">${l}</label><input class="inp num" id="mt-${k}" inputmode="numeric" value="${t[k]}"></div>`).join('')}</div>
+      <button class="primary" id="mt-save">Save target</button><p class="note">A common rule: equity % ≈ 100 − your age, the rest mostly safe, 5–10% gold.</p></section>`;
+}
+function bindMix() {
+  const $ = id => document.getElementById(id);
+  $('mx-add').onchange = () => { state.mixAdd = Number($('mx-add').value.replace(/[,₹\s]/g, '')) || 0; render(); };
+  $('mt-save').onclick = async () => {
+    const mix = { eq: Number($('mt-eq').value) || 0, safe: Number($('mt-safe').value) || 0, gold: Number($('mt-gold').value) || 0 };
+    if (mix.eq + mix.safe + mix.gold !== 100) { toast('The three should add up to 100'); return; }
+    const old = state.docs.profile; state.docs.profile = { ...(state.docs.profile || {}), mix };
+    try { await saveDoc('profile', 'Target mix'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
+  };
+}
+
+/* ---- goal links: holdings / EPF / PPF counted towards a goal ---- */
+function linkOptions() { return [...invHoldings().map(h => h.name), 'EPF', 'PPF', ...(state.docs.others || []).map(o => o.name)]; }
+function linkedValue(g) {
+  let v = 0; const hs = invHoldings(), x = inv() || {};
+  for (const l of g.links || []) {
+    if (l === 'EPF') v += Number((x.epf || {}).value) || 0; else if (l === 'PPF') v += Number((x.ppf || {}).balance) || 0;
+    else { const h = hs.find(y => y.name === l); if (h) v += h.value; else { const o = (state.docs.others || []).find(y => y.name === l); if (o) v += Number(o.value || o.invested) || 0; } }
+  }
+  return v;
+}
+
+/* ======================================================================
+   Spending tools
+   ====================================================================== */
+function payeeKey(t) { const p = upiParts(t.Details).payee; return (p || String(t.Details || '').replace(/^bank:\s*\{[^}]*\}\s*/i, '').replace(/[0-9/]+/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ')).toUpperCase(); }
+function findSubscriptions() {
+  const since = new Date(); since.setMonth(since.getMonth() - 14);
+  const g = {};
+  for (const t of tbl('AppRecent')) {
+    if (t.Type !== 'Expenses' || /Loans|Housing|Credit Card|Investments/i.test(t.Category)) continue;
+    const d = pDate(t.Date); if (!d || d < since) continue;
+    const k = payeeKey(t); if (!k || k.length < 3) continue;
+    (g[k] || (g[k] = [])).push({ d, a: Math.abs(n(t.Amount)), t });
+  }
+  const out = [];
+  for (const [k, rows] of Object.entries(g)) {
+    if (rows.length < 2) continue;
+    rows.sort((a, b) => a.d - b.d);
+    const amts = rows.map(r => r.a).sort((a, b) => a - b), med = amts[Math.floor(amts.length / 2)];
+    const same = rows.filter(r => Math.abs(r.a - med) <= Math.max(5, med * 0.08)); if (same.length < 2) continue;
+    const gaps = same.slice(1).map((r, i) => (r.d - same[i].d) / DAY), mg = gaps.sort((a, b) => a - b)[Math.floor(gaps.length / 2)];
+    let every = null;
+    if (mg >= 25 && mg <= 35 && same.length >= 3) every = 'Monthly'; else if (mg >= 80 && mg <= 100) every = 'Quarterly'; else if (mg >= 340 && mg <= 390) every = 'Yearly';
+    if (!every) continue;
+    const last = same[same.length - 1], perYear = med * ({ Monthly: 12, Quarterly: 4, Yearly: 1 })[every];
+    if ((Date.now() - last.d) / DAY > ({ Monthly: 70, Quarterly: 130, Yearly: 420 })[every]) continue;      // stopped already
+    out.push({ key: k, amount: med, every, perYear, last: last.d, cat: last.t.Category, n: same.length, day: last.d.getDate(), month: last.d.getMonth() + 1 });
+  }
+  const al = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const known = [...(state.docs.bills || []), ...excelBills()].flatMap(b => [al(b.keyword), al(b.name)]).filter(k => k.length >= 3);
+  return out.map(s => { const sk = al(s.key); return { ...s, tracked: known.some(k => sk.includes(k) || k.includes(sk)) }; }).sort((a, b) => b.perYear - a.perYear);
+}
+function viewSubs() {
+  const list = findSubscriptions(), tot = list.reduce((s, x) => s + x.perYear, 0);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Repeating payments found</p><h2 class="hero-v num">${inr(tot)}<span style="font-size:16px;font-weight:500"> a year</span></h2>
+      <p class="hero-s" style="margin:0">${list.length} payments that repeat in your bank data (not loans, rent or investments). Cancel what you don’t use.</p></section>
+    <section class="sec box">${list.map((s, i) => `<div class="sortrow"><div class="row"><span><b>${esc(s.key)}</b><br><span class="small muted">${esc(s.every.toLowerCase())} · ${inr(s.amount)} · last ${esc(fDay(s.last))} · ${esc(s.cat)}</span></span><b class="num">${inr(s.perYear)}<span class="small muted">/yr</span></b></div>
+        ${s.tracked ? '<p class="small good" style="margin:4px 0 0">In your bills list</p>' : `<button class="chip" data-sub-add="${i}" style="margin-top:6px">＋ Add to bills for reminders</button>`}</div>`).join('') || '<p class="small muted">No repeating payments found.</p>'}</section>`;
+}
+function bindSubs() {
+  const list = findSubscriptions();
+  document.querySelectorAll('[data-sub-add]').forEach(b => b.onclick = () => { const s = list[Number(b.dataset.subAdd)]; state.tab = 'bills'; docAdd('bills', { name: s.key.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), amount: Math.round(s.amount), every: s.every === 'Yearly' ? 'Yearly' : 'Monthly', day: s.day, month: s.month, keyword: s.key.split(' ')[0] }); });
+}
+/* no-spend days: days with no discretionary spending (fixed costs, investments, card bills ignored) */
+function viewNoSpend() {
+  const end = bankEnd() || new Date(), ym = state.nsMonth || `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}`;
+  const [y, m] = ym.split('-').map(Number), days = new Date(y, m, 0).getDate(), spent = {};
+  for (const t of tbl('AppRecent')) { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(ym) || FIXED.has(t.Category) || /Credit Card|Investments|Loans/i.test(t.Category)) continue; const d = Number(String(t.Date).slice(8, 10)); spent[d] = (spent[d] || 0) + Math.abs(n(t.Amount)); }
+  const lastDay = end.getFullYear() === y && end.getMonth() + 1 === m ? end.getDate() : days, first = new Date(y, m - 1, 1).getDay();
+  let nos = 0; for (let d = 1; d <= lastDay; d++) if (!spent[d]) nos++;
+  let streak = 0; const all = {}; tbl('AppRecent').forEach(t => { if (t.Type === 'Expenses' && !FIXED.has(t.Category) && !/Credit Card|Investments|Loans/i.test(t.Category)) all[String(t.Date).slice(0, 10)] = 1; });
+  for (let d = new Date(end); ; d = new Date(+d - DAY)) { const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; if (all[k]) break; streak++; if (streak > 400) break; }
+  const prev = new Date(y, m - 2, 1), next = new Date(y, m, 1);
+  const key = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `<section class="hero"><div class="hero-tiles" style="margin-top:0"><div><span>No-spend days in ${MON[m - 1]}</span><b class="num">${nos} of ${lastDay}</b></div><div><span>Current streak</span><b class="num">${streak} day${streak === 1 ? '' : 's'}</b></div></div></section>
+    <div class="row" style="margin:6px 0 10px"><button class="chip" data-ns="${key(prev)}">‹ ${MON[prev.getMonth()]}</button><b>${MONF[m - 1]} ${y}</b><button class="chip" data-ns="${key(next)}" ${next > end ? 'disabled' : ''}>${MON[next.getMonth()]} ›</button></div>
+    <div class="cal">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<span class="cal-h">${d}</span>`).join('')}${'<span></span>'.repeat(first)}
+      ${Array.from({ length: days }, (_, i) => i + 1).map(d => `<span class="cal-d ${d > lastDay ? 'future' : spent[d] ? 'spent' : 'free'}" title="${spent[d] ? inr(spent[d]) : 'no spending'}">${d}${spent[d] && d <= lastDay ? `<i>${spent[d] >= 1000 ? Math.round(spent[d] / 1000) + 'k' : Math.round(spent[d])}</i>` : ''}</span>`).join('')}</div>
+    <p class="note">Green = no day-to-day spending. Rent, EMIs, investments and card bills don’t count. Based on bank data up to ${esc(fDay(end))}.</p>`;
+}
+function bindNoSpend() { document.querySelectorAll('[data-ns]').forEach(b => b.onclick = () => { state.nsMonth = b.dataset.ns; render(); }); }
+/* price of a habit */
+function viewHabits() {
+  const months = 3, since = new Date(); since.setMonth(since.getMonth() - months);
+  const end = bankEnd() || new Date(), from = new Date(end); from.setMonth(from.getMonth() - months);
+  const by = {}; for (const t of tbl('AppRecent')) { const d = pDate(t.Date); if (t.Type !== 'Expenses' || !d || d < from || d > end || FIXED.has(t.Category) || /Credit Card|Investments|Loans|Medical|Education/i.test(t.Category)) continue; by[t.Category] = (by[t.Category] || 0) + Math.abs(n(t.Amount)); }
+  const daysN = Math.max(1, (end - from) / DAY), r = 0.12 / 12, fv = pm => pm * (Math.pow(1 + r, 120) - 1) / r * (1 + r);
+  const list = Object.entries(by).map(([c, v]) => ({ c, day: v / daysN, month: v / daysN * 30.4 })).filter(x => x.month >= 300).sort((a, b) => b.month - a.month).slice(0, 8);
+  const cut = Number(state.habitCut ?? 50) / 100;
+  return `<p class="small muted" style="margin:0 0 10px">Your day-to-day spending over the last 3 months, and what it would grow to if invested instead (12% a year, 10 years).</p>
+    <label class="f" for="hb-cut">If I cut it by <b id="hb-cv">${Math.round(cut * 100)}%</b></label><input type="range" id="hb-cut" min="10" max="100" step="10" value="${Math.round(cut * 100)}">
+    ${list.map(x => `<section class="sec box"><div class="sec-h"><h3>${esc(x.c)}</h3><span class="small num">${inr(x.day)}/day</span></div>
+      <div class="kv"><span>A year</span><span class="num">${inr(x.month * 12)}</span></div>
+      <div class="kv"><span>Cutting ${Math.round(cut * 100)}% and investing it</span><span class="num good">${inr(fv(x.month * cut))}<span class="small muted"> in 10 yrs</span></span></div></section>`).join('') || '<p class="small muted">Not enough spending data yet.</p>'}`;
+}
+function bindHabits() { const i = document.getElementById('hb-cut'); if (i) i.oninput = () => { state.habitCut = Number(i.value); const y = window.scrollY; render(); window.scrollTo(0, y); }; }
+/* duplicates */
+function findDupes() {
+  const rows = allTx().filter(t => t.Type === 'Expenses' || t.Type === 'Income'), out = [], seen = new Set();
+  const byAmt = {}; rows.forEach(t => { const k = `${t.Type}|${Math.round(Math.abs(n(t.Amount)))}`; (byAmt[k] || (byAmt[k] = [])).push(t); });
+  for (const list of Object.values(byAmt)) {
+    if (list.length < 2) continue;
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j], da = pDate(a.Date), db = pDate(b.Date); if (!da || !db || Math.abs(da - db) > 2 * DAY) continue;
+      const phoneA = !!a._pending || /app#/.test(a.Details || ''), phoneB = !!b._pending || /app#/.test(b.Details || '');
+      if (!phoneA && !phoneB) { if (a.Details !== b.Details || txKey(a) !== txKey(b)) continue; }   // two bank rows only if identical
+      else if (phoneA && phoneB && a.Category !== b.Category) continue;
+      if (Math.abs(n(a.Amount)) < 50) continue;
+      const k = [txKey(a), txKey(b)].sort().join('§'); if (seen.has(k)) continue; seen.add(k);
+      out.push({ a, b, phone: phoneA || phoneB });
+    }
+  }
+  return out.sort((x, y) => String(y.a.Date).localeCompare(String(x.a.Date))).slice(0, 40);
+}
+function viewDupes() {
+  const list = findDupes();
+  const line = t => `<div class="small" style="margin:2px 0">${esc(fDay(pDate(t.Date)))} · ${esc(t.Category)} · ${inr(Math.abs(n(t.Amount)))}<br><span class="muted" style="overflow-wrap:anywhere">${esc(t._pending ? 'Phone entry (waiting for Excel): ' + (t.Details || '') : fullDetails(t))}</span></div>`;
+  return `<p class="small muted" style="margin:0 0 10px">Pairs with the same amount within 2 days where at least one is a phone entry – often the same spend added by hand and then found in the bank statement.</p>
+    ${list.map(p => `<section class="sec box">${line(p.a)}<hr class="hair">${line(p.b)}
+      ${[p.a, p.b].filter(t => t._pending === 'pending').map(t => `<button class="chip" data-dup-del="${esc(t._id)}" data-sha="${esc(t._sha)}">Remove the phone entry</button>`).join('') || '<p class="small muted" style="margin:6px 0 0">Both are already in Excel – delete one row in Budget Tracking if it’s a real duplicate.</p>'}</section>`).join('')
+      || '<section class="sec box"><p class="small muted" style="margin:0">No likely duplicates found.</p></section>'}`;
+}
+function bindDupes() {
+  document.querySelectorAll('[data-dup-del]').forEach(b => b.onclick = async () => {
+    try { await GH.deleteEntry(b.dataset.dupDel, b.dataset.sha); state.pending = state.pending.filter(p => p.id !== b.dataset.dupDel); LS.set('pending', state.pending); toast('Removed'); render(); }
+    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); }
+  });
+}
+/* monthly data health check */
+function healthItems() {
+  const out = [], end = bankEnd(), k = kpis(), x = inv() || {};
+  const ok = (good, title, fix, tab) => out.push({ good, title, fix, tab });
+  ok(end && (Date.now() - end) / DAY < 7, end ? `Bank data up to ${fDay(end)}` : 'No bank data', 'Run your bank sync in Excel', null);
+  const ps = latestPayslip(), lastPs = ps && ps.months.length ? ps.months[ps.months.length - 1] : '', lm = new Date(); lm.setMonth(lm.getMonth() - 1);
+  ok(new RegExp(MON[lm.getMonth()] + '.*' + lm.getFullYear()).test(lastPs) || new RegExp(MON[new Date().getMonth()] + '.*' + new Date().getFullYear()).test(lastPs), `Latest payslip: ${lastPs || 'none'}`, `Add the ${MONF[lm.getMonth()]} payslip in Excel`, 'salary');
+  const upi = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /UPI – Other|Uncategorised/i.test(t.Category) && end && (end - pDate(t.Date)) / DAY < 31).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  ok(upi < 5000, `Uncategorised spending last 30 days: ${inr(upi)}`, 'Sort UPI – Other into real categories', 'sort');
+  ok(x.epf && Number(x.epf.invested) > 0, 'EPF invested entered', 'Enter it in PF / PPF', 'pfedit');
+  const noCode = invHoldings().filter(h => !priceOf(h.code));
+  ok(!noCode.length, noCode.length ? `${noCode.length} holding(s) without a live price: ${noCode.map(h => h.name).slice(0, 3).join(', ')}` : 'Every holding has a live price', 'Edit the buy and pick it from the search so the price code fills in', 'invest');
+  const missed = statuses('sips').filter(s => s.st.s === 'missed'); ok(!missed.length, missed.length ? `SIP not found: ${missed.map(s => s.it.name).join(', ')}` : 'SIPs on track', 'Check the platform / bank balance', 'sips');
+  const td = tokenDays(); ok(td == null || td > 14, td == null ? 'GitHub token expiry unknown' : `GitHub token: ${td} days left`, 'Make a new token and paste it in the app and Excel', 'settings');
+  ok(!(state.pending.length + state.trades.length + state.recats.length) || (Date.now() - new Date(state.data && state.data.pushedAt)) / DAY < 3, `${state.pending.length + state.trades.length + state.recats.length} change(s) waiting for Excel`, 'Open the workbook and save', null);
+  return out;
+}
+function viewCheck() {
+  const items = healthItems(), bad = items.filter(i => !i.good).length;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Data health</p><h2 class="hero-v">${bad ? `${bad} thing${bad === 1 ? '' : 's'} to fix` : 'All good'}</h2></section>
+    <section class="sec box">${items.map(i => `<div class="kv"><span>${esc(i.title)}${i.good ? '' : `<br><span class="small muted">${esc(i.fix)}</span>`}</span>${i.good ? '<span class="good">✓</span>' : i.tab ? `<button class="chip" data-gotab="${i.tab}">Fix</button>` : '<span class="warn">!</span>'}</div>`).join('')}</section>`;
+}
+
+/* ======================================================================
+   Tax tools (FY 2026-27 slabs; Budget 2026 kept them unchanged)
+   ====================================================================== */
+function slabTax(inc, slabs) { let t = 0, lo = 0; for (const [hi, r] of slabs) { if (inc > lo) t += (Math.min(inc, hi) - lo) * r; lo = hi; } return t; }
+function taxNew(taxable) { let t = slabTax(taxable, [[400000, 0], [800000, .05], [1200000, .10], [1600000, .15], [2000000, .20], [2400000, .25], [Infinity, .30]]); if (taxable <= 1200000) t = 0; else t = Math.min(t, taxable - 1200000); return Math.round(t * 1.04); }
+function taxOld(taxable) { let t = slabTax(taxable, [[250000, 0], [500000, .05], [1000000, .20], [Infinity, .30]]); if (taxable <= 500000) t = 0; return Math.round(t * 1.04); }
+function fyIncome() {
+  const from = fyStart(), months = Math.max(1, Math.min(12, (new Date().getFullYear() - from.getFullYear()) * 12 + new Date().getMonth() - 3 + 1));
+  const ps = sheetTable('Payslips', /^Month$/, null).filter(r => /\d{4}/.test(r.Month || '') && String(r['Financial Year'] || '').includes(String(from.getFullYear())));
+  const gross = ps.reduce((s, r) => s + num(r['Gross Earnings']), 0), last = ps.length ? num(ps[ps.length - 1]['Gross Earnings']) : 0;
+  const basic = ps.length ? num(ps[ps.length - 1].Basic) : 0, hra = ps.length ? num(ps[ps.length - 1].HRA) : 0;
+  const salaryYear = gross + last * Math.max(0, 12 - ps.length), inFy = t => { const d = pDate(t.Date); return d && d >= from; };
+  const sum = re => tbl('AppRecent').filter(t => t.Type === 'Income' && re.test(t.Category) && inFy(t)).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
+  const coach = receiptsList().filter(r => pDate(r.date) >= from).reduce((s, r) => s + (r.cur === '₹' ? Number(r.total) || 0 : Number(r.inr) || 0), 0);
+  const side = excelSideIncome().reduce((s, j) => s + j.fy, 0);
+  return { months, salaryYear, basicM: basic, hraM: hra, interest: sum(/interest/i), dividend: sum(/dividend/i), coach, side, slips: ps.length };
+}
+function viewRegime() {
+  const f = fyIncome(), p = state.docs.profile || {}, tx = p.tax || {}, x80 = excel80C();
+  const c80 = Math.min(150000, x80 && x80.total != null ? x80.total + x80.extra.reduce((s, e) => s + e.v, 0) : 0);
+  const v = { rent: tx.rent ?? 0, metro: tx.metro ?? false, d80: tx.d80 ?? 0, hl: tx.homeLoan ?? 0, nps: tx.nps ?? 0, c80: tx.c80 ?? c80 };
+  const other = (f.coach + f.side) / f.months * 12 + f.interest / f.months * 12 + f.dividend / f.months * 12;
+  const hraEx = v.rent > 0 ? Math.max(0, Math.min(f.hraM * 12, v.rent * 12 - 0.1 * f.basicM * 12, (v.metro ? 0.5 : 0.4) * f.basicM * 12)) : 0;
+  const newTaxable = Math.max(0, f.salaryYear - 75000 + other), newT = taxNew(newTaxable);
+  const oldTaxable = Math.max(0, f.salaryYear - 50000 - hraEx - 2400 - Math.min(150000, v.c80) - Math.min(100000, v.d80) - Math.min(200000, v.hl) - Math.min(50000, v.nps) + other - Math.min(10000, f.interest / f.months * 12));
+  const oldT = taxOld(oldTaxable), better = newT <= oldT ? 'new' : 'old';
+  const row = (l, a, b) => `<div class="kv"><span>${l}</span><span class="num" style="display:flex;gap:18px"><span style="min-width:84px;text-align:right">${a}</span><span style="min-width:84px;text-align:right">${b}</span></span></div>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">FY ${fyStart().getFullYear()}-${String(fyStart().getFullYear() + 1).slice(2)} estimate</p>
+      <h2 class="hero-v" style="font-size:26px">${better === 'new' ? 'New' : 'Old'} regime saves ${inr(Math.abs(oldT - newT))}</h2>
+      <div class="hero-tiles"><div><span>New regime tax</span><b class="num">${inr(newT)}</b></div><div><span>Old regime tax</span><b class="num">${inr(oldT)}</b></div></div></section>
+    <section class="sec box"><div class="sec-h"><h3>How it’s worked out</h3><span class="small">New · Old</span></div>
+      ${row(`Salary for the year<br><span class="small muted">${f.slips} payslips + rest at the latest gross</span>`, inr(f.salaryYear), inr(f.salaryYear))}
+      ${row('Other income (coaching, side jobs, interest, dividends – full-year estimate)', inr(other), inr(other))}
+      ${row('Standard deduction', '−' + inr(75000), '−' + inr(50000))}
+      ${row('HRA exemption', '–', '−' + inr(hraEx))}
+      ${row('80C · 80D · home loan · NPS', '–', '−' + inr(Math.min(150000, v.c80) + Math.min(100000, v.d80) + Math.min(200000, v.hl) + Math.min(50000, v.nps)))}
+      ${row('<b>Taxable</b>', `<b>${inr(newTaxable)}</b>`, `<b>${inr(oldTaxable)}</b>`)}
+      ${row('<b>Tax incl. 4% cess</b>', `<b>${inr(newT)}</b>`, `<b>${inr(oldT)}</b>`)}
+      <p class="small muted" style="margin:8px 0 0">New regime: ₹75,000 standard deduction; up to ₹12 lakh taxable is tax-free. Slabs are unchanged by Budget 2026. Estimate only – not tax advice.</p></section>
+    <section class="card"><h2 style="margin-top:0">Your deductions (old regime)</h2>
+      <label class="f" for="rg-rent">Rent paid per month (₹)</label><input class="inp num" id="rg-rent" inputmode="numeric" value="${esc(v.rent)}">
+      <label class="tick"><input type="checkbox" id="rg-metro" ${v.metro ? 'checked' : ''}> I live in Delhi, Mumbai, Kolkata or Chennai</label>
+      <label class="f" for="rg-c80">80C total (₹, max 1.5 lakh)</label><input class="inp num" id="rg-c80" inputmode="numeric" value="${esc(v.c80)}">
+      <label class="f" for="rg-d80">80D health insurance (₹)</label><input class="inp num" id="rg-d80" inputmode="numeric" value="${esc(v.d80)}">
+      <label class="f" for="rg-hl">Home-loan interest (₹ a year)</label><input class="inp num" id="rg-hl" inputmode="numeric" value="${esc(v.hl)}">
+      <label class="f" for="rg-nps">NPS 80CCD(1B) (₹, max 50,000)</label><input class="inp num" id="rg-nps" inputmode="numeric" value="${esc(v.nps)}">
+      <button class="primary" id="rg-save">Save and recalculate</button></section>
+    ${viewAdvTax(newT <= oldT ? 'new' : 'old', f, other)}
+    ${viewAis(f)}`;
+}
+function bindRegime() {
+  const $ = id => document.getElementById(id), nv = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
+  $('rg-save').onclick = async () => {
+    const old = state.docs.profile; state.docs.profile = { ...(state.docs.profile || {}), tax: { rent: nv('rg-rent'), metro: $('rg-metro').checked, c80: nv('rg-c80'), d80: nv('rg-d80'), homeLoan: nv('rg-hl'), nps: nv('rg-nps') } };
+    try { await saveDoc('profile', 'Tax deductions'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
+  };
+  const sv = $('adv-save'); if (sv) sv.onclick = async () => {
+    const old = state.docs.advtax; state.docs.advtax = state.advPlan;
+    try { await saveDoc('advtax', 'Advance tax reminders'); toast('Reminders on – a week and a day before each date'); } catch (e) { state.docs.advtax = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
+  };
+  const ai = $('ais-save'); if (ai) ai.onclick = async () => {
+    const ais = {}; document.querySelectorAll('[data-ais]').forEach(i => { ais[i.dataset.ais] = Number(i.value.replace(/[,₹\s]/g, '')) || 0; });
+    const old = state.docs.profile; state.docs.profile = { ...(state.docs.profile || {}), ais };
+    try { await saveDoc('profile', 'AIS figures'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
+  };
+}
+/* advance tax on non-salary income: due 15 Jun 15%, 15 Sep 45%, 15 Dec 75%, 15 Mar 100% */
+function viewAdvTax(regime, f, other) {
+  const salaryOnly = regime === 'new' ? taxNew(Math.max(0, f.salaryYear - 75000)) : taxOld(Math.max(0, f.salaryYear - 50000));
+  const withOther = regime === 'new' ? taxNew(Math.max(0, f.salaryYear - 75000 + other)) : taxOld(Math.max(0, f.salaryYear - 50000 + other));
+  const extra = Math.max(0, withOther - salaryOnly), y = fyStart().getFullYear();
+  const due = [[`${y}-06-15`, .15], [`${y}-09-15`, .45], [`${y}-12-15`, .75], [`${y + 1}-03-15`, 1]].map(([d, p]) => ({ due: d, amount: Math.round(extra * p) }));
+  // instalments whose date has passed are added to the next one (that's what you'd actually pay)
+  const today0 = dayOnly(new Date()); let carried = 0;
+  const sched = due.map((x, i) => { const part = x.amount - (i ? due[i - 1].amount : 0); if (pDate(x.due) < today0) { carried += part; return { due: x.due, amount: 0, missed: part, cumulative: x.amount }; } const amt = part + carried, inc = carried; carried = 0; return { due: x.due, amount: amt, includesMissed: inc, cumulative: x.amount }; });
+  state.advPlan = { fy: y, regime, extra, schedule: sched };
+  const on = state.docs.advtax && state.docs.advtax.fy === y;
+  return `<section class="sec box"><div class="sec-h"><h3>Advance tax on coaching and side income</h3></div>
+    <p class="small muted" style="margin:0 0 8px">TDS from salary only covers salary. Tax on other income of ${inr(other)} a year is about <b>${inr(extra)}</b>${extra > 10000 ? ' – over ₹10,000, so advance tax applies (interest under 234B/C if skipped).' : ' – under ₹10,000, so no advance tax is needed.'}</p>
+    ${extra > 10000 ? state.advPlan.schedule.map(s => { const past = !!s.missed; return `<div class="kv"><span>${esc(fDay(pDate(s.due)))}<br><span class="small muted">${past ? `${inr(s.missed)} was due – added to the next date` : s.includesMissed ? `includes ${inr(s.includesMissed)} from earlier dates` : 'pay by this date'}</span></span><span class="num ${past ? 'muted' : ''}">${past ? '–' : inr(s.amount)}</span></div>`; }).join('')
+      + `<button class="${on ? 'secondary' : 'primary'}" id="adv-save">${on ? 'Update reminders' : 'Remind me before each date'}</button>` : ''}</section>`;
+}
+/* AIS / 26AS cross-check: your figures vs the tax department's */
+function viewAis(f) {
+  const a = (state.docs.profile || {}).ais || {}, ours = { salary: f.salaryYear * f.slips / 12, interest: f.interest, dividend: f.dividend, other: f.coach + f.side };
+  const lines = [['salary', 'Salary (so far)'], ['interest', 'Savings / FD interest'], ['dividend', 'Dividends'], ['other', 'Other income (coaching, side jobs)']];
+  return `<section class="card"><h2 style="margin-top:0">Check against AIS / Form 26AS</h2>
+    <p class="small muted" style="margin:0 0 6px">Open AIS on the income-tax portal (Services → Annual Information Statement) and type its totals. Big differences mean income the tax department sees that you haven’t recorded – or the other way round.</p>
+    ${lines.map(([k, l]) => { const diff = a[k] ? a[k] - ours[k] : null; return `<label class="f" for="ais-${k}">${l} – yours ${inr(ours[k])}</label><div class="row" style="gap:8px"><input class="inp num" id="ais-${k}" data-ais="${k}" inputmode="numeric" value="${esc(a[k] || '')}" placeholder="AIS figure" style="flex:1;margin:0">${diff != null ? `<span class="small ${Math.abs(diff) > Math.max(1000, ours[k] * 0.05) ? 'bad' : 'good'}" style="min-width:90px;text-align:right">${Math.abs(diff) > Math.max(1000, ours[k] * 0.05) ? (diff > 0 ? 'AIS +' : 'AIS −') + inr(Math.abs(diff)) : 'matches'}</span>` : ''}</div>`; }).join('')}
+    <button class="secondary" id="ais-save">Save and compare</button></section>`;
+}
+
+/* ======================================================================
+   Life & convenience
+   ====================================================================== */
+const EMERGENCY_FIELDS = [['banks', 'Bank accounts', 'Bank, branch, last 4 digits, nominee'], ['policies', 'Insurance policies', 'Insurer, policy no. (last 4), sum assured, nominee, agent phone'],
+  ['investments', 'Investments', 'Groww / demat, EPF UAN, PPF account, where statements are'], ['loans', 'Loans and dues', 'Lender, EMI, who to call'],
+  ['documents', 'Where documents are', 'Will, property papers, locker, DigiLocker'], ['contacts', 'People to call', 'Family, CA, lawyer, HR with phone numbers'], ['notes', 'Anything else', '']];
+function viewEmergency() {
+  const e = state.docs.emergency || {}, edit = state.emEdit;
+  if (!edit && !Object.values(e).some(Boolean)) state.emEdit = true;
+  return state.emEdit ? `<p class="small muted" style="margin:0 0 8px">What your family needs if something happens to you. Never type full account numbers, passwords or PINs – last 4 digits are enough.</p>
+    <section class="card">${EMERGENCY_FIELDS.map(([k, l, h]) => `<label class="f" for="em-${k}">${l}</label><textarea class="inp" id="em-${k}" rows="3" placeholder="${esc(h)}">${esc(e[k] || '')}</textarea>`).join('')}
+      <button class="primary" id="em-save">Save</button>${Object.values(e).some(Boolean) ? '<button class="secondary" id="em-cancel">Cancel</button>' : ''}</section>`
+    : `<section class="sec box"><div class="sec-h"><h3>Emergency information</h3><button id="em-edit">Edit</button></div>
+      ${EMERGENCY_FIELDS.filter(([k]) => e[k]).map(([k, l]) => `<div class="em-b"><b>${l}</b><p>${esc(e[k]).replace(/\n/g, '<br>')}</p></div>`).join('')}</section>
+      <p class="note">Family phones can see this if you tick “Emergency card” in Family view. Kept in your private data repo.</p>`;
+}
+function bindEmergency() {
+  const $ = id => document.getElementById(id);
+  if ($('em-edit')) $('em-edit').onclick = () => { state.emEdit = true; render(); };
+  if ($('em-cancel')) $('em-cancel').onclick = () => { state.emEdit = false; render(); };
+  if ($('em-save')) $('em-save').onclick = async () => {
+    const e = {}; EMERGENCY_FIELDS.forEach(([k]) => { e[k] = $('em-' + k).value.trim(); });
+    if (Object.values(e).some(v => /\b\d{9,18}\b/.test(v))) { toast('Looks like a full account number – keep only the last 4 digits'); return; }
+    const old = state.docs.emergency; state.docs.emergency = e;
+    try { await saveDoc('emergency', 'Emergency information'); state.emEdit = false; toast('Saved'); } catch (err) { state.docs.emergency = old; toast(err.message || 'Couldn’t reach GitHub'); } render();
+  };
+}
+/* education fund */
+function viewEduCalc() {
+  const c = state.edu || (state.edu = { age: 5, at: 18, cost: 1500000, infl: 10, ret: 12, have: 0 });
+  const yrs = Math.max(1, c.at - c.age), fut = c.cost * Math.pow(1 + c.infl / 100, yrs), r = c.ret / 1200, nM = yrs * 12;
+  const haveFv = c.have * Math.pow(1 + c.ret / 100, yrs), sip = Math.max(0, (fut - haveFv) * r / ((Math.pow(1 + r, nM) - 1) * (1 + r)));
+  const f = (k, l, s) => `<div><label class="f" for="ed-${k}">${l}</label><input class="inp num" id="ed-${k}" data-ed="${k}" inputmode="numeric" value="${c[k]}" ${s || ''}></div>`;
+  return `<section class="card"><h2 style="margin-top:0">Child’s education fund</h2>
+    <div class="row2">${f('age', 'Child’s age now')}${f('at', 'Needed at age')}</div>
+    <div class="row2">${f('cost', 'Cost today (₹)')}${f('have', 'Already saved (₹)')}</div>
+    <div class="row2">${f('infl', 'Fee inflation %')}${f('ret', 'Expected return %')}</div>
+    <div class="kv" style="margin-top:10px"><span>Cost in ${yrs} years</span><b class="num">${inr(fut)}</b></div>
+    <div class="kv"><span><b>SIP needed each month</b></span><b class="num good">${inr(sip)}</b></div>
+    <button class="secondary" id="ed-goal">Save as a goal</button></section>`;
+}
+function bindEduCalc() {
+  document.querySelectorAll('[data-ed]').forEach(i => i.onchange = () => { state.edu[i.dataset.ed] = Number(i.value.replace(/[,₹\s%]/g, '')) || 0; render(); });
+  const b = document.getElementById('ed-goal'); if (b) b.onclick = () => {
+    const c = state.edu, yrs = Math.max(1, c.at - c.age), d = new Date(); d.setFullYear(d.getFullYear() + yrs);
+    docAdd('goals', { name: 'Education fund', target: Math.round(c.cost * Math.pow(1 + c.infl / 100, yrs)), date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, saved: c.have, ret: c.ret });
+  };
+}
+/* glance: one small screen with the essentials */
+function viewGlance() {
+  const k = kpis(), bal = bankAccounts().reduce((s, a) => s + a.bal, 0), next = statuses('bills').concat(statuses('sips')).filter(x => x.st.s === 'due').sort((a, b) => a.st.due - b.st.due)[0];
+  const today = portfolioToday(), net = netPay(), plan = activePlan(), lim = isFinite(net) ? net - (Number(plan.savings) || 0) : null, spent = n(k.spending_month) || 0;
+  return `<div class="glance">
+    <div><span>In your banks</span><b class="num">${inr(bal)}</b></div>
+    <div><span>Spent this month</span><b class="num">${inr(spent)}</b>${lim ? `<i class="${spent > lim ? 'bad' : 'good'}">${spent > lim ? 'over by ' + inr(spent - lim) : inr(lim - spent) + ' left'}</i>` : ''}</div>
+    <div><span>Next payment</span><b>${next ? esc(next.it.name) : '–'}</b>${next ? `<i>${Number(next.it.amount) > 0 ? inr(next.it.amount) + ' · ' : ''}${esc(next.st.txt)}</i>` : ''}</div>
+    <div><span>Stocks & funds today</span><b class="num ${today && today.d < 0 ? 'bad' : 'good'}">${today ? (today.d >= 0 ? '+' : '−') + inr(Math.abs(today.d)) : '–'}</b>${today ? `<i>${pctTxt(today.pct, 2)}</i>` : ''}</div>
+    <div><span>Net worth</span><b class="num">${inr(k.net_worth)}</b></div>
+  </div><button class="secondary" data-gotab="home">Open the full app</button>`;
+}
+/* all tools on one screen */
+function viewTools() {
+  const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
+  return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review']])
+    + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
+    + g('Tax', [['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
+    + g('Life', [['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
+    + g('App', [['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+}
+function viewTelegram() {
+  return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
+    <p class="small muted" style="margin:0 0 8px">Your weekly summary, monthly review and alerts can also go to a Telegram chat. WhatsApp isn’t possible without a paid business account, so Telegram is the free option.</p>
+    <ol class="steps small">
+      <li>In Telegram, open <b>@BotFather</b>, send <code>/newbot</code>, give it any name. Copy the <b>token</b> it gives you.</li>
+      <li>Open your new bot and send it “hi”. Then open <b>@userinfobot</b> and copy your <b>Id</b> (a number).</li>
+      <li>On GitHub, open your data repo → <b>Settings → Secrets and variables → Actions → New repository secret</b>. Add <code>TELEGRAM_TOKEN</code> (the token) and <code>TELEGRAM_CHAT</code> (your Id).</li>
+      <li>Done – the next notification also arrives in Telegram. Remove the secrets to stop.</li>
+    </ol><p class="small muted">Never paste the token in this app or in a chat – only in GitHub’s secrets page.</p></section>`;
+}
+
+/* undo: a toast with an Undo button */
+function toastUndo(msg, undo) {
+  const el = document.getElementById('toast'); el.innerHTML = `${esc(msg)} <button class="toast-undo">Undo</button>`; el.hidden = false; clearTimeout(toastTimer);
+  el.querySelector('.toast-undo').onclick = async () => { el.hidden = true; try { await undo(); toast('Undone'); } catch (e) { toast(e.message || 'Couldn’t undo'); } render(); };
+  toastTimer = setTimeout(() => { el.hidden = true; el.textContent = ''; }, 6000);
 }
 
 /* Retirement: ring + projection, quick sliders, savings today (format from the reference) */
@@ -2763,6 +3213,7 @@ function viewAdd() {
     <div class="pay" id="add-pay">${['Cash', 'UPI', 'Card', 'Other'].map(p => `<button class="chip ${a.paidWith === p ? 'on' : ''}" data-p="${p}">${p}</button>`).join('')}</div>
     <label class="f" for="add-note">Note</label>
     <input class="inp" id="add-note" maxlength="80" placeholder="e.g. Vegetables at market" value="${esc(a.note)}">
+    ${(() => { if (a.paidWith !== 'Card' || !a.category) return ''; const c = (state.docs.cards || []).find(x => String(x.cat || '').toLowerCase().split(/[,/]/).some(w => w.trim() && a.category.toLowerCase().includes(w.trim()))); return c ? `<p class="small good" style="margin:8px 0 0">💳 Best card for ${esc(a.category)}: <b>${esc(c.name)}</b>${c.offer ? ' – ' + esc(c.offer) : ''}</p>` : ''; })()}
     <button class="primary" id="add-save">${a.editId ? 'Save changes' : 'Save entry'}</button>
     ${a.editId ? '<button class="secondary" id="add-cancel">Cancel</button>' : ''}
     <p class="note">Use this for cash, or anything that won’t show up in a bank statement. Bank transactions arrive through your Excel sync, so adding them here too would count them twice.</p>
@@ -2777,6 +3228,7 @@ function bindAdd() {
   document.querySelectorAll('#add-pay .chip').forEach(b => b.onclick = () => { sync1(); a.paidWith = b.dataset.p; render(); });
   const qp = quickPicks();
   document.querySelectorAll('#add-quick .chip').forEach(b => b.onclick = () => { const e = qp[Number(b.dataset.q)]; Object.assign(a, { type: e.type, category: e.category, amount: String(e.amount), note: e.note || '', paidWith: e.paidWith || 'Cash', date: isoToday() }); render(); });
+  document.getElementById('add-cat').onchange = () => { sync1(); if (a.paidWith === 'Card' && (state.docs.cards || []).length) render(); };   // show the best card
   const vb = document.getElementById('add-voice'); if (vb) vb.onclick = () => { sync1(); startVoice(); };
   const sg = document.getElementById('add-sms-go'); if (sg) sg.onclick = () => { sync1(); if (applySms(document.getElementById('add-sms').value)) render(); };
   const ac = document.getElementById('add-cancel'); if (ac) ac.onclick = () => { state.add = newAdd(); state.tab = 'tx'; render(); };
@@ -2802,7 +3254,7 @@ function bindAdd() {
     try {
       const sha = await GH.putEntry(entry);
       state.pending.unshift({ id: entry.id, sha, entry }); LS.set('pending', state.pending);
-      toast(`Saved ${inr(entry.amount)}. Excel adds it next time it opens`);
+      toastUndo(`Saved ${inr(entry.amount)}`, async () => { const p = state.pending.find(x => x.id === entry.id); if (p) await GH.deleteEntry(p.id, p.sha); state.pending = state.pending.filter(x => x.id !== entry.id); LS.set('pending', state.pending); });
     } catch (e) {
       state.outbox.push(entry); LS.set('outbox', state.outbox);
       toast(e instanceof AppError && !/offline/i.test(e.message) && navigator.onLine !== false ? e.message + ' Kept on this phone.' : 'Saved on this phone · uploads when you’re online');
@@ -2933,6 +3385,7 @@ document.getElementById('btn-sync').onclick = () => sync({ toast: true });
 document.getElementById('btn-back').onclick = goBack;
 document.getElementById('btn-settings').onclick = () => { state.tab = 'more'; window.scrollTo(0, 0); render(); };
 window.addEventListener('online', () => sync());
+setInterval(() => { if (state.outbox.length && navigator.onLine !== false && state.cfg) flushOutbox().then(() => render(), () => {}); }, 60000);   // offline entries: keep trying
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { if (!state.locked) LS.set('lastActive', Date.now()); return; }
   if (lockCfg() && !state.locked && Date.now() - (LS.get('lastActive', 0) || 0) > LOCK_AFTER) showLock();
