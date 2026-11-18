@@ -250,8 +250,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -278,7 +278,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck,
+  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -334,6 +334,7 @@ function render() {
     const ed = document.getElementById('rp-edit');
     if (ed) ed.onclick = () => { const t = state.retireTry; state.retireEdit = { x: { ...t.x }, b: t.b }; render(); window.scrollTo(0, 0); };
   }
+  const cm = document.querySelector('[data-covmore]'); if (cm) cm.onclick = () => { state.covMonths = (state.covMonths || 12) === 12 ? 24 : 12; render(); };
   const ha = document.querySelector('[data-homeall]'); if (ha) ha.onclick = () => { state.homeAlertsAll = !state.homeAlertsAll; render(); };
   const hh = document.querySelector('[data-health]'); if (hh) hh.onclick = () => { state.healthOpen = !state.healthOpen; render(); };
   document.querySelectorAll('[data-gotab]').forEach(b => b.onclick = () => { state.tab = b.dataset.gotab; window.scrollTo(0, 0); render(); });
@@ -346,7 +347,7 @@ const SUBNAV = {
   invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
-const VIEW_SUBS = new Set(['sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
+const VIEW_SUBS = new Set(['coverage', 'sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
 function viewerMay(t) { const a = famAllowed(); return a.includes(t) || (VIEW_SUBS.has(t) && (a.includes(groupOf(t)) || ['family', 'lockset', 'settings', 'more'].includes(t))); }
 function groupOf(tab) { return MAIN_TABS.includes(tab) ? tab : (NAV_OF[tab] || 'home'); }
 function subnav() {
@@ -356,7 +357,7 @@ function subnav() {
 const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['trade', '📈', 'Buy / sell'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax'], ['pfedit', '🏛', 'PF / PPF'],
   ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
-  ['coaching', '🎓', 'Coaching'], ['regime', '⚖', 'Tax regime'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
+  ['coaching', '🎓', 'Coaching'], ['regime', '⚖', 'Tax regime'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
 function viewShortcuts() {
   return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
     ${SHORTCUTS.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
@@ -378,8 +379,8 @@ function renderFreshness() {
     ? `Updated ${pushed ? fDay(pushed).replace(/ \d{4}$/, '') + ', ' + pushed.toTimeString().slice(0, 5) : '–'}`
     : '';
   let msg = state.lastError, cls = 'banner err';
-  if (!msg && pushed && (Date.now() - pushed) > 3 * 864e5) {
-    msg = `Figures are ${Math.floor((Date.now() - pushed) / 864e5)} days old. Open the workbook on your PC to update.`;
+  if (!msg && pushed && (Date.now() - pushed) > 2 * 864e5) {
+    msg = `Excel hasn’t been opened for ${Math.floor((Date.now() - pushed) / 864e5)} days. Open the workbook on your PC to update.`;
     cls = 'banner';
   }
   if (!msg && state.outbox.length) { msg = `${state.outbox.length} entr${state.outbox.length === 1 ? 'y' : 'ies'} saved on this phone, waiting to upload.`; cls = 'banner'; }
@@ -499,6 +500,7 @@ function viewHome() {
   ${viewNetWorthChart()}
   ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}
   ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}
+  ${homeMissingCard()}
   <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
     ${qa('href="receipts.html"', IC.receipt, 'Receipt')}
@@ -2751,13 +2753,79 @@ function bindDupes() {
     catch (e) { toast(e.message || 'Couldn’t reach GitHub'); }
   });
 }
+/* ======================================================================
+   Statements and payslips: which months are in, which are missing
+   ====================================================================== */
+const ymKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+const ymLabel = k => { const [y, m] = k.split('-').map(Number); return MON[m - 1] + ' ' + y; };
+function coverage(monthsBack) {
+  const now = new Date(), lastDone = new Date(now.getFullYear(), now.getMonth() - 1, 1), months = [];
+  for (let i = (monthsBack || 12) - 1; i >= 0; i--) months.push(ymKey(new Date(lastDone.getFullYear(), lastDone.getMonth() - i, 1)));
+  const pay = new Set(), banks = {};
+  for (const r of sheetTable('Payslips', /^Month$/, null)) {
+    const m = String(r.Month || '').match(/^([A-Za-z]{3})[a-z]*\s+(\d{4})/); if (!m) continue;
+    const mi = MON.findIndex(x => x.toLowerCase() === m[1].toLowerCase()); if (mi >= 0) pay.add(m[2] + '-' + String(mi + 1).padStart(2, '0'));
+  }
+  for (const t of tbl('AppRecent')) {
+    const d = String(t.Date || '').slice(0, 10); if (!/^\d{4}-\d\d-\d\d$/.test(d)) continue;
+    if (t.Source === 'Payslip') { pay.add(d.slice(0, 7)); continue; }
+    const b = (String(t.Source || '').match(/^Bank Statement - (.+)$/) || [])[1]; if (!b) continue;
+    const x = banks[b] || (banks[b] = { first: d, last: d, months: new Set() });
+    x.months.add(d.slice(0, 7)); if (d < x.first) x.first = d; if (d > x.last) x.last = d;
+  }
+  const today = ymKey(now) + '-' + String(now.getDate()).padStart(2, '0');
+  const active = Object.keys(banks).filter(b => (pDate(today) - pDate(banks[b].last)) / DAY <= 150).sort();
+  const firstPay = [...pay].sort()[0] || '9999';
+  const rows = months.map(k => {
+    const [y, m] = k.split('-').map(Number), end = new Date(y, m, 0), endKey = k + '-' + String(end.getDate()).padStart(2, '0');
+    const bank = {};
+    for (const b of active) {
+      const x = banks[b];
+      if (k < x.first.slice(0, 7)) bank[b] = { st: 'na' };
+      else if ((pDate(endKey) - pDate(x.last)) / DAY <= 7) bank[b] = { st: 'ok' };
+      else if (x.last.slice(0, 7) === k) bank[b] = { st: 'part', note: 'up to ' + fDay(pDate(x.last)).replace(/ \d{4}$/, '') };
+      else bank[b] = { st: 'missing' };
+    }
+    return { k, pay: k < firstPay ? 'na' : pay.has(k) ? 'ok' : 'missing', bank };
+  }).reverse();
+  const todo = [];
+  for (const r of rows) {
+    if (r.pay === 'missing') todo.push({ k: r.k, what: 'Payslip' });
+    for (const b of active) if (r.bank[b].st === 'missing' || r.bank[b].st === 'part') todo.push({ k: r.k, what: b + ' statement' + (r.bank[b].note ? ` (${r.bank[b].note})` : '') });
+  }
+  return { rows, banks: active, todo };
+}
+function homeMissingCard() {
+  if (!state.data || new Date().getDate() < 2) return '';
+  const c = coverage(3), last = ymKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
+  const need = c.todo.filter(t => t.k === last); if (!need.length) return '';
+  return `<button class="strip" data-gotab="coverage"><span class="strip-i warn">📅</span><span class="strip-t"><span>Upload for ${ymLabel(last)}</span><b>${esc(need.map(t => t.what.replace(/ \(.*\)$/, '')).join(', '))}</b></span><span class="strip-a">Check ›</span></button>`;
+}
+function viewCoverage() {
+  if (!state.data) return '<section class="sec box"><p class="muted">Waiting for figures from Excel.</p></section>';
+  const c = coverage(state.covMonths || 12), cell = (st, note) => st === 'ok' ? '<span class="good" aria-label="in">✓</span>'
+    : st === 'na' ? '<span class="muted" aria-label="not needed">–</span>'
+    : st === 'part' ? `<span class="warn" title="${esc(note || '')}">½</span>` : '<span class="bad" aria-label="missing">✗</span>';
+  const pushed = state.data.pushedAt ? new Date(state.data.pushedAt) : null;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Statements and payslips</p>
+      <h2 class="hero-v">${c.todo.length ? `${c.todo.length} missing` : 'All in'}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">Last ${state.covMonths || 12} finished months · Excel last sent figures ${pushed ? fDay(pushed) : '–'}</p></section>
+    ${c.todo.length ? `<section class="sec box"><div class="sec-h"><h3>To upload</h3></div>
+      ${c.todo.map(t => `<div class="kv"><span>${esc(t.what)}</span><b>${ymLabel(t.k)}</b></div>`).join('')}
+      <p class="small muted" style="margin:10px 0 0">Put the files in your Google Drive. Payslips go in the payslip folder with “payslip” in the name; statements can go anywhere with the bank’s name in the file name (XLS or CSV from net banking reads best). Then open Excel on the PC.</p></section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>Month by month</h3></div>
+      <div class="cov-wrap"><table class="cov"><thead><tr><th>Month</th><th>Payslip</th>${c.banks.map(b => `<th>${esc(b)}</th>`).join('')}</tr></thead>
+      <tbody>${c.rows.map(r => `<tr><td>${ymLabel(r.k)}</td><td>${cell(r.pay)}</td>${c.banks.map(b => `<td>${cell(r.bank[b].st, r.bank[b].note)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin:10px 0 0">✓ in · ½ statement stops before month end · ✗ missing · – before you started. Banks with no rows for 5 months are left out.</p>
+      <button class="more-btn" data-covmore>${(state.covMonths || 12) === 12 ? 'Show 24 months' : 'Show 12 months'}</button></section>`;
+}
 /* monthly data health check */
 function healthItems() {
   const out = [], end = bankEnd(), k = kpis(), x = inv() || {};
   const ok = (good, title, fix, tab) => out.push({ good, title, fix, tab });
-  ok(end && (Date.now() - end) / DAY < 7, end ? `Bank data up to ${fDay(end)}` : 'No bank data', 'Run your bank sync in Excel', null);
+  ok(end && (Date.now() - end) / DAY < 7, end ? `Bank data up to ${fDay(end)}` : 'No bank data', 'Upload the statement to Drive, then open Excel on the PC', 'coverage');
   const ps = latestPayslip(), lastPs = ps && ps.months.length ? ps.months[ps.months.length - 1] : '', lm = new Date(); lm.setMonth(lm.getMonth() - 1);
-  ok(new RegExp(MON[lm.getMonth()] + '.*' + lm.getFullYear()).test(lastPs) || new RegExp(MON[new Date().getMonth()] + '.*' + new Date().getFullYear()).test(lastPs), `Latest payslip: ${lastPs || 'none'}`, `Add the ${MONF[lm.getMonth()]} payslip in Excel`, 'salary');
+  ok(new RegExp(MON[lm.getMonth()] + '.*' + lm.getFullYear()).test(lastPs) || new RegExp(MON[new Date().getMonth()] + '.*' + new Date().getFullYear()).test(lastPs), `Latest payslip: ${lastPs || 'none'}`, `Upload the ${MONF[lm.getMonth()]} payslip to Drive, then open Excel on the PC`, 'coverage');
   const upi = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /UPI – Other|Uncategorised/i.test(t.Category) && end && (end - pDate(t.Date)) / DAY < 31).reduce((s, t) => s + Math.abs(n(t.Amount)), 0);
   ok(upi < 5000, `Uncategorised spending last 30 days: ${inr(upi)}`, 'Sort UPI – Other into real categories', 'sort');
   ok(x.epf && Number(x.epf.invested) > 0, 'EPF invested entered', 'Enter it in PF / PPF', 'pfedit');
@@ -2933,7 +3001,7 @@ function viewTools() {
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
     + g('Tax', [['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
     + g('Life', [['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
-    + g('App', [['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+    + g('App', [['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
   return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
