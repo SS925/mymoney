@@ -1876,16 +1876,22 @@ function mfType(name) {
     : /hybrid|balanced/i.test(name) ? 'Hybrid MF' : /debt|liquid|gilt|bond/i.test(name) ? 'Debt MF' : 'Equity MF';
 }
 /* AMFI price code for a Groww fund name, from the free mfapi.in search (Direct + Growth plan) */
-async function findMfCode(name) {
-  const words = s => String(s).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !['fund', 'direct', 'growth', 'plan', 'option', 'the', 'and', 'of'].includes(w));
+async function findMfCode(name, nav) {
+  const STOP = ['fund', 'direct', 'growth', 'plan', 'option', 'the', 'and', 'of'];
+  const words = s => String(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !STOP.includes(w));
   const want = words(name), base = name.replace(/\s*-?\s*direct.*$/i, '').replace(/\s+fund\s*$/i, '').trim();
+  // every word must match; each extra word (e.g. "mid" in "Large & Mid Cap") costs more than a match is worth
+  const score = x => { const w = words(x.schemeName); return want.filter(t => w.includes(t)).length - 1.5 * w.filter(t => !want.includes(t)).length; };
+  const latest = async code => { try { const j = await (await fetch(`https://api.mfapi.in/mf/${code}/latest`)).json(); return Number(j && j.data && j.data[0] && j.data[0].nav) || 0; } catch (e) { return 0; } };
   for (const q of [base, want.slice(0, 3).join(' ')]) {
     try {
       const arr = await (await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q))).json();
-      const ok = (arr || []).filter(x => /direct/i.test(x.schemeName) && /growth/i.test(x.schemeName) && !/idcw|dividend|bonus|segregated/i.test(x.schemeName));
-      const score = x => { const w = words(x.schemeName); return want.filter(t => w.includes(t)).length - 0.1 * Math.abs(w.length - want.length); };
-      const best = ok.sort((a, b) => score(b) - score(a))[0];
-      if (best && score(best) >= Math.min(2, want.length)) return { code: String(best.schemeCode), match: best.schemeName };
+      const ok = (arr || []).filter(x => /direct/i.test(x.schemeName) && /growth/i.test(x.schemeName) && !/idcw|dividend|bonus|segregated/i.test(x.schemeName))
+        .map(x => ({ ...x, sc: score(x) })).filter(x => x.sc >= Math.min(2, want.length) - 1.5).sort((a, b) => b.sc - a.sc).slice(0, 4);
+      if (!ok.length) continue;
+      // the NAV in your history must be close to the fund's NAV today – rules out look-alike funds
+      if (nav > 0) for (const x of ok) { const v = await latest(x.schemeCode); if (v > 0 && v / nav > 0.6 && v / nav < 1.7) return { code: String(x.schemeCode), match: x.schemeName, nav: v }; }
+      if (ok[0].sc >= Math.min(2, want.length)) return { code: String(ok[0].schemeCode), match: ok[0].schemeName, unsure: nav > 0 };
     } catch (e) { return null; }       // offline: codes can be added later with Edit
   }
   return null;
@@ -1943,8 +1949,9 @@ function bindImport() {
       im.kind = 'MF'; im.txns = prepTxns(tx); render();
       Object.entries(im.txns.funds).forEach(async ([nm, f]) => {
         const known = invHoldings().find(h => h.name.toLowerCase() === nm.toLowerCase() && h.code);
-        const r = known ? { code: known.code, match: 'Code you already use' } : await findMfCode(nm);
-        f.looking = false; if (r) { f.code = r.code; f.match = r.match; }
+        const lastNav = [...im.txns.rows].reverse().find(x => x.name === nm && x.nav > 0);
+        const r = known ? { code: known.code, match: 'Code you already use' } : await findMfCode(nm, lastNav ? lastNav.nav : 0);
+        f.looking = false; if (r) { f.code = r.code; f.match = r.match + (r.unsure ? ' – NAV doesn’t match your history, check this code' : ''); }
         if (state.imp === im && state.tab === 'import') render();
       });
       return;
@@ -2965,6 +2972,10 @@ function healthItems() {
   ok(x.epf && Number(x.epf.invested) > 0, 'EPF invested entered', 'Enter it in PF / PPF', 'pfedit');
   const noCode = invHoldings().filter(h => !priceOf(h.code));
   ok(!noCode.length, noCode.length ? `${noCode.length} holding(s) without a live price: ${noCode.map(h => h.name).slice(0, 3).join(', ')}` : 'Every holding has a live price', 'Edit the buy and pick it from the search so the price code fills in', 'invest');
+  const odd = invHoldings().filter(h => h.units > 0 && h.invested > 0 && h.price && /^\d+$/.test(h.code) && (h.price / (h.invested / h.units) > 2.5 || h.price / (h.invested / h.units) < 0.4));
+  ok(!odd.length, odd.length ? `Price code looks wrong for ${odd.map(h => `${h.name} (₹${h.price} now vs ₹${(h.invested / h.units).toFixed(2)} paid)`).join(', ')}` : 'Fund prices match what you paid', 'Change the price code in Excel (Stocks & MF, Code column)', 'invest');
+  const neg = ((inv() || {}).holdings || []).map(h => ({ name: h.name, units: Number(h.units) || 0 })).filter(h => h.units < -0.001);
+  ok(!neg.length, neg.length ? `Below zero units: ${neg.map(h => `${h.name} ${fUnits(h.units)}`).join(', ')}` : 'No holding below zero', 'Delete the extra sell, or add the missing older buys', 'invest');
   const missed = statuses('sips').filter(s => s.st.s === 'missed'); ok(!missed.length, missed.length ? `SIP not found: ${missed.map(s => s.it.name).join(', ')}` : 'SIPs on track', 'Check the platform / bank balance', 'sips');
   const td = tokenDays(); ok(td == null || td > 14, td == null ? 'GitHub token expiry unknown' : `GitHub token: ${td} days left`, 'Make a new token and paste it in the app and Excel', 'settings');
   ok(!(state.pending.length + state.trades.length + state.recats.length) || (Date.now() - new Date(state.data && state.data.pushedAt)) / DAY < 3, `${state.pending.length + state.trades.length + state.recats.length} change(s) waiting for Excel`, 'Open the workbook and save', null);
