@@ -252,8 +252,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -280,7 +280,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -307,6 +307,7 @@ function render() {
   if (state.tab === 'lockset') bindLockSettings();
   if (state.tab === 'recat') bindRecat();
   if (state.tab === 'loans') bindLoans();
+  if (state.tab === 'ccards') bindCards();
   if (state.tab === 'cover') bindCover();
   if (state.tab === 'sort') bindSort();
   if (state.tab === 'shared') bindShared();
@@ -349,7 +350,7 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
+  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Cards'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
@@ -363,7 +364,7 @@ function subnav() {
 const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['trade', '📈', 'Buy / sell'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax'], ['pfedit', '🏛', 'PF / PPF'],
   ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
-  ['coaching', '🎓', 'Coaching'], ['regime', '⚖', 'Tax regime'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
+  ['ccards', '💳', 'Credit cards'], ['coaching', '🎓', 'Coaching'], ['regime', '⚖', 'Tax regime'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
 function viewShortcuts() {
   return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
     ${SHORTCUTS.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
@@ -2157,7 +2158,9 @@ function worthNow() {
   const total = have.reduce((a, r) => a + r.v, 0);
   let loanOwe = lastNum(loans), owe2 = owe;
   if (loansPending()) { const lt = allLoans().reduce((a, l) => a + l.owed, 0); owe2 = owe - loanOwe + lt; loanOwe = lt; }
-  return { have, total, owe: owe2, loans: loanOwe, cards: lastNum(cards), net: total - owe2, banks };
+  let cardOwe = lastNum(cards); const cl = (state.docs && state.docs.ccards) || [];
+  if (cl.length) { const t = cl.reduce((a, c) => a + (Number(c.outstanding) || 0), 0); owe2 = owe2 - cardOwe + t; cardOwe = t; }
+  return { have, total, owe: owe2, loans: loanOwe, cards: cardOwe, net: total - owe2, banks };
 }
 function viewWorth() {
   if (!state.data) return '<div class="empty">Waiting for figures from Excel.</div>';
@@ -2170,9 +2173,102 @@ function viewWorth() {
         <i class="wr-bar" style="width:${(r.v / max * 100).toFixed(1)}%"></i></button>`).join('')}</section>
     <section class="sec box"><div class="sec-h"><h3>What you owe</h3><span class="small num">${inr(w.owe)}</span></div>
       <button class="worth-row" data-gotab="loans"><span class="wr-t"><b>Loans</b></span><span class="wr-v"><b class="num">${inr(w.loans)}</b></span></button>
-      <div class="worth-row"><span class="wr-t"><b>Credit card dues</b><small>${w.cards ? '' : 'Not entered in Excel (Balances sheet)'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></div></section>
+      <button class="worth-row" data-gotab="ccards"><span class="wr-t"><b>Credit card dues</b><small>${((state.docs && state.docs.ccards) || []).length ? `${state.docs.ccards.length} cards` : 'Add your cards to track them'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></button></section>
     ${viewNetWorthChart()}
     <p class="small muted" style="margin:0 4px 16px">Banks are the last statement balances; funds and stocks use today’s prices; EPF and PPF are your passbook figures. The EPS pension part of EPF is paid as a monthly pension, not as cash.</p>`;
+}
+/* ======================================================================
+   Credit cards: limit, what you owe, due date – typed in or read from a screenshot (on the phone, nothing uploaded)
+   ====================================================================== */
+const CC_BANKS = ['HDFC', 'ICICI', 'SBI', 'Axis', 'Kotak', 'IDFC', 'AU', 'OneCard', 'Amex', 'American Express', 'RBL', 'Yes', 'IndusInd', 'Federal', 'Scapia', 'Jupiter', 'Slice', 'Uni', 'Standard Chartered', 'HSBC', 'BOB', 'Bank of Baroda', 'Tata Neu', 'Amazon Pay', 'Flipkart', 'Swiggy', 'Airtel'];
+function ccDays(d) { const x = pDate(d); return x ? Math.round((x - dayOnly(new Date())) / DAY) : null; }
+function viewCards() {
+  const list = (state.docs.ccards || []).slice(), ed = state.ccEdit, sum = f => list.reduce((a, c) => a + (Number(c[f]) || 0), 0);
+  const owe = sum('outstanding'), lim = sum('limit'), use = lim ? owe / lim : 0;
+  const form = c => `<section class="card"><h2 style="margin-top:0">${ed.isNew ? 'Add a card' : 'Update ' + esc(c.name || 'card')}</h2>
+      ${ed.fromShot ? `<p class="small ${ed.found ? 'good' : 'warn'}" style="margin:0 0 8px">${ed.found ? 'Read from your screenshot – check the numbers, then save.' : 'Couldn’t read much from that screenshot – fill in the rest.'}</p>` : ''}
+      <label class="f" for="cc-name">Card name</label><input class="inp" id="cc-name" value="${esc(c.name || '')}" placeholder="HDFC Millennia">
+      <label class="f" for="cc-last4">Last 4 digits (optional)</label><input class="inp num" id="cc-last4" inputmode="numeric" maxlength="4" value="${esc(c.last4 || '')}" placeholder="1234">
+      <div class="row2"><div><label class="f" for="cc-limit">Credit limit (₹)</label><input class="inp num" id="cc-limit" inputmode="decimal" value="${esc(c.limit ?? '')}"></div>
+      <div><label class="f" for="cc-out">You owe now (₹)</label><input class="inp num" id="cc-out" inputmode="decimal" value="${esc(c.outstanding ?? '')}"></div></div>
+      <div class="row2"><div><label class="f" for="cc-min">Minimum due (₹)</label><input class="inp num" id="cc-min" inputmode="decimal" value="${esc(c.minDue ?? '')}"></div>
+      <div><label class="f" for="cc-due">Payment due date</label><input class="inp" id="cc-due" type="date" value="${esc(c.dueDate || '')}"></div></div>
+      <button class="primary" id="cc-save">Save</button>
+      ${ed.isNew ? '' : '<button class="secondary" id="cc-del" style="color:var(--bad)">Delete card</button>'}
+      <button class="secondary" id="cc-cancel">Cancel</button></section>`;
+  if (ed) return form(ed.item);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">You owe on cards</p><h2 class="hero-v num">${inr(owe)}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">${list.length} card${list.length === 1 ? '' : 's'} · limit ${inr(lim)} · ${Math.round(use * 100)}% used</p>
+      ${lim ? `<div class="cc-bar"><i style="width:${Math.min(100, use * 100).toFixed(1)}%;background:${use > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}</section>
+    <div class="row2"><label class="secondary cc-shot" style="margin:0">📷 From screenshot<input type="file" id="cc-file" accept="image/*" hidden></label><button class="primary" id="cc-add" style="margin:0">＋ Add card</button></div>
+    <p class="small muted" style="margin:6px 4px 12px">A screenshot of the card page in your bank or CRED app. It’s read on this phone – the picture isn’t uploaded anywhere.</p>
+    ${state.ccBusy ? `<p class="small" style="margin:0 4px 12px">${esc(state.ccBusy)}</p>` : ''}
+    ${list.map((c, i) => { const l = Number(c.limit) || 0, o = Number(c.outstanding) || 0, u = l ? o / l : 0, dd = c.dueDate ? ccDays(c.dueDate) : null;
+      return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="chip" data-cc-edit="${i}">Update</button></div>
+        <div class="kv"><span>You owe</span><b class="num">${inr(o)}</b></div>
+        <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
+        ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
+        ${c.dueDate ? `<div class="kv"><span>Due ${esc(fDay(pDate(c.dueDate)))}${c.minDue ? ` · minimum ${inr(c.minDue)}` : ''}</span><span class="${dd != null && dd < 0 ? 'bad' : dd != null && dd <= 3 ? 'warn' : 'muted'}">${dd == null ? '' : dd < 0 ? `${-dd} days late` : dd === 0 ? 'today' : `in ${dd} days`}</span></div>` : ''}
+        <p class="small muted" style="margin:6px 0 0">Updated ${c.updated ? esc(fDay(pDate(c.updated))) : '–'}${u > .3 ? ' · using more than 30% of the limit can lower your credit score' : ''}</p></section>`; }).join('') || '<div class="empty">No cards yet. Add one, or pick a screenshot of the card page in your bank or CRED app.</div>'}`;
+}
+async function ocrImage(file) {
+  if (!window.Tesseract) await new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = () => bad(new Error('Couldn’t load the reader – check your internet')); document.head.appendChild(sc); });
+  const r = await window.Tesseract.recognize(file, 'eng');
+  return r && r.data ? r.data.text : '';
+}
+/* Picks card figures out of OCR text: total due / outstanding, credit limit, available limit, minimum due, due date, bank, last 4 digits */
+function parseCardText(t) {
+  const lines = String(t).split(/\n+/).map(l => l.trim()).filter(Boolean), out = {};
+  const amt = s => { const m = String(s).replace(/[oO](?=\d)/g, '0').match(/(?:₹|rs\.?|inr|z|%)?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{1,2}|\d{3,})/i); return m ? Number(m[1].replace(/,/g, '')) : null; };
+  const near = (re, not) => { for (let i = 0; i < lines.length; i++) if (re.test(lines[i]) && !(not && not.test(lines[i]))) { const a = amt(lines[i].replace(re, '')); if (a != null) return a; for (let j = i + 1; j <= i + 2 && j < lines.length; j++) { const b = amt(lines[j]); if (b != null) return b; } } return null; };
+  out.outstanding = near(/total (amount )?(due|outstanding)|outstanding( amount| balance)?|current (balance|outstanding|due)|amount due|total due|balance due|you owe/i, /min(imum)?\.? /i);
+  out.limit = near(/(total |overall )?credit limit|card limit|total limit|^limit/i, /avail|avl|remaining|unused/i);
+  const avail = near(/available (credit )?(limit|balance)?|avl\.? limit/i);
+  out.minDue = near(/min(imum)?\.? (amount )?due|min\.? due/i);
+  if (!out.limit && avail != null && out.outstanding != null) out.limit = avail + out.outstanding;
+  if (out.outstanding == null && avail != null && out.limit) out.outstanding = Math.max(0, out.limit - avail);
+  const MONS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  for (let i = 0; i < lines.length && !out.dueDate; i++) if (/due (date|by|on)|pay by|payment due/i.test(lines[i])) {
+    const s = lines.slice(i, i + 2).join(' ');
+    let m = s.match(/(\d{1,2})[\s\-\/.]*([A-Za-z]{3})[a-z]*[\s,\-\/.]*(\d{2,4})?/);
+    if (m && MONS.includes(m[2].toLowerCase())) { const y = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : new Date().getFullYear(); out.dueDate = `${y}-${String(MONS.indexOf(m[2].toLowerCase()) + 1).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`; break; }
+    m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (m) { const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]); out.dueDate = `${y}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`; }
+  }
+  const all = lines.join(' '), bank = CC_BANKS.find(b => new RegExp('\\b' + b + '\\b', 'i').test(all)); if (bank) out.bank = bank;
+  const l4 = all.match(/(?:x{2,}|\*{2,}|•{2,}|X{2,}|ending( in)?|\.{3,})\s*(\d{4})\b/i); if (l4) out.last4 = l4[2];
+  return out;
+}
+function bindCards() {
+  const $ = id => document.getElementById(id), list = state.docs.ccards || (state.docs.ccards = []);
+  const add = $('cc-add'); if (add) add.onclick = () => { state.ccEdit = { isNew: true, item: { id: uid('cc') } }; render(); };
+  document.querySelectorAll('[data-cc-edit]').forEach(b => b.onclick = () => { state.ccEdit = { isNew: false, i: Number(b.dataset.ccEdit), item: { ...list[Number(b.dataset.ccEdit)] } }; render(); });
+  const f = $('cc-file'); if (f) f.onchange = async () => {
+    const file = f.files && f.files[0]; if (!file) return;
+    state.ccBusy = 'Reading the screenshot… (the first time takes a few seconds)'; render();
+    try {
+      const p = parseCardText(await ocrImage(file)), found = ['outstanding', 'limit', 'minDue', 'dueDate'].some(k => p[k] != null);
+      const i = list.findIndex(c => (p.last4 && c.last4 === p.last4) || (p.bank && new RegExp(p.bank, 'i').test(c.name || '')));
+      const base = i >= 0 ? { ...list[i] } : { id: uid('cc'), name: p.bank ? p.bank + ' card' : '' };
+      for (const k of ['outstanding', 'limit', 'minDue', 'dueDate', 'last4']) if (p[k] != null && p[k] !== '') base[k] = p[k];
+      state.ccEdit = { isNew: i < 0, i, item: base, fromShot: true, found };
+    } catch (e) { toast(e.message || 'Couldn’t read that picture'); }
+    state.ccBusy = null; render();
+  };
+  const sv = $('cc-save'); if (sv) sv.onclick = async () => {
+    const e = state.ccEdit, it = e.item, n = id => { const v = $(id).value.replace(/[,₹\s]/g, ''); return v === '' ? null : Number(v); };
+    it.name = $('cc-name').value.trim(); it.last4 = $('cc-last4').value.replace(/\D/g, '').slice(0, 4);
+    if ($('cc-last4').value.replace(/\D/g, '').length > 4) { toast('Only the last 4 digits, please – never the full card number'); return; }
+    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.dueDate = $('cc-due').value; it.updated = isoToday();
+    if (!it.name) { toast('Enter the card name'); return; }
+    const old = list.slice(); if (e.isNew) list.push(it); else list[e.i] = it;
+    try { await saveDoc('ccards', `${e.isNew ? 'Add' : 'Update'} card ${it.name}`); state.ccEdit = null; toast('Saved'); render(); }
+    catch (err) { state.docs.ccards = old; toast(err.message || 'Couldn’t reach GitHub – try again'); }
+  };
+  const del = $('cc-del'); if (del) del.onclick = async () => { if (!confirmInline(del)) { del.textContent = 'Tap again to delete'; return; }
+    const old = list.slice(); list.splice(state.ccEdit.i, 1);
+    try { await saveDoc('ccards', 'Delete card'); state.ccEdit = null; toast('Deleted'); render(); } catch (err) { state.docs.ccards = old; toast(err.message || 'Couldn’t reach GitHub'); } };
+  const cc = $('cc-cancel'); if (cc) cc.onclick = () => { state.ccEdit = null; render(); };
 }
 /* ======================================================================
    Accounts and balances (Balances sheet), low balance before SIPs / bills
@@ -2876,7 +2972,7 @@ function portfolioToday() {
 function pctTxt(x, digits = 1) { return `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(digits)}%`; }
 
 /* ---- generic lists kept in app/*.json ---- */
-Object.assign(DOCS, { cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
+Object.assign(DOCS, { ccards: 'app/creditcards.json', cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
 Object.assign(DOC_NAME, { cards: 'card offer', others: 'investment', documents: 'document', alerts: 'price alert' });
 const OTHER_TYPES = ['FD', 'NPS', 'Sovereign Gold Bond', 'Bond', 'RD', 'Gold', 'Other'];
 Object.assign(DOC_FIELDS, {
