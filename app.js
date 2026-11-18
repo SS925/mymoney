@@ -1851,25 +1851,125 @@ function parseHoldingsText(txt) {
     return { name: (r[iName >= 0 ? iName : iSym] || '').trim(), code: iSym >= 0 ? String(r[iSym]).trim().toUpperCase() : '', isin: iIsin >= 0 ? r[iIsin] : '', units: qty, amount: inv > 0 ? inv : Math.round(qty * avg * 100) / 100 };
   }).filter(x => x.name && x.units > 0 && x.amount > 0);
 }
+/* Groww order history (mutual funds): "Name <tab> PURCHASE|REDEEM <tab> units <tab> NAV <tab> amount <tab> 02 Nov 2026".
+   The name is sometimes on its own line above. Newest first in Groww; returned oldest first. */
+function parseTxnText(txt) {
+  const SIDE = /^(PURCHASE|SIP|BUY|SWITCH[ -]?IN|REDEEM|REDEMPTION|SELL|SWITCH[ -]?OUT)\b/i;
+  const lines = String(txt).split(/\r?\n/).map(l => l.trim()).filter(Boolean), merged = [];
+  for (const l of lines) {
+    if (SIDE.test(l) && merged.length && !/\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$/.test(merged[merged.length - 1])) merged[merged.length - 1] += '\t' + l;
+    else merged.push(l);
+  }
+  const out = [], nm = v => Number(String(v).replace(/[,₹\s]/g, ''));
+  merged.forEach((l, i) => {
+    const m = l.match(/^(.+?)\s+(PURCHASE|SIP|BUY|SWITCH[ -]?IN|REDEEM|REDEMPTION|SELL|SWITCH[ -]?OUT)\s+([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)\s+(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})\s*$/i);
+    if (!m) return;
+    const mo = MON.findIndex(x => x.toLowerCase() === m[7].toLowerCase()); if (mo < 0) return;
+    const units = nm(m[3]), amount = nm(m[5]); if (!(units > 0)) return;
+    out.push({ name: m[1].replace(/\s+/g, ' ').trim(), side: /PURCHASE|SIP|BUY|IN$/i.test(m[2]) ? 'Buy' : 'Sell', units, nav: nm(m[4]), amount,
+      date: `${m[8]}-${String(mo + 1).padStart(2, '0')}-${String(Number(m[6])).padStart(2, '0')}`, order: i });
+  });
+  return out.sort((a, b) => a.date.localeCompare(b.date) || b.order - a.order);
+}
+function mfType(name) {
+  return /elss|tax saver/i.test(name) ? 'ELSS (tax saver)' : /index|nifty|sensex/i.test(name) ? 'Index fund' : /small|mid ?cap/i.test(name) && !/large/i.test(name) ? 'Small / Mid cap MF'
+    : /hybrid|balanced/i.test(name) ? 'Hybrid MF' : /debt|liquid|gilt|bond/i.test(name) ? 'Debt MF' : 'Equity MF';
+}
+/* AMFI price code for a Groww fund name, from the free mfapi.in search (Direct + Growth plan) */
+async function findMfCode(name) {
+  const words = s => String(s).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !['fund', 'direct', 'growth', 'plan', 'option', 'the', 'and', 'of'].includes(w));
+  const want = words(name), base = name.replace(/\s*-?\s*direct.*$/i, '').replace(/\s+fund\s*$/i, '').trim();
+  for (const q of [base, want.slice(0, 3).join(' ')]) {
+    try {
+      const arr = await (await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q))).json();
+      const ok = (arr || []).filter(x => /direct/i.test(x.schemeName) && /growth/i.test(x.schemeName) && !/idcw|dividend|bonus|segregated/i.test(x.schemeName));
+      const score = x => { const w = words(x.schemeName); return want.filter(t => w.includes(t)).length - 0.1 * Math.abs(w.length - want.length); };
+      const best = ok.sort((a, b) => score(b) - score(a))[0];
+      if (best && score(best) >= Math.min(2, want.length)) return { code: String(best.schemeCode), match: best.schemeName };
+    } catch (e) { return null; }       // offline: codes can be added later with Edit
+  }
+  return null;
+}
 function viewImport() {
   const im = state.imp || (state.imp = { text: '', rows: [], date: isoToday(), kind: 'Stock' });
   return `<section class="card"><h2 style="margin-top:0">Import holdings</h2>
     <p class="small muted" style="margin:0 0 6px">In Groww: Stocks (or Mutual funds) → Holdings → download the holdings file. Open it, copy the table, and paste it here. Each holding becomes one buy with your total units and amount invested.</p>
+    <p class="small muted" style="margin:0 0 6px">Mutual fund <b>order history</b> works too (fund, PURCHASE / REDEEM, units, NAV, amount, date): every row becomes its own buy or sell on its real date, so long-term gains and XIRR come out right.</p>
     <div class="seg" id="im-kind">${[['Stock', 'Stocks'], ['MF', 'Mutual funds']].map(([k, l]) => `<button data-v="${k}" class="${im.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <label class="f" for="im-text">Paste here</label>
     <textarea class="inp" id="im-text" rows="6" placeholder="Stock Name, Symbol, Quantity, Average buy price…">${esc(im.text)}</textarea>
-    <label class="f" for="im-date">Date to use for these buys</label>
-    <input class="inp" id="im-date" type="date" value="${esc(im.date)}" max="${isoToday()}">
+    ${im.txns ? `<input type="hidden" id="im-date" value="${esc(im.date)}">` : `<label class="f" for="im-date">Date to use for these buys</label>
+    <input class="inp" id="im-date" type="date" value="${esc(im.date)}" max="${isoToday()}">`}
     <button class="secondary" id="im-read">Read the table</button>
-    ${im.rows.length ? `<div class="group" style="margin-top:10px">${im.rows.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${fUnits(r.units)} units${r.code ? ' · ' + esc(r.code) : ''}</span></span><span class="num">${inr(r.amount)}</span></div>`).join('')}</div>
+    ${im.txns ? viewImportTxns(im) : im.rows.length ? `<div class="group" style="margin-top:10px">${im.rows.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${fUnits(r.units)} units${r.code ? ' · ' + esc(r.code) : ''}</span></span><span class="num">${inr(r.amount)}</span></div>`).join('')}</div>
       <p class="small muted">${im.kind === 'Stock' ? 'Price code is the symbol – check it matches the NSE symbol.' : 'For funds, add the AMFI price code afterwards (Edit on each buy) to get live prices.'}</p>
       <button class="primary" id="im-save">Add ${im.rows.length} holding${im.rows.length === 1 ? '' : 's'}</button>` : ''}
   </section>`;
 }
+function prepTxns(rows) {
+  const have = tradeLog().filter(r => !r.empty && !r.deleting);
+  const held = Object.fromEntries(invHoldings().map(h => [h.name.toLowerCase(), h.units])), run = {}, funds = {};
+  for (const r of rows) {
+    const k = r.name.toLowerCase();
+    r.dup = have.some(x => x.side === r.side && String(x.date).slice(0, 10) === r.date && String(x.name).toLowerCase() === k && Math.abs(Number(x.units) - r.units) < 0.01);
+    if (!funds[r.name]) funds[r.name] = { code: '', match: '', looking: true, held: held[k] || 0 };
+    if (r.dup) continue;
+    if (run[k] == null) run[k] = held[k] || 0;
+    r.over = r.side === 'Sell' && r.units > run[k] + 0.001;
+    r.short = r.over ? r.units - run[k] : 0;
+    if (!r.over) run[k] += r.side === 'Buy' ? r.units : -r.units;
+  }
+  return { rows, funds, anyway: false };
+}
+function viewImportTxns(im) {
+  const T = im.txns, fresh = T.rows.filter(r => !r.dup), over = fresh.filter(r => r.over), dups = T.rows.length - fresh.length;
+  const take = fresh.filter(r => !r.over || T.anyway);
+  return `<div class="sec-h" style="margin-top:14px"><h3>Price codes</h3></div>
+    <div class="group">${Object.entries(T.funds).map(([nm, f], i) => `<div class="kv" style="align-items:flex-start"><span>${esc(nm)}<br><span class="small ${f.code ? 'muted' : 'warn'}">${f.looking ? 'Finding the AMFI code…' : f.code ? esc(f.match) : 'Not found – type the AMFI code, or add it later with Edit'}</span>${f.held ? `<br><span class="small warn">Already holding ${fUnits(f.held)} units – make sure these aren’t the same buys</span>` : ''}</span>
+      <input class="inp" style="width:96px;margin:0" inputmode="numeric" data-imcode="${i}" value="${esc(f.code)}" placeholder="code" aria-label="AMFI code for ${esc(nm)}"></div>`).join('')}</div>
+    <div class="sec-h" style="margin-top:14px"><h3>${fresh.length} new row${fresh.length === 1 ? '' : 's'}</h3>${dups ? `<span class="small muted">${dups} already added</span>` : ''}</div>
+    <div class="group">${T.rows.map(r => `<div class="kv ${r.dup || (r.over && !T.anyway) ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.over ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.side} ${fUnits(r.units)} units at ₹${r.nav}${r.dup ? ' · already added' : r.over ? ` · ${fUnits(r.short)} more units sold than bought before this` : ''}</span></span><span class="num ${r.side === 'Sell' ? 'good' : ''}">${r.side === 'Sell' ? '+' : ''}${inr(r.amount)}</span></div>`).join('')}</div>
+    ${over.length ? `<p class="small warn">${over.length} sell${over.length === 1 ? '' : 's'} sold more units than the buys in this list – older buys are probably missing from what you copied. They’re skipped so the fund doesn’t go below zero.</p>
+      <label class="small" style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="im-anyway" ${T.anyway ? 'checked' : ''}> Add them anyway</label>` : ''}
+    <button class="primary" id="im-save-tx" ${take.length && !Object.values(T.funds).some(f => f.looking) ? '' : 'disabled'}>${Object.values(T.funds).some(f => f.looking) ? 'Finding price codes…' : take.length ? `Add ${take.length} buy${take.length === 1 ? '' : 's'} / sell${take.length === 1 ? '' : 's'}` : 'Nothing new to add'}</button>`;
+}
 function bindImport() {
   const im = state.imp, $ = id => document.getElementById(id);
   document.querySelectorAll('#im-kind button').forEach(b => b.onclick = () => { im.text = $('im-text').value; im.kind = b.dataset.v; render(); });
-  $('im-read').onclick = () => { im.text = $('im-text').value; im.date = $('im-date').value; im.rows = parseHoldingsText(im.text); if (!im.rows.length) toast('Couldn’t find a table with name and quantity columns'); render(); };
+  $('im-read').onclick = () => {
+    im.text = $('im-text').value; im.date = $('im-date').value; im.txns = null; im.rows = [];
+    const tx = parseTxnText(im.text);
+    if (tx.length) {
+      im.kind = 'MF'; im.txns = prepTxns(tx); render();
+      Object.entries(im.txns.funds).forEach(async ([nm, f]) => {
+        const known = invHoldings().find(h => h.name.toLowerCase() === nm.toLowerCase() && h.code);
+        const r = known ? { code: known.code, match: 'Code you already use' } : await findMfCode(nm);
+        f.looking = false; if (r) { f.code = r.code; f.match = r.match; }
+        if (state.imp === im && state.tab === 'import') render();
+      });
+      return;
+    }
+    im.rows = parseHoldingsText(im.text); if (!im.rows.length) toast('Couldn’t read that – paste the holdings table or the order history'); render();
+  };
+  const T = im.txns;
+  if (T) {
+    const keepCodes = () => document.querySelectorAll('[data-imcode]').forEach(i => { const f = Object.values(T.funds)[Number(i.dataset.imcode)]; f.code = i.value.trim().replace(/\D/g, ''); });
+    document.querySelectorAll('[data-imcode]').forEach(i => i.onchange = keepCodes);
+    const aw = $('im-anyway'); if (aw) aw.onchange = () => { keepCodes(); im.text = $('im-text').value; T.anyway = aw.checked; render(); };
+    const sv = $('im-save-tx'); if (sv) sv.onclick = async () => {
+      keepCodes(); sv.disabled = true; let ok = 0;
+      const take = T.rows.filter(r => !r.dup && (!r.over || T.anyway));
+      for (const r of take) {
+        sv.textContent = `Adding ${ok + 1} of ${take.length}…`;
+        const now = new Date(), f = T.funds[r.name], entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, date: r.date, side: r.side,
+          name: r.name.slice(0, 120), code: (f && f.code || '').slice(0, 20), type: mfType(r.name), units: Math.round(r.units * 10000) / 10000,
+          amount: Math.round(r.amount * 100) / 100, platform: 'Groww', note: `Groww history, NAV ${r.nav}`, createdAt: now.toISOString() };
+        try { await GH.putJson(`trades/${entry.id}.json`, entry, `${entry.side} ${entry.name}`); state.trades.unshift({ id: entry.id, entry }); ok++; }
+        catch (e) { toast(e.message || 'Couldn’t reach GitHub'); break; }
+      }
+      LS.set('trades', state.trades); state.imp = null; toast(`${ok} buy${ok === 1 ? '' : 's'} / sell${ok === 1 ? '' : 's'} added – Excel adds them to Stocks & MF next time it opens`); state.tab = 'invest'; render();
+    };
+  }
   const s = $('im-save'); if (s) s.onclick = async () => {
     im.date = $('im-date').value; if (!/^\d{4}-\d{2}-\d{2}$/.test(im.date)) { toast('Pick a date'); return; }
     s.disabled = true; s.textContent = 'Adding…'; let ok = 0;
