@@ -251,8 +251,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -279,8 +279,8 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, pcode: viewPcode, coverage: viewCoverage,
-    mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
+  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+    mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -288,7 +288,7 @@ function render() {
   if (state.tab === 'budget') bindBudget();
   if (state.tab === 'salary') bindSalary();
   if (state.tab === 'money') bindMoney();
-  if (state.tab === 'invest') bindInvest();
+  if (state.tab === 'invest' || state.tab === 'holdings') bindInvest();
   if (state.tab === 'trade') bindTrade();
   if (state.tab === 'pfedit') bindPfEdit();
   if (['sips', 'bills', 'goals', 'cards', 'others', 'documents', 'alerts'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) { bindGoals(); bindEduCalc(); } }
@@ -349,7 +349,7 @@ function render() {
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
   money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
-  invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
+  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
 const VIEW_SUBS = new Set(['coverage', 'sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
@@ -985,44 +985,27 @@ function bindMoney() {
 }
 
 function viewInvest() {
-  const tot = sheetRowValue('Balances', 'Investments total');
-  const sum = sheetRowRaw('Savings Schemes', 'Total');          // Total | Invested | Est. value | Gain | Gain %
-  const mf = sheetRowCells('Balances', 'Mutual funds');
-  const mix = ['Safe', 'Pension', 'Market'].map(w => {
-    const sh = sheetList().find(s => s.name === 'Balances'); if (!sh) return null;
-    for (const r of sh.rows) { const i = r.c.findIndex(t => String(t).startsWith(w)); if (i >= 0) return { name: r.c[i], v: num(r.c[i + 1]), pc: r.c[i + 2] }; }
-    return null; }).filter(Boolean);
-  const mixTot = mix.reduce((s, x) => s + x.v, 0) || 1;
-  const MIXC = ['#a9cdf5', '#3f74b3', '#6fd3a0'];
-  const hold = ['EPF', 'PPF', 'Fixed deposits', 'Other schemes'].map(l => { const c = sheetRowRaw('Savings Schemes', l); return c ? { name: c[0], inv: num(c[1]), v: num(c[2]), g: num(c[1]) > 0 ? c[4] : '' } : null; })   // no gain % without an invested figure
-    .filter(x => x && (x.v > 0 || x.inv > 0));
-  if (mf) hold.push({ name: 'Mutual funds and stocks', v: num(mf[mf.length > 3 ? 3 : 2]), g: '' });
-  const k = kpis();
+  const w = worthNow(), parts = w.have.filter(r => r.k !== 'banks' && r.v), tot = parts.reduce((a, r) => a + r.v, 0), k = kpis();
+  const mkt = parts.filter(r => r.k === 'mf' || r.k === 'st'), gain = mkt.reduce((a, r) => a + (r.gain || 0), 0), td = portfolioToday();
+  const go = { mf: 'holdings', st: 'holdings', epf: 'pfedit', ppf: 'pfedit', fd: 'others', oth: 'others' };
+  const COL = { mf: '#6fd3a0', st: '#f2c26b', epf: '#3f74b3', ppf: '#a9cdf5', fd: '#c9a7f0', oth: '#8a96a3' };
   return `<section class="hero">
-      <p class="hero-k" style="margin-top:0">Portfolio value</p>
-      <h2 class="hero-v num">${tot != null ? inr(tot) : '–'}</h2>
-      ${sum ? `<p class="hero-s" style="margin:-6px 0 0">Schemes: invested ${inr(num(sum[1]))}, gain <b>${inr(num(sum[3]))}</b> (${esc(sum[4] || '')})</p>` : ''}
+      <p class="hero-k" style="margin-top:0">All investments</p>
+      <h2 class="hero-v num">${inr(tot)}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">Funds and stocks <b class="${gain >= 0 ? '' : ''}">${gain >= 0 ? '+' : '−'}${inr(Math.abs(gain))}</b>${td ? ` · today ${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))}` : ''}</p>
       <div class="hero-tiles"><div><span>Investing a month</span><b class="num">${inr(k.invest_actual_month)}</b></div><div><span>Plan says</span><b class="num">${inr(k.invest_plan_month)}</b></div></div>
     </section>
-    ${mix.length ? `<section class="sec box"><div class="sec-h"><h3>Asset allocation</h3></div>
-      <div class="stack">${mix.map((x, i) => `<i style="width:${(x.v / mixTot * 100).toFixed(1)}%;background:${MIXC[i]}"></i>`).join('')}</div>
-      <div class="dlegend">${mix.map((x, i) => `<span><i style="background:${MIXC[i]}"></i>${esc(x.name.replace(/\s*\(.*$/, ''))} <em>${esc(x.pc || '')}</em></span>`).join('')}</div></section>` : ''}
-    ${viewInvestFunds()}
-    ${viewInvestChart()}
-    ${viewInvestPf()}
-    ${viewInvestFds()}
-    <section class="sec"><div class="group">
-      <button class="navrow" data-gotab="sips"><span class="nt">SIPs<br><span class="small muted">${(() => { const l = statuses('sips'); return l.length ? `${l.filter(x => x.st.s === 'paid').length} of ${l.length} paid this month${l.some(x => x.st.s === 'missed') ? ' · one missed' : ''}` : 'Track and get reminders'; })()}</span></span><span class="chev">›</span></button>
-      <button class="navrow" data-gotab="tax"><span class="nt">Tax: 80C and capital gains</span><span class="chev">›</span></button>
-      <button class="navrow" data-gotab="import"><span class="nt">Import holdings from Groww</span><span class="chev">›</span></button>
-    </div></section>
-    <section class="sec box"><div class="sec-h"><h3>All investments</h3></div>
-      ${hold.map(h => `<div class="kv"><span>${esc(h.name)}${h.inv ? `<br><span class="small muted">Invested ${inr(h.inv)}</span>` : ''}</span>
-        <span class="num" style="text-align:right">${inr(h.v)}${h.g ? `<br><span class="small ${num(h.g) >= 0 ? 'good' : 'bad'}">+${esc(h.g)}</span>` : ''}</span></div>`).join('')}</section>
-    <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>
-    <button class="secondary" data-sheet-open="Savings Schemes">PF, PPF and FDs in Excel</button>`;
+    <section class="sec box">
+      <div class="stack" style="margin:2px 0 12px">${parts.map(r => `<i style="width:${(r.v / (tot || 1) * 100).toFixed(1)}%;background:${COL[r.k]}"></i>`).join('')}</div>
+      ${parts.map(r => `<button class="worth-row" data-gotab="${go[r.k]}"><span class="wr-t"><b><i class="dot-c" style="background:${COL[r.k]}"></i>${esc(r.name)}</b>${r.sub ? `<small>${esc(r.sub.replace(/ · invested.*$/, ''))}</small>` : ''}</span>
+        <span class="wr-v"><b class="num">${inr(r.v)}</b><small class="${r.gain == null ? '' : r.gain >= 0 ? 'good' : 'bad'}">${r.gain == null ? Math.round(r.v / (tot || 1) * 100) + '%' : (r.gain >= 0 ? '+' : '−') + inr(Math.abs(r.gain))}</small></span></button>`).join('')}
+    </section>
+    <button class="primary" data-gotab="trade">Add buy / sell</button>`;
 }
-
+function viewHoldings() {
+  return `${viewInvestFunds()}${viewInvestChart()}
+    <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>`;
+}
 /* ---------------- Investments: holdings at latest prices, buy / sell from the phone ---------------- */
 const INV_TYPES = ['Equity MF', 'Index fund', 'ELSS (tax saver)', 'Small / Mid cap MF', 'Hybrid MF', 'Debt MF', 'Stock', 'ETF', 'Gold'];
 const INV_PLATFORMS = ['Groww', 'YES Bank SIP (auto-debit)', 'Paytm Money', 'Zerodha', 'INDmoney', 'Other'];
@@ -1129,7 +1112,7 @@ function viewInvestPf() {
       <div class="kv"><span>Into EPF each month<br><span class="small muted">You ${pc(e.yourRate)} = ${inr(e.youMonth)} · employer ${inr(e.employerMonth)} after EPS</span></span><span class="num" style="text-align:right">${inr(e.epfMonth)}<br><span class="small muted">EPS ${inr(e.epsMonth)}</span></span></div>
       <div class="kv"><span>PPF<br><span class="small muted">${p.updated ? 'Updated ' + esc(fDay(pDate(p.updated))) : 'Balance you typed'}</span></span><span class="num">${inr(p.balance)}</span></div>`
       : `<p class="small muted" style="margin:4px 0 0">Run the new AppLink macro once in Excel to see your PF and PPF here.</p>`}
-      <button class="primary" data-gotab="pfedit" style="margin-top:12px">Update PF / PPF</button>
+      ${state.tab === 'pfedit' ? '' : '<button class="primary" data-gotab="pfedit" style="margin-top:12px">Update PF / PPF</button>'}
     </section>`;
 }
 /* Update PF / PPF from the phone: saved as settings/balances.json, Excel writes it into Savings Schemes */
@@ -1146,7 +1129,7 @@ function viewPfEdit() {
     wage: s.wage ?? e.wage ?? 25000, you: +(((s.yourRate ?? e.yourRate ?? 0.12) * 100).toFixed(2)), er: +(((s.employerRate ?? e.employerRate ?? 0.12) * 100).toFixed(2)) });
   const m = pfMonthly(Number(f.wage) || 0, (Number(f.you) || 0) / 100, (Number(f.er) || 0) / 100, Number(e.epsCap) || 25000, Number(e.epsRate) || 0.0833);
   const val = v => v === '' || v == null ? '' : String(Math.round(Number(v) * 100) / 100);
-  return `<section class="card">
+  return viewInvestPf() + `<section class="card">
     <h2 style="margin-top:0">EPF passbook</h2>
     <p class="small muted" style="margin:0 0 4px">From UMANG or passbook.epfindia.gov.in. Overwrites the old figures – nothing is added as a new row.</p>
     <label class="f" for="pf-epf">EPF balance (₹)</label>
