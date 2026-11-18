@@ -437,3 +437,7 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .loan-more{margin-top:12px}
 .loan-more summary{cursor:pointer;color:var(--muted);padding:4px 0}
 .linkbtn.bad{color:var(--bad)}
+.cc-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.18);margin-top:12px;overflow:hidden}
+.cc-bar.sm{background:var(--raised);height:6px;margin:4px 0 8px}
+.cc-bar i{display:block;height:100%;border-radius:4px}
+.cc-shot{display:flex;align-items:center;justify-content:center;cursor:pointer}
