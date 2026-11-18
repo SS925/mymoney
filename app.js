@@ -1056,7 +1056,7 @@ function tradeLog() {
   const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true }));
   const dels = new Set(state.tradeDels.map(d => d.entry.row));
   for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], row: r[6], pending: false,
-    empty: !(Number(r[3]) > 0 && Number(r[4]) > 0), deleting: r[6] != null && dels.has(r[6]) });
+    empty: !(Number(r[3]) > 0 && (Number(r[4]) > 0 || r[1] === 'Buy')), bonus: Number(r[3]) > 0 && !(Number(r[4]) > 0), deleting: r[6] != null && dels.has(r[6]) });
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
@@ -1074,7 +1074,7 @@ function viewInvestFunds() {
       <button class="primary" data-gotab="trade" style="margin-top:12px">Add buy / sell</button>
     </section>
     ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
-      ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${esc(r.side)} ${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
+      ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${r.bonus || (r.pending && r.side === 'Buy' && !(Number(r.amount) > 0)) ? 'Bonus / split +' : esc(r.side) + ' '}${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
         <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
           : r.row && !r.deleting ? `<br><button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
       ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}</section>` : ''}`;
@@ -1191,12 +1191,16 @@ function viewTrade() {
     <div id="tr-results" class="group" ${t.results.length ? '' : 'hidden'}>${t.results.map((r, i) => resultRow(r, i)).join('')}</div>
     <label class="f" for="tr-code">Price code</label>
     <input class="inp" id="tr-code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="${t.kind === 'MF' ? 'AMFI code – filled in when you pick a fund' : 'Filled in when you pick – NSE symbol or BSE:code'}" value="${esc(t.code)}">
-    <div class="row2">
+    ${t.side === 'Buy' && t.kind !== 'MF' ? `<label class="tick"><input type="checkbox" id="tr-bonus" ${t.bonus ? 'checked' : ''}> Bonus or split shares – no money paid</label>` : ''}
+    ${t.bonus && t.side === 'Buy' ? `<label class="f" for="tr-units">Extra shares you received</label><input class="inp num" id="tr-units" inputmode="decimal" placeholder="e.g. 12 for a 1:1 bonus on 12 shares" value="${esc(t.units)}">
+      <p class="small muted" style="margin:6px 0 0">Added at ₹0, so your total cost stays the same and the average cost per share goes down – exactly what a bonus or split does. For a split, enter only the new shares (e.g. 1:5 split on 10 shares → 40).</p>
+      <input type="hidden" id="tr-price" value=""><input type="hidden" id="tr-amt" value="0">`
+    : `<div class="row2">
       <div><label class="f" for="tr-units">Units</label><input class="inp num" id="tr-units" inputmode="decimal" placeholder="0" value="${esc(t.units)}"></div>
       <div><label class="f" for="tr-price">Price per unit (₹)</label><input class="inp num" id="tr-price" inputmode="decimal" placeholder="NAV / price" value="${esc(t.price)}"></div>
     </div>
     <label class="f" for="tr-amt">Amount (₹)</label>
-    <input class="inp amount num" id="tr-amt" inputmode="decimal" placeholder="0" value="${esc(t.amount)}">
+    <input class="inp amount num" id="tr-amt" inputmode="decimal" placeholder="0" value="${esc(t.amount)}">`}
     <div class="row2">
       <div><label class="f" for="tr-type">Type</label><select class="inp" id="tr-type">${INV_TYPES.map(x => `<option ${x === t.type ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
       <div><label class="f" for="tr-plat">Platform</label><select class="inp" id="tr-plat">${INV_PLATFORMS.map(x => `<option ${x === t.platform ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
@@ -1238,6 +1242,7 @@ function resultRow(x, i) {
 }
 function bindTrade() {
   const t = state.trade, $ = id => document.getElementById(id);
+  const bx = $('tr-bonus'); if (bx) bx.onchange = () => { read(); t.bonus = bx.checked; if (t.bonus) { t.amount = '0'; t.price = ''; if (!t.note) t.note = 'Bonus / split'; } else if (t.amount === '0') t.amount = ''; render(); };
   const read = () => { t.name = $('tr-name').value; t.code = $('tr-code').value.trim().toUpperCase(); t.units = $('tr-units').value; t.price = $('tr-price').value;
     t.amount = $('tr-amt').value; t.type = $('tr-type').value; t.platform = $('tr-plat').value; t.date = $('tr-date').value; t.note = $('tr-note').value; };
   const n = v => Number(String(v).replace(/[,₹\s]/g, ''));
@@ -1291,7 +1296,8 @@ function bindTrade() {
     const units = n(t.units), amount = n(t.amount);
     if (!t.name.trim()) { toast('Enter the fund or stock name'); $('tr-name').focus(); return; }
     if (!(units > 0)) { toast('Enter the units'); $('tr-units').focus(); return; }
-    if (!(amount > 0)) { toast('Enter the amount'); $('tr-amt').focus(); return; }
+    if (!(amount > 0) && !(t.bonus && t.side === 'Buy')) { toast('Enter the amount'); $('tr-amt').focus(); return; }
+    if (t.bonus && t.side === 'Buy' && !invHoldings().some(x => x.name.toLowerCase() === t.name.trim().toLowerCase())) { toast('Pick the stock you already hold'); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) { toast('Pick a date'); return; }
     if (t.side === 'Sell') {
       const h = invHoldings().find(x => x.name.toLowerCase() === t.name.trim().toLowerCase());
