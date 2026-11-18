@@ -26,7 +26,7 @@ const state = {
   trades: LS.get('trades', []), tradeDels: LS.get('tradeDels', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
-  balSaved: LS.get('balSaved', null), pfEdit: null,
+  balSaved: LS.get('balSaved', null), pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
   docs: Object.assign({ sips: [], bills: [], goals: [] }, LS.get('docs', {})), docEdit: null,   // app/*.json in the data repo
   history: LS.get('history', null),  // history.json: daily value of funds and stocks
   locked: false,
@@ -199,6 +199,7 @@ async function sync(opts = {}) {
     try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
     try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'settings/codes.json', { raw: true }); if (r.ok) { state.codeFixes = await r.json(); LS.set('codeFixes', state.codeFixes); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'settings/loans.json', { raw: true }); if (r.ok) { state.loansSaved = await r.json(); LS.set('loansSaved', state.loansSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
     try { await refreshTrades(); } catch (e) { /* optional */ }
@@ -2154,7 +2155,9 @@ function worthNow() {
     { k: 'fd', name: 'Fixed deposits', v: fd, tab: 'others' }, { k: 'oth', name: 'Other schemes', v: other, tab: 'others' },
   ].filter(r => r.v || ['banks', 'epf', 'ppf', 'mf', 'st'].includes(r.k));
   const total = have.reduce((a, r) => a + r.v, 0);
-  return { have, total, owe, loans: lastNum(loans), cards: lastNum(cards), net: total - owe, banks };
+  let loanOwe = lastNum(loans), owe2 = owe;
+  if (loansPending()) { const lt = allLoans().reduce((a, l) => a + l.owed, 0); owe2 = owe - loanOwe + lt; loanOwe = lt; }
+  return { have, total, owe: owe2, loans: loanOwe, cards: lastNum(cards), net: total - owe2, banks };
 }
 function viewWorth() {
   if (!state.data) return '<div class="empty">Waiting for figures from Excel.</div>';
@@ -2325,36 +2328,98 @@ function viewNetWorthChart() {
 }
 function loanRows() {
   const sh = sheetList().find(s => s.name === 'Loans'); if (!sh) return [];
-  let hdr = null; const out = [];
+  let hdr = null, extra = false; const out = [];
   for (const r of sh.rows) {
-    if (/^Lender/.test(r.c[0] || '')) { hdr = r.c; continue; }
-    if (!hdr) continue; if (/^Total/i.test(r.c[0] || '')) break;
-    const o = {}; hdr.forEach((h, i) => { o[h] = r.c[i]; }); o.name = r.c[0]; out.push(o);
+    const c0 = String(r.c[0] || '');
+    if (/^Other loans/.test(c0)) { extra = true; hdr = null; continue; }
+    if (/^Lender/.test(c0)) { hdr = r.c; continue; }
+    if (!hdr || !c0) continue; if (/^Total/i.test(c0)) { hdr = null; continue; }
+    const o = {}; hdr.forEach((h, i) => { o[String(h).replace(/\s*\(.*\)$/, '')] = r.c[i]; }); o.name = c0; o.kind = extra ? 'app' : 'excel'; out.push(o);
   }
   return out;
 }
+/* Loans as you see them in the app: Excel's lender rows and the loans you added, with your unsaved-in-Excel edits on top */
+function loansPending() { const s = state.loansSaved; return !!(s && s.id && (!state.data || state.data.loansApplied !== s.id)); }
+function allLoans() {
+  const saved = (state.loansSaved && state.loansSaved.loans) || [], pend = loansPending();
+  const fromSheet = loanRows().filter(r => r.kind === 'excel').map(r => ({ kind: 'excel', name: r.name, borrowed: num(r.Borrowed) || 0, repaid: num(r.Repaid) || 0,
+    emi: num(r.EMI) || 0, left: num(r['EMIs left']) || 0, cleared: /yes/i.test(r['Cleared?'] || '') || /closed/i.test(r.Status || '') && !(num(r['Still owed']) > 0), start: '' }));
+  const out = fromSheet.map(l => { const e = saved.find(x => x.kind === 'excel' && x.name.toLowerCase() === l.name.toLowerCase()); return e && pend ? { ...l, ...e, repaid: l.repaid } : l; });
+  const apps = saved.filter(x => x.kind === 'app').length || pend ? saved.filter(x => x.kind === 'app')
+    : loanRows().filter(r => r.kind === 'app').map(r => ({ kind: 'app', name: r.name, borrowed: num(r.Borrowed) || 0, emi: num(r.EMI) || 0, left: num(r['EMIs left']) || 0, cleared: /yes/i.test(r['Cleared?'] || ''), start: '' }));
+  return out.concat(apps).map(l => ({ ...l, owed: l.cleared ? 0 : (l.emi || 0) * (l.left || 0) }));
+}
+async function saveLoans(list, msg) {
+  const loans = list.map(l => ({ kind: l.kind, name: String(l.name).trim().slice(0, 60), borrowed: Math.round(Number(l.borrowed) || 0), emi: Math.round((Number(l.emi) || 0) * 100) / 100,
+    left: Math.max(0, Math.round(Number(l.left) || 0)), cleared: !!l.cleared, start: l.start || '' }));
+  const saved = { id: uid('L'), savedAt: new Date().toISOString(), loans };
+  await GH.putJson('settings/loans.json', saved, msg || 'Loans from the app');
+  state.loansSaved = saved; LS.set('loansSaved', saved);
+}
 function loanMonths(bal, emi, r) { if (bal <= 0) return 0; if (!r) return Math.ceil(bal / emi); const x = 1 - r * bal / emi; return x <= 0 ? Infinity : Math.ceil(-Math.log(x) / Math.log(1 + r)); }
 function viewLoans() {
-  const rows = loanRows(), act = rows.filter(r => /Active/i.test(r.Status || '')), rates = LS.get('loanRates', {}), pre = state.prepay || {};
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">Still owed</p><h2 class="hero-v num">${inr(act.reduce((s, r) => s + num(r['Still owed']), 0))}</h2>
-      <p class="hero-s" style="margin:0">${act.length} active loan${act.length === 1 ? '' : 's'} · ${inr(act.reduce((s, r) => s + num(r.EMI), 0))} EMI a month</p></section>
-    ${act.map(r => { const bal = num(r['Still owed']), emi = num(r.EMI), left = num(r['EMIs left']), key = r.name, rate = rates[key] ?? 18, mr = rate / 1200, p = pre[key] || 0;
+  const all = allLoans(), act = all.filter(l => !l.cleared && l.owed > 0), done = all.filter(l => !(!l.cleared && l.owed > 0)), rates = LS.get('loanRates', {}), pre = state.prepay || {}, ed = state.loanEdit;
+  const form = (l, i) => `<div class="loan-form">
+      ${l.kind === 'app' || i === 'new' ? `<label class="f" for="le-name">Lender / loan name</label><input class="inp" id="le-name" value="${esc(l.name || '')}" placeholder="HDFC personal loan">
+      <label class="f" for="le-borrowed">Amount borrowed (₹)</label><input class="inp num" id="le-borrowed" inputmode="decimal" value="${esc(l.borrowed || '')}">` : ''}
+      <div class="row2"><div><label class="f" for="le-emi">EMI (₹ a month)</label><input class="inp num" id="le-emi" inputmode="decimal" value="${esc(l.emi || '')}"></div>
+      <div><label class="f" for="le-left">EMIs left</label><input class="inp num" id="le-left" inputmode="numeric" value="${esc(l.left ?? '')}"></div></div>
+      ${i === 'new' ? `<label class="f" for="le-start">First EMI date</label><input class="inp" id="le-start" type="date" value="${esc(l.start || isoToday())}">` : ''}
+      ${i === 'new' ? '' : `<label class="tick"><input type="checkbox" id="le-cleared" ${l.cleared ? 'checked' : ''}> Loan is fully paid off</label>`}
+      <div class="row2" style="margin-top:10px"><button class="secondary" data-le-cancel style="margin:0">Cancel</button><button class="primary" data-le-save="${i}" style="margin:0">${i === 'new' ? 'Add loan' : 'Save'}</button></div>
+      ${i !== 'new' && l.kind === 'app' ? '<button class="linkbtn bad" data-le-del style="margin-top:10px">Remove this loan</button>' : ''}</div>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Still owed</p><h2 class="hero-v num">${inr(act.reduce((s, l) => s + l.owed, 0))}</h2>
+      <p class="hero-s" style="margin:0">${act.length} active loan${act.length === 1 ? '' : 's'} · ${inr(act.reduce((s, l) => s + (l.emi || 0), 0))} EMI a month</p></section>
+    ${loansPending() ? '<p class="small warn" style="margin:0 4px 12px">Your loan changes are saved – Excel takes them the next time it opens.</p>' : ''}
+    ${ed && ed.i === 'new' ? `<section class="sec box"><div class="sec-h"><h3>New loan</h3></div>${form(ed.l, 'new')}</section>` : `<button class="primary" data-le-new>＋ Add a new loan</button>`}
+    ${act.map(l => { const i = all.indexOf(l), bal = l.owed, emi = l.emi, left = l.left, key = l.name, rate = rates[key] ?? 18, mr = rate / 1200, p = pre[key] || 0;
       const n0 = loanMonths(bal, emi, mr), n1 = loanMonths(bal - p, emi, mr), saved = isFinite(n0) && isFinite(n1) ? emi * n0 - (emi * n1 + p) : 0;
       const end = new Date(); end.setMonth(end.getMonth() + (left || n0));
-      return `<section class="sec box"><div class="sec-h"><h3>${esc(r.name)}</h3><span class="small">${left ? left + ' EMIs left' : ''}</span></div>
-        <div class="kv"><span>Still owed</span><span class="num">${inr(bal)}</span></div><div class="kv"><span>EMI</span><span class="num">${inr(emi)}</span></div>
+      if (ed && ed.i === i) return `<section class="sec box"><div class="sec-h"><h3>${esc(l.name)}</h3></div>${form(ed.l, i)}</section>`;
+      return `<section class="sec box"><div class="sec-h"><h3>${esc(l.name)}</h3><button class="chip" data-le-edit="${i}">Edit</button></div>
+        <div class="kv"><span>Still owed</span><span class="num">${inr(bal)}</span></div>
+        <div class="kv"><span>EMI</span><span class="num">${inr(emi)}</span></div>
+        <div class="kv"><span>EMIs left</span><span class="num">${left}</span></div>
         <div class="kv"><span>Last EMI about</span><span>${MON[end.getMonth()]} ${end.getFullYear()}</span></div>
+        ${l.borrowed ? `<div class="kv"><span>Borrowed${l.repaid ? ' · repaid so far' : ''}</span><span class="num">${inr(l.borrowed)}${l.repaid ? ' · ' + inr(l.repaid) : ''}</span></div>` : ''}
+        <div class="row2" style="margin-top:10px"><button class="secondary" data-le-paid="${i}" style="margin:0">Paid 1 EMI</button><button class="secondary" data-le-clear="${i}" style="margin:0">Mark cleared</button></div>
+        <details class="loan-more"><summary class="small">Prepayment calculator</summary>
         <label class="f" for="lr-${esc(key)}">Interest rate (% a year)</label><input class="inp num" id="lr-${esc(key)}" data-lrate="${esc(key)}" inputmode="decimal" value="${rate}">
-        <label class="f">What if I prepay <b class="num" id="lpv-${esc(key)}">${inr(p)}</b>?</label>
+        <label class="f">What if I prepay <b class="num">${inr(p)}</b>?</label>
         <input type="range" data-lpre="${esc(key)}" min="0" max="${Math.max(1000, Math.floor(bal / 1000) * 1000)}" step="1000" value="${p}">
-        <p class="small ${p ? 'good' : 'muted'}" id="lpr-${esc(key)}" style="margin:4px 0 0">${p ? `Ends ${n0 - n1} month${n0 - n1 === 1 ? '' : 's'} sooner and saves about ${inr(saved)} in interest` : 'Move the slider to see the interest you’d save'}</p></section>`; }).join('')
-      || '<p class="small muted">No active loans – nice.</p>'}
-    ${rows.filter(r => !/Active/i.test(r.Status || '')).length ? `<section class="sec box"><div class="sec-h"><h3>Closed</h3></div>${rows.filter(r => !/Active/i.test(r.Status || '')).map(r => `<div class="kv"><span>${esc(r.name)}</span><span class="small good">${esc(r.Status)}</span></div>`).join('')}</section>` : ''}
-    <p class="note">From the Loans sheet. The rate is only kept on this phone – check your loan statement for it.</p>`;
+        <p class="small ${p ? 'good' : 'muted'}" style="margin:4px 0 0">${p ? `Ends ${n0 - n1} month${n0 - n1 === 1 ? '' : 's'} sooner and saves about ${inr(saved)} in interest` : 'Move the slider to see the interest you’d save'}</p></details>
+      </section>`; }).join('') || '<p class="small muted" style="margin:12px 4px">No active loans – nice.</p>'}
+    ${done.length ? `<section class="sec box"><div class="sec-h"><h3>Cleared</h3></div>${done.map(l => { const i = all.indexOf(l);
+      return ed && ed.i === i ? form(ed.l, i) : `<div class="kv"><span>${esc(l.name)}${l.borrowed ? `<br><span class="small muted">Borrowed ${inr(l.borrowed)}</span>` : ''}</span><span><span class="good">Closed ✓</span> <button class="linkbtn" data-le-edit="${i}">Edit</button></span></div>`; }).join('')}</section>` : ''}
+    <p class="note">EMIs left and cleared loans are saved to Excel’s Loans sheet the next time the workbook opens; new loans go under “Other loans (added in the app)”. The interest rate is only kept on this phone.</p>`;
 }
 function bindLoans() {
   document.querySelectorAll('[data-lrate]').forEach(i => i.onchange = () => { const r = LS.get('loanRates', {}); r[i.dataset.lrate] = Number(i.value) || 0; LS.set('loanRates', r); render(); });
   document.querySelectorAll('[data-lpre]').forEach(i => i.oninput = () => { (state.prepay || (state.prepay = {}))[i.dataset.lpre] = Number(i.value); const y = window.scrollY; render(); window.scrollTo(0, y); });
+  const all = allLoans(), $ = id => document.getElementById(id);
+  const commit = async (list, msg, okMsg) => { try { await saveLoans(list, msg); state.loanEdit = null; toast(okMsg); render(); } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); } };
+  const nb = document.querySelector('[data-le-new]'); if (nb) nb.onclick = () => { state.loanEdit = { i: 'new', l: { kind: 'app', name: '', borrowed: '', emi: '', left: '', start: isoToday() } }; render(); };
+  document.querySelectorAll('[data-le-edit]').forEach(b => b.onclick = () => { const i = Number(b.dataset.leEdit); state.loanEdit = { i, l: { ...all[i] } }; render(); });
+  document.querySelectorAll('[data-le-cancel]').forEach(b => b.onclick = () => { state.loanEdit = null; render(); });
+  document.querySelectorAll('[data-le-paid]').forEach(b => b.onclick = () => { const i = Number(b.dataset.lePaid), list = all.map(l => ({ ...l }));
+    list[i].left = Math.max(0, (list[i].left || 0) - 1); if (!list[i].left) list[i].cleared = true;
+    commit(list, `EMI paid: ${list[i].name}`, list[i].left ? `${list[i].left} EMIs left on ${list[i].name}` : `${list[i].name} cleared`); });
+  document.querySelectorAll('[data-le-clear]').forEach(b => b.onclick = () => { if (!confirmInline(b)) { b.textContent = 'Tap again to confirm'; return; }
+    const i = Number(b.dataset.leClear), list = all.map(l => ({ ...l })); list[i].cleared = true; list[i].left = 0; commit(list, `Cleared: ${list[i].name}`, `${list[i].name} marked as cleared`); });
+  const del = document.querySelector('[data-le-del]'); if (del) del.onclick = () => { if (!confirmInline(del)) { del.textContent = 'Tap again to remove'; return; }
+    const list = all.filter((l, j) => j !== state.loanEdit.i); commit(list, 'Removed a loan', 'Loan removed'); };
+  const sv = document.querySelector('[data-le-save]'); if (sv) sv.onclick = () => {
+    const isNew = sv.dataset.leSave === 'new', l = state.loanEdit.l;
+    if ($('le-name')) l.name = $('le-name').value.trim(); if ($('le-borrowed')) l.borrowed = num($('le-borrowed').value) || 0;
+    l.emi = num($('le-emi').value) || 0; l.left = Math.round(num($('le-left').value) || 0); if ($('le-start')) l.start = $('le-start').value;
+    if ($('le-cleared')) l.cleared = $('le-cleared').checked;
+    if (!l.name) { toast('Enter the loan name'); return; }
+    if (!l.cleared && !(l.emi > 0)) { toast('Enter the EMI'); return; }
+    if (isNew && all.some(x => x.name.toLowerCase() === l.name.toLowerCase())) { toast('There’s already a loan with that name'); return; }
+    const list = all.map(x => ({ ...x }));
+    if (isNew) list.push({ ...l, kind: 'app', cleared: false }); else list[state.loanEdit.i] = l;
+    commit(list, isNew ? `New loan: ${l.name}` : `Loan updated: ${l.name}`, isNew ? 'Loan added' : 'Saved');
+  };
 }
 function forecast() {
   const accts = bankAccounts(), now = bankAccounts().reduce((s, a) => s + a.bal, 0); if (!accts.length) return null;
