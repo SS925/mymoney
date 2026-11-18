@@ -251,7 +251,7 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
 const NAV_OF = { trade: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
@@ -279,7 +279,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, pcode: viewPcode, coverage: viewCoverage,
+  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -346,7 +346,7 @@ function render() {
 }
 
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
-const MAIN_TABS = ['home', 'salary', 'money', 'invest', 'future'];
+const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
   money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
@@ -493,16 +493,19 @@ function viewHome() {
   const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0, left = limit - spent;
   const qa = (attrs, icon, label) => `<${attrs.startsWith('href') ? 'a' : 'button'} class="qa" ${attrs}><span class="qa-i">${icon}</span><span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
   return `
-  <section class="hero">
-    <p class="hero-k" style="margin-top:0">Total net worth</p>
-    <h2 class="hero-v num">${inr(k.net_worth)}</h2>
-    <p class="hero-s" style="margin:-6px 0 0">${inr(k.money_available)} in cash and bank</p>
+  ${(() => { const banks = bankAccounts().filter(a => a.type === 'Bank' || a.bal), tot = banks.reduce((x, a) => x + a.bal, 0);
+    const asOf = banks.map(a => a.asOf).filter(Boolean).sort((a, b) => (pDate(a) || 0) - (pDate(b) || 0)).pop();
+    return `<section class="hero">
+    <p class="hero-k" style="margin-top:0">In your banks</p>
+    <h2 class="hero-v num">${inr(tot)}</h2>
+    <p class="hero-s" style="margin:-6px 0 0">${banks.length} account${banks.length === 1 ? '' : 's'}${asOf ? ` · latest statement ${esc(asOf)}` : ''}</p>
+    <div class="bank-list">${banks.map(a => `<div class="bank-row"><span>${esc(a.name)}<br><small>${esc(a.asOf || '–')}</small></span><b class="num">${inr(a.bal)}</b></div>`).join('')}</div>
     <div class="hero-tiles">
       <div><span>Income${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(k.income_month)}</b></div>
       <div><span>Spent${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(spent)}</b></div>
     </div>
-  </section>
-  ${viewNetWorthChart()}
+  </section>`; })()}
+  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>
   ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}
   ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}
   ${homeMissingCard()}
@@ -2145,6 +2148,47 @@ function applyTheme() {
 }
 
 /* ======================================================================
+   Net worth tab: everything you have minus what you owe
+   ====================================================================== */
+function worthNow() {
+  const banks = bankAccounts(), bankTot = banks.reduce((x, a) => x + a.bal, 0), x = inv() || {};
+  const epf = x.epf || {}, ppf = x.ppf || {};
+  const hs = invHoldings().filter(h => h.units > 1e-6), isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
+  const stocks = hs.filter(isStock), funds = hs.filter(h => !isStock(h));
+  const sum = (l, f) => l.reduce((a, h) => a + (Number(h[f]) || 0), 0);
+  const raw = l => { const c = sheetRowRaw('Savings Schemes', l); return c ? num(c[2]) || 0 : 0; };
+  const fd = raw('Fixed deposits'), other = raw('Other schemes');
+  const lastNum = c => { for (const t of (c || []).slice(1).reverse()) { const v = num(t); if (v) return v; } return 0; };
+  const owe = lastNum(sheetRowCells('Balances', 'Liabilities total'));
+  const loans = sheetRowCells('Balances', 'Loans outstanding'), cards = sheetRowCells('Balances', 'Credit card dues');
+  const epfV = Number(epf.value) || 0, ppfV = Number(ppf.balance) || 0;
+  const have = [
+    { k: 'banks', name: 'Banks', v: bankTot, sub: `${banks.filter(a => a.type === 'Bank').length} accounts`, tab: 'home' },
+    { k: 'epf', name: 'EPF', v: epfV, sub: epf.epfPassbook != null ? `EPF ${inr(epf.epfPassbook)} + EPS pension ${inr(epf.epsTotal || 0)}${epf.asOf ? ' · ' + fDay(pDate(epf.asOf)) : ''}` : '', tab: 'pfedit' },
+    { k: 'ppf', name: 'PPF', v: ppfV, sub: ppf.updated ? fDay(pDate(ppf.updated)) : '', tab: 'pfedit' },
+    { k: 'mf', name: 'Mutual funds', v: sum(funds, 'value'), sub: `${funds.length} funds · invested ${inr(sum(funds, 'invested'))}`, gain: sum(funds, 'value') - sum(funds, 'invested'), tab: 'invest' },
+    { k: 'st', name: 'Stocks', v: sum(stocks, 'value'), sub: `${stocks.length} stocks · invested ${inr(sum(stocks, 'invested'))}`, gain: sum(stocks, 'value') - sum(stocks, 'invested'), tab: 'invest' },
+    { k: 'fd', name: 'Fixed deposits', v: fd, tab: 'others' }, { k: 'oth', name: 'Other schemes', v: other, tab: 'others' },
+  ].filter(r => r.v || ['banks', 'epf', 'ppf', 'mf', 'st'].includes(r.k));
+  const total = have.reduce((a, r) => a + r.v, 0);
+  return { have, total, owe, loans: lastNum(loans), cards: lastNum(cards), net: total - owe, banks };
+}
+function viewWorth() {
+  if (!state.data) return '<div class="empty">Waiting for figures from Excel.</div>';
+  const w = worthNow(), max = Math.max(1, ...w.have.map(r => r.v));
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Net worth</p><h2 class="hero-v num">${inr(w.net)}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">${inr(w.total)} you have − ${inr(w.owe)} you owe</p></section>
+    <section class="sec box"><div class="sec-h"><h3>What you have</h3><span class="small num">${inr(w.total)}</span></div>
+      ${w.have.map(r => `<button class="worth-row" data-gotab="${r.tab}"><span class="wr-t"><b>${esc(r.name)}</b>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</span>
+        <span class="wr-v"><b class="num">${inr(r.v)}</b>${r.gain != null && r.v ? `<small class="${r.gain >= 0 ? 'good' : 'bad'}">${r.gain >= 0 ? '+' : '−'}${inr(Math.abs(r.gain))}</small>` : `<small>${w.total ? Math.round(r.v / w.total * 100) : 0}%</small>`}</span>
+        <i class="wr-bar" style="width:${(r.v / max * 100).toFixed(1)}%"></i></button>`).join('')}</section>
+    <section class="sec box"><div class="sec-h"><h3>What you owe</h3><span class="small num">${inr(w.owe)}</span></div>
+      <button class="worth-row" data-gotab="loans"><span class="wr-t"><b>Loans</b></span><span class="wr-v"><b class="num">${inr(w.loans)}</b></span></button>
+      <div class="worth-row"><span class="wr-t"><b>Credit card dues</b><small>${w.cards ? '' : 'Not entered in Excel (Balances sheet)'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></div></section>
+    ${viewNetWorthChart()}
+    <p class="small muted" style="margin:0 4px 16px">Banks are the last statement balances; funds and stocks use today’s prices; EPF and PPF are your passbook figures. The EPS pension part of EPF is paid as a monthly pension, not as cash.</p>`;
+}
+/* ======================================================================
    Accounts and balances (Balances sheet), low balance before SIPs / bills
    ====================================================================== */
 function bankAccounts() {
@@ -2635,7 +2679,7 @@ function bindYear() { document.querySelectorAll('[data-yr]').forEach(b => b.oncl
 /* ======================================================================
    Family view: view-only phones, limited to the screens you choose (app/family.json)
    ====================================================================== */
-const FAMILY_SCREENS = [['home', 'Home'], ['salary', 'Salary'], ['money', 'Money'], ['invest', 'Invest'], ['future', 'Retire'], ['goals', 'Goals'], ['bills', 'Bills'], ['tx', 'Transactions'], ['emergency', 'Emergency card'], ['documents', 'Documents']];
+const FAMILY_SCREENS = [['home', 'Home'], ['worth', 'Net worth'], ['salary', 'Salary'], ['money', 'Money'], ['invest', 'Invest'], ['future', 'Retire'], ['goals', 'Goals'], ['bills', 'Bills'], ['tx', 'Transactions'], ['emergency', 'Emergency card'], ['documents', 'Documents']];
 function isViewer() { return !!(state.cfg && state.cfg.viewOnly); }
 function famAllowed() { const f = state.docs.family || {}; return Array.isArray(f.screens) && f.screens.length ? f.screens : ['home', 'money', 'future', 'goals']; }
 function viewFamily() {
