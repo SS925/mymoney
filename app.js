@@ -1216,7 +1216,7 @@ function newTrade() { return { side: 'Buy', kind: 'MF', name: '', code: '', type
 function viewTrade() {
   const t = state.trade || (state.trade = newTrade());
   const mine = invHoldings();
-  return `<section class="card">
+  return `${state.tradeFromAdd && !t.editId && !t.replaceRow ? `<div class="seg seg5" id="tr-addtype" style="margin-bottom:12px">${['Expenses', 'Income', 'Savings', 'Transfer'].map(x => `<button data-t="${x}">${x === 'Expenses' ? 'Spent' : x}</button>`).join('')}<button class="on">Buy / sell</button></div>` : ''}<section class="card">
     <div class="seg" id="tr-side">${['Buy', 'Sell'].map(s => `<button data-v="${s}" class="${t.side === s ? 'on' : ''}">${s}</button>`).join('')}</div>
     <div class="seg" id="tr-kind" style="margin-top:8px">${[['MF', 'Mutual fund'], ['Stock', 'Stock / ETF']].map(([k, l]) => `<button data-v="${k}" class="${t.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     ${mine.length ? `<label class="f">Your holdings</label><div class="pay" id="tr-mine">${mine.slice(0, 12).map((h, i) => `<button class="chip ${t.name === h.name ? 'on' : ''}" data-i="${i}">${esc(h.name.length > 28 ? h.name.slice(0, 27) + '…' : h.name)}</button>`).join('')}</div>` : ''}
@@ -1275,6 +1275,7 @@ function resultRow(x, i) {
   return `<button class="navrow" data-r="${i}"><span class="nt">${esc(x.schemeName)}<br><span class="small muted">${sub}</span></span></button>`;
 }
 function bindTrade() {
+  document.querySelectorAll('#tr-addtype button[data-t]').forEach(b => b.onclick = () => { if (state.add) { state.add.type = b.dataset.t; state.add.category = ''; } state.tradeFromAdd = false; state.tab = 'add'; window.scrollTo(0, 0); render(); });
   const t = state.trade, $ = id => document.getElementById(id);
   const bx = $('tr-bonus'); if (bx) bx.onchange = () => { read(); t.bonus = bx.checked; if (t.bonus) { t.amount = '0'; t.price = ''; if (!t.note) t.note = 'Bonus / split'; } else if (t.amount === '0') t.amount = ''; render(); };
   const read = () => { t.name = $('tr-name').value; t.code = $('tr-code').value.trim().toUpperCase(); t.units = $('tr-units').value; t.price = $('tr-price').value;
@@ -3693,7 +3694,7 @@ function viewAdd() {
       <textarea class="inp" id="add-sms" rows="3" placeholder="e.g. Rs.250.00 debited from A/c XX1234 on 17-11-26 to VPA swiggy@icici…"></textarea>
       <button class="secondary" id="add-sms-go">Fill in from message</button></details>`}<section class="card">
     ${voiceSupported() && !a.editId ? '<button class="secondary voice" id="add-voice">🎤 Say it</button><p class="small muted" style="margin:6px 0 10px;text-align:center">e.g. “spent 250 on vegetables cash”</p>' : ''}
-    <div class="seg" id="add-type">${['Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button data-t="${t}" class="${a.type === t ? 'on' : ''}">${t === 'Expenses' ? 'Spent' : t}</button>`).join('')}</div>
+    <div class="seg seg5" id="add-type">${['Expenses', 'Income', 'Savings', 'Transfer'].map(t => `<button data-t="${t}" class="${a.type === t ? 'on' : ''}">${t === 'Expenses' ? 'Spent' : t}</button>`).join('')}<button data-t="Trade">Buy / sell</button></div>
     <label class="f" for="add-amt">Amount (₹)</label>
     <input class="inp amount num" id="add-amt" inputmode="decimal" placeholder="0" value="${esc(a.amount)}" autocomplete="off">
     <label class="f" for="add-cat">Category</label>
@@ -3715,7 +3716,7 @@ function bindAdd() {
   const a = state.add;
   const sync1 = () => { a.amount = document.getElementById('add-amt').value; a.category = document.getElementById('add-cat').value;
     a.date = document.getElementById('add-date').value; a.note = document.getElementById('add-note').value; };
-  document.querySelectorAll('#add-type button').forEach(b => b.onclick = () => { sync1(); a.type = b.dataset.t; a.category = ''; render(); });
+  document.querySelectorAll('#add-type button').forEach(b => b.onclick = () => { sync1(); if (b.dataset.t === 'Trade') { if (!state.trade || state.trade.editId || state.trade.replaceRow) state.trade = newTrade(); state.tradeFromAdd = true; state.tab = 'trade'; window.scrollTo(0, 0); render(); return; } a.type = b.dataset.t; a.category = ''; render(); });
   document.querySelectorAll('#add-pay .chip').forEach(b => b.onclick = () => { sync1(); a.paidWith = b.dataset.p; render(); });
   const qp = quickPicks();
   document.querySelectorAll('#add-quick .chip').forEach(b => b.onclick = () => { const e = qp[Number(b.dataset.q)]; Object.assign(a, { type: e.type, category: e.category, amount: String(e.amount), note: e.note || '', paidWith: e.paidWith || 'Cash', date: isoToday() }); render(); });
