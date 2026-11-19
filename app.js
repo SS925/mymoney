@@ -26,7 +26,7 @@ const state = {
   trades: LS.get('trades', []), tradeDels: LS.get('tradeDels', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
-  balSaved: LS.get('balSaved', null), mfh: LS.get('mfh', null), gainsFy: null, pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
+  balSaved: LS.get('balSaved', null), mfh: LS.get('mfh', null), plats: LS.get('plats', null), gainsFy: null, pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
   docs: Object.assign({ sips: [], bills: [], goals: [] }, LS.get('docs', {})), docEdit: null,   // app/*.json in the data repo
   history: LS.get('history', null),  // history.json: daily value of funds and stocks
   locked: false,
@@ -209,6 +209,7 @@ async function sync(opts = {}) {
     await loadDocs();
     try { await refreshRecats(); } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'settings/platforms.json', { raw: true }); if (r.ok) { state.plats = await r.json(); LS.set('plats', state.plats); } } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'mfholdings.json', { raw: true }); if (r.ok) { state.mfh = await r.json(); LS.set('mfh', state.mfh); } } catch (e) { /* optional */ }
     await refreshPending();
     try { await autoEmi(); } catch (e) { /* optional */ }
@@ -1064,9 +1065,9 @@ function invHoldings() {
 }
 function tradeLog() {
   const x = inv(), inExcel = new Set(((x && x.log) || []).map(r => r[5]));
-  const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true }));
+  const rows = state.trades.filter(t => !inExcel.has(t.id)).map(t => ({ date: t.entry.date, side: t.entry.side, name: t.entry.name, units: t.entry.units, amount: t.entry.amount, id: t.id, pending: true, platform: t.entry.platform || '' }));
   const dels = new Set(state.tradeDels.map(d => d.entry.row));
-  for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], row: r[6], pending: false,
+  for (const r of (x && x.log) || []) rows.push({ date: r[0], side: r[1], name: r[2], units: r[3], amount: r[4], id: r[5], row: r[6], platform: r[7] || '', pending: false,
     empty: !(Number(r[3]) > 0 && (Number(r[4]) > 0 || r[1] === 'Buy')), bonus: Number(r[3]) > 0 && !(Number(r[4]) > 0), deleting: r[6] != null && dels.has(r[6]) });
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
@@ -2357,35 +2358,51 @@ function bindCardPayPrompts() {
    ====================================================================== */
 const fyOf = d => { const [y, m] = String(d).split('-').map(Number); const s = m >= 4 ? y : y - 1; return `${s}-${String((s + 1) % 100).padStart(2, '0')}`; };
 const plusYear = d => { const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${Number(y) + 1}-${m}-${dd}`; };
+function platformOf(r) {
+  const k = `${String(r.date).slice(0, 10)}|${String(r.name).toLowerCase()}|${Number(r.units).toFixed(3)}`;
+  const m = (state.plats && state.plats.rows || []).find(x => `${x.date}|${String(x.name).toLowerCase()}|${Number(x.units).toFixed(3)}` === k);
+  return (m && m.platform) || r.platform || '';
+}
+/* Every sale with the buys it used up. Units go oldest-first within the same platform (each platform is its own folio),
+   then from other platforms only if that platform runs out. Each row is one sale, split into long- and short-term parts. */
 function realisedGains() {
   const typeOf = {}; invHoldings().forEach(h => { typeOf[h.name.toLowerCase()] = h.type || ''; });
-  const log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0)
+  const log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0).map(r => ({ ...r, plat: platformOf(r) || 'Other' }))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.side === 'Buy' ? -1 : 1) - (b.side === 'Buy' ? -1 : 1));
-  const lots = {}, rows = [];
+  const lots = {}, sales = [];
   for (const r of log) {
     const k = String(r.name).toLowerCase(), d = String(r.date).slice(0, 10), debt = /debt|gilt|liquid|bond/i.test((typeOf[k] || '') + ' ' + r.name);
-    if (r.side === 'Buy') { (lots[k] || (lots[k] = [])).push({ date: d, units: Number(r.units), cost: Number(r.amount) || 0 }); continue; }
-    let u = Number(r.units); const per = (Number(r.amount) || 0) / u;
-    while (u > 1e-9 && lots[k] && lots[k].length) {
-      const l = lots[k][0], take = Math.min(u, l.units), c = l.cost * take / l.units;
-      l.cost -= c; l.units -= take; u -= take; if (l.units < 1e-9) lots[k].shift();
-      rows.push({ sell: d, buy: l.date, name: r.name, units: take, proceeds: per * take, cost: c, gain: per * take - c, term: debt ? 'debt' : plusYear(l.date) < d ? 'LT' : 'ST' });
+    if (r.side === 'Buy') { (lots[k] || (lots[k] = [])).push({ date: d, units: Number(r.units), cost: Number(r.amount) || 0, plat: r.plat }); continue; }
+    const units = Number(r.units), per = (Number(r.amount) || 0) / units, sale = { sell: d, name: r.name, plat: r.plat, units, proceeds: Number(r.amount) || 0, debt,
+      lt: { units: 0, proceeds: 0, cost: 0 }, st: { units: 0, proceeds: 0, cost: 0 }, missing: 0, buys: [] };
+    let u = units;
+    const pool = () => (lots[k] || []).filter(l => l.units > 1e-9 && l.date <= d);
+    for (const pass of [l => l.plat === r.plat, () => true]) {
+      for (const l of pool().filter(pass)) {
+        if (u <= 1e-9) break;
+        const take = Math.min(u, l.units), c = l.cost * take / l.units, part = plusYear(l.date) < d ? sale.lt : sale.st;
+        l.cost -= c; l.units -= take; u -= take; part.units += take; part.proceeds += per * take; part.cost += c;
+        sale.buys.push({ date: l.date, units: take, term: part === sale.lt ? 'LT' : 'ST' });
+      }
+      lots[k] = (lots[k] || []).filter(l => l.units > 1e-9);
     }
-    if (u > 1e-6) rows.push({ sell: d, buy: null, name: r.name, units: u, proceeds: per * u, cost: null, gain: null, term: 'missing' });
+    if (u > 1e-6) sale.missing = u;
+    sales.push(sale);
   }
-  return rows;
+  return sales.map(x => ({ ...x, ltGain: x.lt.proceeds - x.lt.cost, stGain: x.st.proceeds - x.st.cost, gain: x.lt.proceeds - x.lt.cost + x.st.proceeds - x.st.cost }));
 }
 function gainsSummary(rows, fy) {
-  const r = rows.filter(x => fyOf(x.sell) === fy), sum = (t, f) => r.filter(x => x.term === t).reduce((a, x) => a + (x[f] || 0), 0);
-  const fyStart = Number(fy.slice(0, 4)), exempt = fyStart >= 2024 ? 125000 : 100000;
+  const r = rows.filter(x => fyOf(x.sell) === fy), fyStart = Number(fy.slice(0, 4)), exempt = fyStart >= 2024 ? 125000 : 100000;
+  const eq = r.filter(x => !x.debt), sum = f => eq.reduce((a, x) => a + f(x), 0);
+  const st = sum(x => x.stGain), lt = sum(x => x.ltGain), debt = r.filter(x => x.debt).reduce((a, x) => a + x.gain, 0);
   const rate = (t, d) => t === 'LT' ? (d < '2024-07-23' ? 0.10 : 0.125) : (d < '2024-07-23' ? 0.15 : 0.20);
-  const avg = t => { const g = r.filter(x => x.term === t && x.gain > 0); const tot = g.reduce((a, x) => a + x.gain, 0); return tot ? g.reduce((a, x) => a + x.gain * rate(t, x.sell), 0) / tot : rate(t, '2099'); };
-  let st = sum('ST', 'gain'), lt = sum('LT', 'gain'); const debt = sum('debt', 'gain');
+  const avg = t => { const g = eq.filter(x => (t === 'LT' ? x.ltGain : x.stGain) > 0); const tot = g.reduce((a, x) => a + (t === 'LT' ? x.ltGain : x.stGain), 0);
+    return tot ? g.reduce((a, x) => a + (t === 'LT' ? x.ltGain : x.stGain) * rate(t, x.sell), 0) / tot : rate(t, '2099'); };
   let stNet = st, ltNet = lt, carry = 0;
-  if (stNet < 0) { ltNet += stNet; stNet = 0; }                     // short-term loss is set off against long-term gains too
+  if (stNet < 0) { ltNet += stNet; stNet = 0; }
   if (ltNet < 0) { carry = -ltNet; ltNet = 0; }
-  const ltTaxable = Math.max(0, ltNet - exempt), tax = (stNet * avg('ST') + ltTaxable * avg('LT')) * 1.04;
-  return { rows: r, st, lt, debt, stNet, ltNet, exempt, ltTaxable, carry, tax, missing: r.filter(x => x.term === 'missing').length, proceeds: r.reduce((a, x) => a + x.proceeds, 0) };
+  const ltTaxable = Math.max(0, ltNet - exempt), stTax = stNet * avg('ST') * 1.04, ltTax = ltTaxable * avg('LT') * 1.04;
+  return { rows: r, st, lt, debt, stNet, ltNet, exempt, ltTaxable, carry, stTax, ltTax, tax: stTax + ltTax, missing: r.filter(x => x.missing > 1e-6).length, proceeds: r.reduce((a, x) => a + x.proceeds, 0) };
 }
 function harvestPlan(fy) {
   const g = gainsSummary(realisedGains(), fy), room = Math.max(0, g.exempt - g.ltNet), out = [];
@@ -2407,12 +2424,15 @@ function viewGains() {
       <select class="inp" id="g-fy">${fys.map(f => `<option ${f === fy ? 'selected' : ''}>${f}</option>`).join('')}</select></div>
       <button class="secondary noprint" id="g-print" style="margin:0">Print / save PDF</button></div></section>
     <section class="hero"><p class="hero-k" style="margin-top:0">Capital gains, FY ${esc(fy)}</p><h2 class="hero-v num">${inr(g.st + g.lt + g.debt)}</h2>
-      <p class="hero-s" style="margin:-6px 0 0">${g.rows.length} sale${g.rows.length === 1 ? '' : 's'} · sold for ${inr(g.proceeds)} · estimated tax ${inr(g.tax)}</p></section>
+      <p class="hero-s" style="margin:-6px 0 0">${g.rows.length} redemption${g.rows.length === 1 ? '' : 's'} · sold for ${inr(g.proceeds)}</p>
+      <div class="hero-tiles"><div><span>Long-term</span><b class="num">${g.lt >= 0 ? '+' : '−'}${inr(Math.abs(g.lt))}</b></div><div><span>Short-term</span><b class="num">${g.st >= 0 ? '+' : '−'}${inr(Math.abs(g.st))}</b></div></div></section>
     <section class="sec box">
       <div class="kv"><span>Short-term (held 12 months or less)<br><span class="small muted">taxed at ${fy >= '2025' ? '20%' : '15% / 20%'}</span></span>${sg(g.st)}</div>
       <div class="kv"><span>Long-term (held more than 12 months)<br><span class="small muted">first ${inr(g.exempt)} tax-free, then 12.5%</span></span>${sg(g.lt)}</div>
       ${g.debt ? `<div class="kv"><span>Debt funds<br><span class="small muted">added to your income, slab rate</span></span>${sg(g.debt)}</div>` : ''}
       <div class="kv"><span>Long-term gain above the tax-free limit</span><span class="num">${inr(g.ltTaxable)}</span></div>
+      <div class="kv"><span>Tax on short-term (20% + cess)</span><span class="num">${inr(g.stTax)}</span></div>
+      <div class="kv"><span>Tax on long-term (12.5% above the limit + cess)</span><span class="num">${inr(g.ltTax)}</span></div>
       <div class="kv"><span><b>Estimated tax on these gains</b><br><span class="small muted">incl. 4% cess${g.debt ? ', excluding debt funds' : ''}</span></span><b class="num">${inr(g.tax)}</b></div>
       ${g.carry ? `<p class="small warn" style="margin:8px 0 0">Net loss of ${inr(g.carry)} – show it in your ITR to carry it forward for 8 years.</p>` : ''}
       ${g.missing ? `<p class="small warn" style="margin:8px 0 0">${g.missing} sale${g.missing === 1 ? '' : 's'} had no matching buy – add the older buys (Import) for a correct figure.</p>` : ''}
@@ -2422,10 +2442,11 @@ function viewGains() {
       ${hv.plan.length ? hv.plan.map(p => `<div class="kv"><span>${esc(p.name)}<br><span class="small muted">sell ${p.all ? 'all ' : ''}${fUnits(p.units)} ${p.isFund ? 'units' : 'shares'} held over a year (about ${inr(p.value)})</span></span><span class="num good">+${inr(p.gain)}</span></div>`).join('')
         + `<p class="small muted" style="margin:8px 0 0">Selling these and buying back straight away books ${inr(hv.used)} of gain tax-free and raises your cost, so less tax later. Do it before 31 March. Check exit loads on funds; brokerage and STT apply.</p>`
         : '<p class="small muted" style="margin:0">Nothing in long-term gain right now.</p>'}</section>` : ''}
-    <section class="sec box"><div class="sec-h"><h3>Sales</h3></div>
-      ${g.rows.map(x => `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">${fUnits(x.units)} sold ${esc(fDay(pDate(x.sell)))}${x.buy ? ` · bought ${esc(fDay(pDate(x.buy)))}` : ' · buy not found'} · ${x.term === 'LT' ? 'long-term' : x.term === 'ST' ? 'short-term' : x.term === 'debt' ? 'debt fund' : '–'}</span></span>
-        <span style="text-align:right">${x.gain == null ? '<span class="muted">?</span>' : sg(x.gain)}<br><span class="small muted num">${inr(x.proceeds)}</span></span></div>`).join('') || '<p class="small muted">No sales in this year.</p>'}</section>
-    <p class="note">Worked out from your buys and sells, oldest units sold first. Check with your broker’s capital gains statement before filing.</p>`;
+    <section class="sec box"><div class="sec-h"><h3>Each redemption</h3></div>
+      ${g.rows.map(x => `<div class="gain-row"><div class="gr-h"><span><b>${esc(x.name.replace(/\s+(Fund|Direct|Growth).*$/i, ''))}</b><br><span class="small muted">${esc(fDay(pDate(x.sell)))} · ${esc(x.plat)} · ${fUnits(x.units)} units · ${inr(x.proceeds)}</span></span>${sg(x.gain)}</div>
+        <div class="gr-s">${x.lt.units > 1e-9 ? `<span>Long-term ${fUnits(x.lt.units)} units <b class="num">${x.ltGain >= 0 ? '+' : '−'}${inr(Math.abs(x.ltGain))}</b></span>` : ''}${x.st.units > 1e-9 ? `<span>Short-term ${fUnits(x.st.units)} units <b class="num">${x.stGain >= 0 ? '+' : '−'}${inr(Math.abs(x.stGain))}</b></span>` : ''}${x.debt ? '<span>Debt fund – slab rate</span>' : ''}${x.missing > 1e-6 ? `<span class="warn">${fUnits(x.missing)} units: buy not found</span>` : ''}</div>
+        <p class="small muted" style="margin:4px 0 0">Bought ${esc([...new Set(x.buys.map(b => fDay(pDate(b.date)).replace(/^\d+ /, '')))].join(', '))}</p></div>`).join('') || '<p class="small muted">No sales in this year.</p>'}</section>
+    <p class="note">Worked out from your buys and sells: on each platform the oldest units are sold first, as fund houses do. Check with your broker’s capital gains statement before filing.</p>`;
 }
 function bindGains() {
   const f = document.getElementById('g-fy'); if (f) f.onchange = () => { state.gainsFy = f.value; render(); };
