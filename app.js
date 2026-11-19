@@ -284,8 +284,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -312,7 +312,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -347,6 +347,10 @@ function render() {
   if (state.tab === 'worth') bindWorth();
   if (state.tab === 'cover') bindCover();
   if (state.tab === 'sort') bindSort();
+  if (state.tab === 'spends') bindSpends();
+  if (state.tab === 'afford') bindAfford();
+  if (state.tab === 'rent') bindRent();
+  if (state.tab === 'routine') bindRoutine();
   if (state.tab === 'shared') bindShared();
   if (state.tab === 'year') bindYear();
   if (state.tab === 'family') bindFamily();
@@ -387,8 +391,8 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Cards'], ['budget', 'Plan'], ['add', '＋ Add']],
-  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
+  money: [['money', 'Spending'], ['tx', 'Transactions'], ['spends', 'Payees'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Cards'], ['budget', 'Plan'], ['add', '＋ Add']],
+  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', '80C'], ['regime', 'Old vs new'], ['rent', 'Rent'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
 const VIEW_SUBS = new Set(['coverage', 'sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
@@ -547,7 +551,7 @@ function viewHome() {
     worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
     salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
     budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
-    remind1: () => `  ${homeMissingCard()}`,
+    remind1: () => `  ${homeRoutineCard() || homeMissingCard()}`,
     remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
     quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
@@ -2255,7 +2259,9 @@ function viewWorth() {
       <button class="worth-row" data-gotab="loans"><span class="wr-t"><b>Loans</b></span><span class="wr-v"><b class="num">${inr(w.loans)}</b></span></button>
       <button class="worth-row" data-gotab="ccards"><span class="wr-t"><b>Credit card dues</b><small>${((state.docs && state.docs.ccards) || []).length ? `${state.docs.ccards.length} cards` : 'Add your cards to track them'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></button></section>
     ${viewEmergencyMeter(w)}
+    ${viewMilestones(w)}
     ${viewNetWorthChart()}
+    ${viewSavingsRate()}
     <p class="small muted" style="margin:0 4px 16px">Banks are the last statement balances; funds and stocks use today’s prices; EPF and PPF are your passbook figures. The EPS pension part of EPF is paid as a monthly pension, not as cash.</p>`;
 }
 /* ======================================================================
@@ -2601,6 +2607,7 @@ function viewEmergencyMeter(w) {
     <p class="small muted" style="margin:8px 0 0">3–6 months of spending kept in a savings account or liquid fund is the usual advice; more if your income is irregular.</p></section>`;
 }
 function bindWorth() {
+  document.querySelectorAll('[data-sr]').forEach(b => b.onclick = () => { LS.set('srTarget', Math.max(0, Math.min(80, LS.get('srTarget', 20) + Number(b.dataset.sr)))); render(); });
   document.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { LS.set('efTarget', Math.max(1, Math.min(24, LS.get('efTarget', 6) + Number(b.dataset.ef)))); render(); });
 }
 
@@ -3062,7 +3069,7 @@ function viewReview() {
    Sort "UPI – Other": group by payee, give each payee a real category
    ====================================================================== */
 function upiGroups() {
-  const since = new Date(); since.setMonth(since.getMonth() - 6);
+  const since = new Date(); since.setMonth(since.getMonth() - (state.sortAll ? 600 : 6));
   const g = {};
   for (const t of allTx()) {
     if (t._pending || t.Type !== 'Expenses' || !/UPI – Other|Uncategorised/i.test(t.Category)) continue;
@@ -3075,15 +3082,20 @@ function upiGroups() {
 }
 function viewSort() {
   const gs = upiGroups(), cats = catsFor('Expenses'), tot = gs.reduce((s, x) => s + x.sum, 0);
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">“UPI – Other”, last 6 months</p><h2 class="hero-v num">${inr(tot)}</h2>
-      <p class="hero-s" style="margin:0">${gs.length} payees. Pick a category for the big ones – every past and future payment to them moves.</p></section>
-    <section class="sec box">${gs.slice(0, 40).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(x.payee)}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
+  const shown = state.sortMore ? gs.length : 40, cnt = gs.reduce((s, x) => s + x.n, 0);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">“UPI – Other”, ${state.sortAll ? 'all time' : 'last 6 months'}</p><h2 class="hero-v num">${inr(tot)}</h2>
+      <p class="hero-s" style="margin:0">${cnt} payments to ${gs.length} payees left to sort. Pick a category for the big ones – every past and future payment to them moves.</p></section>
+    <div class="seg" id="sort-range" style="margin:0 0 12px">${[['6', 'Last 6 months'], ['all', 'All time']].map(([v, l]) => `<button data-v="${v}" class="${(v === 'all') === !!state.sortAll ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <section class="sec box">${gs.slice(0, shown).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(x.payee)}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
         <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-sort-cat="${i}"><option value="">Choose category…</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option>${esc(c)}</option>`).join('')}</select>
-        <button class="chip" data-sort-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}</section>
+        <button class="chip" data-sort-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
+      ${gs.length > shown ? `<button class="more-btn" data-sort-more>Show all ${gs.length} payees</button>` : ''}</section>
     <p class="note">Each choice is saved as a rule for that payee; Excel adds it to the top of Auto Rules next time it opens.</p>`;
 }
 function bindSort() {
   const gs = upiGroups();
+  document.querySelectorAll('#sort-range button').forEach(b => b.onclick = () => { state.sortAll = b.dataset.v === 'all'; render(); });
+  const more = document.querySelector('[data-sort-more]'); if (more) more.onclick = () => { state.sortMore = true; render(); };
   document.querySelectorAll('[data-sort-go]').forEach(b => b.onclick = async () => {
     const i = Number(b.dataset.sortGo), sel = document.querySelector(`[data-sort-cat="${i}"]`), g = gs[i];
     if (!sel.value) { toast('Choose a category first'); return; }
@@ -3094,6 +3106,188 @@ function bindSort() {
     try { await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`); state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats); toast(`${g.payee} → ${sel.value}`); render(); }
     catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; b.textContent = 'Save'; }
   });
+}
+
+/* ======================================================================
+   Where the money goes: top payees by month, and small UPI spends
+   ====================================================================== */
+function payeeOf(t) {
+  const d = String(t.Details || '').replace(/^bank:\s*\{[^}]*\}\s*/i, '');
+  if (/ATM|CASH WITHDRAWAL|NFS\//i.test(d) && !/UPI\//i.test(d)) return 'Cash (ATM)';
+  const named = d.match(/(?:IMPS|NEFT|RTGS)[-/][A-Z]*\/?\d+\/([A-Za-z][^/]{2,})/i) || d.match(/^NACH\/([^/]+)/i);
+  const p = upiParts(t.Details).payee && /UPI\//i.test(d) ? upiParts(t.Details).payee : named ? named[1] : describe(t).title || t.Category || 'Other';
+  return String(p).replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w+/g, w => w.toLowerCase());
+}
+function spendMonths() {
+  const set = new Set(); allTx().forEach(t => { if (t.Type === 'Expenses') set.add(String(t.Date).slice(0, 7)); });
+  return [...set].filter(m => /^\d{4}-\d\d$/.test(m)).sort().reverse().slice(0, 18);
+}
+function viewSpends() {
+  const months = spendMonths(); if (!months.length) return '<div class="empty">No spending yet.</div>';
+  const m = state.spM && months.includes(state.spM) ? state.spM : months[0], prev = months[months.indexOf(m) + 1];
+  const SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i;
+  const group = ym => { const g = {}; allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(ym) || SKIP.test(t.Category || '')) return;
+    const k = payeeOf(t), o = g[k] || (g[k] = { name: k, sum: 0, n: 0, cat: t.Category }); o.sum += Math.abs(n(t.Amount)); o.n++; }); return g; };
+  const cur = group(m), old = prev ? group(prev) : {}, top = Object.values(cur).sort((a, b) => b.sum - a.sum).slice(0, state.spAll ? 60 : 15);
+  const tot = Object.values(cur).reduce((a, x) => a + x.sum, 0);
+  // small UPI spends (under ₹200) – last 12 months
+  const small = {}; allTx().forEach(t => { const a = Math.abs(n(t.Amount)); if (t.Type === 'Expenses' && a > 0 && a < 200 && /UPI|PAYTM|PHONEPE|GPAY/i.test(String(t.Details || '') + t.Category))
+    { const k = String(t.Date).slice(0, 7); const o = small[k] || (small[k] = { sum: 0, n: 0 }); o.sum += a; o.n++; } });
+  const sm = months.slice(0, 12).reverse().map(k => ({ k, ...(small[k] || { sum: 0, n: 0 }) })), smMax = Math.max(1, ...sm.map(x => x.sum));
+  const yr = sm.reduce((a, x) => a + x.sum, 0), full = sm.filter(x => x.k < isoToday().slice(0, 7)), avg = full.length ? full.reduce((a, x) => a + x.sum, 0) / full.length : 0;
+  return `<section class="card"><label class="f" for="sp-m">Month</label><select class="inp" id="sp-m">${months.map(x => `<option value="${x}" ${x === m ? 'selected' : ''}>${ymLabel(x)}</option>`).join('')}</select></section>
+    <section class="sec box"><div class="sec-h"><h3>Top payees, ${ymLabel(m)}</h3><span class="small muted num">${inr(tot)}</span></div>
+      ${top.map(x => { const o = old[x.name], d = o ? x.sum - o.sum : null;
+        return `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · ${esc(x.cat)}</span></span><span style="text-align:right"><b class="num">${inr(x.sum)}</b><br><span class="small ${d == null || Math.abs(d) < 1 ? 'muted' : d > 0 ? 'bad' : 'good'}">${d == null ? 'new this month' : Math.abs(d) < 1 ? 'same as ' + MON[pDate(prev + '-01').getMonth()] : (d > 0 ? '+' : '−') + inr(Math.abs(d)) + ' vs ' + MON[pDate(prev + '-01').getMonth()]}</span></span></div>`; }).join('')}
+      ${Object.keys(cur).length > 15 ? `<button class="more-btn" data-sp-all>${state.spAll ? 'Show top 15' : `Show all ${Object.keys(cur).length}`}</button>` : ''}
+      <p class="small muted" style="margin:8px 0 0">Leaves out transfers between your accounts, investments, loan EMIs and card bill payments.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Small UPI spends (under ₹200)</h3></div>
+      <p style="margin:0 0 10px">About <b class="num">${inr(avg)}</b> a month – <b class="num">${inr(yr)}</b> in the last 12 months.</p>
+      <div class="bars">${sm.map(x => `<div class="bar-c" title="${ymLabel(x.k)}: ${inr(x.sum)}"><i style="height:${(x.sum / smMax * 100).toFixed(1)}%"></i><span>${MON[pDate(x.k + '-01').getMonth()].slice(0, 1)}</span></div>`).join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">${sm[sm.length - 1].n} small payments so far in ${ymLabel(sm[sm.length - 1].k)}.</p></section>`;
+}
+function bindSpends() {
+  const s = document.getElementById('sp-m'); if (s) s.onchange = () => { state.spM = s.value; render(); };
+  const a = document.querySelector('[data-sp-all]'); if (a) a.onclick = () => { state.spAll = !state.spAll; render(); };
+}
+
+/* ======================================================================
+   Can I afford it?
+   ====================================================================== */
+function viewAfford() {
+  const A = state.afford || (state.afford = { price: '', mode: 'cash', months: 12, rate: 16 });
+  const w = worthNow(), bank = w.banks.reduce((a, x) => a + x.bal, 0), net = netPay(), p = activePlan(), k = kpis();
+  const ym = isoToday().slice(0, 7), mrows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), spendAvg = mrows.length ? mrows.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / mrows.length : 0;
+  const price = num(A.price) || 0, emiNow = allLoans().filter(l => !l.cleared && l.owed > 0).reduce((a, l) => a + (l.emi || 0), 0);
+  const r = (Number(A.rate) || 0) / 1200, nM = Math.max(1, Number(A.months) || 1), emi = A.mode === 'emi' && price ? (r ? price * r / (1 - Math.pow(1 + r, -nM)) : price / nM) : 0;
+  const interest = emi ? emi * nM - price : 0, bankAfter = A.mode === 'cash' ? bank - price : bank, efBefore = spendAvg ? bank / spendAvg : 0, efAfter = spendAvg ? bankAfter / spendAvg : 0;
+  const emiShare = isFinite(net) && net > 0 ? (emiNow + emi) / net : null, limit = isFinite(net) ? net - (Number(p.savings) || 0) : null;
+  const checks = price ? [
+    A.mode === 'cash' ? [bankAfter >= 0, bankAfter >= 0 ? `Banks after paying: ${inr(bankAfter)}` : `You’re ${inr(-bankAfter)} short in your banks`] : null,
+    spendAvg ? [efAfter >= 3, `Emergency fund: ${efBefore.toFixed(1)} → ${efAfter.toFixed(1)} months of spending${efAfter < 3 ? ' (below 3 months)' : ''}`] : null,
+    A.mode === 'emi' ? [emiShare == null || emiShare <= 0.4, `EMIs would take ${emiShare == null ? '–' : Math.round(emiShare * 100) + '%'} of your net pay${emiShare > 0.4 ? ' – more than the 40% lenders see as a stretch' : ''}`] : null,
+    A.mode === 'emi' ? [interest <= price * 0.1, `Interest over ${nM} months: ${inr(interest)} (${price ? Math.round(interest / price * 100) : 0}% extra)`] : null,
+    limit != null ? [limit - (n(k.spending_month) || 0) - (A.mode === 'cash' ? price : emi) >= 0, `Left to spend this month after it: ${inr(limit - (n(k.spending_month) || 0) - (A.mode === 'cash' ? price : emi))}`] : null,
+  ].filter(Boolean) : [];
+  const ok = checks.filter(c => c[0]).length;
+  return `<section class="card"><h2 style="margin-top:0">Can I afford it?</h2>
+      <label class="f" for="af-price">Price (₹)</label><input class="inp num" id="af-price" inputmode="decimal" value="${esc(A.price)}" placeholder="60000">
+      <div class="seg" id="af-mode" style="margin-top:10px">${[['cash', 'Pay now'], ['emi', 'On EMI']].map(([v, l]) => `<button data-v="${v}" class="${A.mode === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+      ${A.mode === 'emi' ? `<div class="row2"><div><label class="f" for="af-m">Months</label><input class="inp num" id="af-m" inputmode="numeric" value="${esc(A.months)}"></div>
+        <div><label class="f" for="af-r">Interest (% a year, 0 for no-cost EMI)</label><input class="inp num" id="af-r" inputmode="decimal" value="${esc(A.rate)}"></div></div>
+        ${emi ? `<p style="margin:10px 0 0">EMI <b class="num">${inr(emi)}</b> a month for ${nM} months.</p>` : ''}` : ''}
+    </section>
+    ${price ? `<section class="sec box"><div class="sec-h"><h3>${ok === checks.length ? 'Looks affordable' : ok >= checks.length - 1 ? 'Possible, with care' : 'Better to wait or save first'}</h3></div>
+      ${checks.map(([good, text]) => `<div class="kv"><span>${esc(text)}</span><b class="${good ? 'good' : 'bad'}">${good ? '✓' : '✗'}</b></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">Based on your last bank balances (${inr(bank)}), average spending of ${inr(spendAvg)} a month and current EMIs of ${inr(emiNow)}.</p></section>` : ''}`;
+}
+function bindAfford() {
+  const A = state.afford, $ = id => document.getElementById(id), keep = () => { if ($('af-price')) A.price = $('af-price').value; if ($('af-m')) A.months = $('af-m').value; if ($('af-r')) A.rate = $('af-r').value; };
+  ['af-price', 'af-m', 'af-r'].forEach(id => { const e = $(id); if (e) e.onchange = () => { keep(); render(); }; });
+  document.querySelectorAll('#af-mode button').forEach(b => b.onclick = () => { keep(); A.mode = b.dataset.v; render(); });
+}
+
+/* ======================================================================
+   Net worth milestones and savings rate (Worth tab)
+   ====================================================================== */
+function viewMilestones(w) {
+  const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6);
+  const epf = (inv() || {}).epf || {}, pace = rows.length ? rows.reduce((a, r) => a + (Number(r.Saved) || 0) + (Number(r.LeftOver) || 0), 0) / rows.length + (Number(epf.epfMonth) || 0) : 0;
+  const steps = [100000, 200000, 300000, 500000, 750000, 1000000, 1500000, 2000000, 2500000, 5000000, 10000000], nw = w.net;
+  const next = steps.filter(s => s > nw).slice(0, 3), passed = steps.filter(s => s <= nw).pop();
+  const seen = LS.get('nwMilestone', 0);
+  if (passed && passed > seen) { LS.set('nwMilestone', passed); if (seen) setTimeout(() => toast(`🎉 Your net worth passed ${inr(passed)}!`), 300); }
+  const when = s => { if (!(pace > 0)) return null; const m = Math.ceil((s - nw) / pace), d = new Date(); d.setMonth(d.getMonth() + m); return { m, d }; };
+  return `<section class="sec box"><div class="sec-h"><h3>Net worth milestones</h3></div>
+    <p style="margin:0 0 8px">${passed ? `Passed <b class="num">${inr(passed)}</b>. ` : ''}At your pace of about <b class="num ${pace > 0 ? 'good' : 'bad'}">${pace >= 0 ? '+' : '−'}${inr(Math.abs(pace))}</b> a month:</p>
+    ${next.map(s => { const x = when(s); return `<div class="kv"><span>${inr(s)}</span><span>${x ? `${MON[x.d.getMonth()]} ${x.d.getFullYear()} <span class="small muted">· ${x.m < 12 ? x.m + ' months' : (x.m / 12).toFixed(1) + ' years'}</span>` : '<span class="muted">not at this pace</span>'}</span></div>`; }).join('')}
+    <p class="small muted" style="margin:8px 0 0">Pace = average of investments plus money left over, last ${rows.length} months, plus PF; market growth would make it sooner.</p></section>`;
+}
+function viewSavingsRate() {
+  const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym && Number(r.Income) > 0).slice(-12);
+  if (rows.length < 2) return '';
+  const target = LS.get('srTarget', 20), pts = rows.map(r => ({ k: String(r.Month).slice(0, 7), v: (Number(r.Income) - Number(r.Spending)) / Number(r.Income) * 100 }));
+  const max = Math.max(target + 10, ...pts.map(p => p.v)), min = Math.min(0, ...pts.map(p => p.v)), span = max - min, avg = pts.reduce((a, p) => a + p.v, 0) / pts.length;
+  const y = v => ((max - v) / span * 100).toFixed(1);
+  return `<section class="sec box"><div class="sec-h"><h3>Savings rate</h3><span class="small muted">target ${target}%</span></div>
+    <p style="margin:0 0 8px">You kept <b class="${avg >= target ? 'good' : avg >= 0 ? 'warn' : 'bad'}">${Math.round(avg)}%</b> of your income on average over ${pts.length} months.</p>
+    <div class="sr-chart"><i class="sr-t" style="top:${y(target)}%"></i><i class="sr-z" style="top:${y(0)}%"></i>${pts.map(p => `<div class="sr-c" title="${ymLabel(p.k)}: ${Math.round(p.v)}%"><b class="${p.v >= target ? 'ok' : p.v >= 0 ? 'mid' : 'neg'}" style="top:${p.v >= 0 ? y(p.v) : y(0)}%;height:${(Math.abs(p.v) / span * 100).toFixed(1)}%"></b><span>${MON[pDate(p.k + '-01').getMonth()].slice(0, 1)}</span></div>`).join('')}</div>
+    <div class="row2" style="margin-top:8px"><button class="secondary" data-sr="-5" style="margin:0">Target −5%</button><button class="secondary" data-sr="5" style="margin:0">Target +5%</button></div>
+    <p class="small muted" style="margin:8px 0 0">Savings rate = (income − spending) ÷ income each month. Card bills and EMIs count as spending.</p></section>`;
+}
+
+/* ======================================================================
+   Rent receipts for HRA
+   ====================================================================== */
+function viewRent() {
+  const prof = (state.docs && state.docs.profile) || {}, R = state.rent || (state.rent = Object.assign({ tenant: prof.name || '', landlord: '', pan: '', address: '', rent: '', from: '', to: '' }, LS.get('rentInfo', {})));
+  if (!R.rent || !R.landlord) {      // suggest from regular Housing transfers
+    const g = {}; tbl('AppRecent').forEach(t => { if (t.Type === 'Expenses' && /housing|rent/i.test(t.Category || '') && /IMPS|NEFT|UPI/i.test(t.Details || '')) { const p = (String(t.Details).match(/IMPS-OPM\/\d+\/([^/]+)/) || [])[1] || upiParts(t.Details).payee; if (p) { const k = p.trim() + '|' + n(t.Amount); g[k] = (g[k] || 0) + 1; } } });
+    const best = Object.entries(g).sort((a, b) => b[1] - a[1])[0]; if (best) { const [nm, amt] = best[0].split('|'); R.landlord = R.landlord || nm.replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w+/g, x => x.toLowerCase()); R.rent = R.rent || amt; }
+  }
+  const fy = fyOf(isoToday()), fyS = Number(fy.slice(0, 4)); R.from = R.from || `${fyS}-04`; R.to = R.to || isoToday().slice(0, 7);
+  const months = []; for (let d = pDate(R.from + '-01'); d && d <= pDate(R.to + '-01'); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(new Date(d));
+  const yearly = (num(R.rent) || 0) * 12, needPan = yearly > 100000;
+  return `<section class="card noprint"><h2 style="margin-top:0">Rent receipts</h2>
+      <p class="small muted" style="margin:0 0 8px">For HRA: one receipt a month, for your employer or ITR. Print or save as PDF, then get them signed.</p>
+      <label class="f" for="rt-tenant">Your name</label><input class="inp" id="rt-tenant" value="${esc(R.tenant)}">
+      <label class="f" for="rt-landlord">Landlord’s name</label><input class="inp" id="rt-landlord" value="${esc(R.landlord)}">
+      <label class="f" for="rt-pan">Landlord’s PAN ${needPan ? '(needed – rent is over ₹1 lakh a year)' : '(optional)'}</label><input class="inp" id="rt-pan" value="${esc(R.pan)}" maxlength="10" autocapitalize="characters" placeholder="ABCDE1234F">
+      <label class="f" for="rt-addr">Rented house address</label><input class="inp" id="rt-addr" value="${esc(R.address)}">
+      <label class="f" for="rt-rent">Rent a month (₹)</label><input class="inp num" id="rt-rent" inputmode="decimal" value="${esc(R.rent)}">
+      <div class="row2"><div><label class="f" for="rt-from">From</label><input class="inp" id="rt-from" type="month" value="${esc(R.from)}"></div><div><label class="f" for="rt-to">To</label><input class="inp" id="rt-to" type="month" value="${esc(R.to)}"></div></div>
+      <button class="primary" id="rt-print">Print / save PDF (${months.length} receipt${months.length === 1 ? '' : 's'})</button></section>
+    <div class="rent-receipts">${R.rent && R.landlord ? months.map(d => { const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return `<div class="rent-r"><h3>Rent receipt – ${MONF[d.getMonth()]} ${d.getFullYear()}</h3>
+        <p>Received a sum of <b>${inr(num(R.rent))}</b> (Rupees ${esc(inWords(num(R.rent)))} only) from <b>${esc(R.tenant || '________')}</b> towards rent for the period 1 ${MONF[d.getMonth()]} ${d.getFullYear()} to ${end.getDate()} ${MONF[d.getMonth()]} ${d.getFullYear()}, for the property at ${esc(R.address || '________')}.</p>
+        <div class="rent-sig"><span>Landlord: <b>${esc(R.landlord)}</b>${R.pan ? `<br>PAN: ${esc(R.pan.toUpperCase())}` : ''}<br>Date: ${end.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}</span><span class="rent-sign">Signature</span></div></div>`; }).join('') : ''}</div>`;
+}
+function inWords(x) {
+  x = Math.round(x); if (!x) return 'Zero';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = v => v < 20 ? a[v] : b[Math.floor(v / 10)] + (v % 10 ? ' ' + a[v % 10] : ''), three = v => (v >= 100 ? a[Math.floor(v / 100)] + ' Hundred' + (v % 100 ? ' ' : '') : '') + (v % 100 ? two(v % 100) : '');
+  const parts = [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']], out = [];
+  for (const [d, w] of parts) if (x >= d) { out.push(two(Math.floor(x / d)) + ' ' + w); x %= d; }
+  if (x) out.push(three(x)); return out.join(' ');
+}
+function bindRent() {
+  const R = state.rent, $ = id => document.getElementById(id), keep = () => { R.tenant = $('rt-tenant').value.trim(); R.landlord = $('rt-landlord').value.trim(); R.pan = $('rt-pan').value.trim().toUpperCase(); R.address = $('rt-addr').value.trim(); R.rent = $('rt-rent').value; R.from = $('rt-from').value; R.to = $('rt-to').value; LS.set('rentInfo', R); };
+  ['rt-tenant', 'rt-landlord', 'rt-pan', 'rt-addr', 'rt-rent', 'rt-from', 'rt-to'].forEach(id => { const e = $(id); if (e) e.onchange = () => { keep(); render(); }; });
+  const p = $('rt-print'); if (p) p.onclick = () => { keep(); if (R.pan && !/^[A-Z]{5}\d{4}[A-Z]$/.test(R.pan)) { toast('That PAN doesn’t look right (5 letters, 4 digits, 1 letter)'); return; } document.body.classList.add('print-rent'); render(); setTimeout(() => { window.print(); document.body.classList.remove('print-rent'); }, 200); };
+}
+
+/* ======================================================================
+   Monthly money routine: a checklist from the 2nd of each month
+   ====================================================================== */
+function routineItems() {
+  const ym = isoToday().slice(0, 7), done = LS.get('routine', {})[ym] || {}, last = ymKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
+  const cov = state.data ? coverage(3).todo.filter(t => t.k === last) : [];
+  const cards = (state.docs && state.docs.ccards) || [];
+  const pushed = state.data && state.data.pushedAt ? new Date(state.data.pushedAt) : null;
+  return [
+    { id: 'stmts', t: `Upload ${ymLabel(last)} statements and payslip to Drive`, auto: true, ok: state.data && !cov.length, tab: 'coverage', hint: cov.length ? 'Missing: ' + cov.map(x => x.what.replace(/ \(.*\)$/, '')).join(', ') : '' },
+    { id: 'excel', t: 'Open Excel on the PC so it takes everything in', auto: true, ok: !!pushed && (Date.now() - pushed) < 3 * DAY, tab: 'home' },
+    { id: 'cards', t: 'Update what you owe on each credit card', auto: true, ok: !cards.length || cards.every(c => String(c.updated || '') >= ym + '-01' && c.outstanding != null), tab: 'ccards', hint: cards.length ? cards.filter(c => !(String(c.updated || '') >= ym + '-01' && c.outstanding != null)).map(c => c.name).join(', ') : '' },
+    { id: 'match', t: 'Match card bill payments to cards', auto: true, ok: !cardPayments().length, tab: 'ccards' },
+    { id: 'sort', t: 'Sort new “UPI – Other” payees', auto: false, ok: !!done.sort, tab: 'sort' },
+    { id: 'review', t: `Look over ${ymLabel(last)}: spending, budget and goals`, auto: false, ok: !!done.review, tab: 'review' },
+  ];
+}
+function homeRoutineCard() {
+  if (new Date().getDate() < 2 || !state.data) return '';
+  const it = routineItems(), ok = it.filter(x => x.ok).length; if (ok === it.length) return '';
+  return `<button class="strip" data-gotab="routine"><span class="strip-i">✅</span><span class="strip-t"><span>Monthly money routine</span><b>${ok} of ${it.length} done</b></span><span class="strip-a">Open ›</span></button>`;
+}
+function viewRoutine() {
+  const it = routineItems(), ok = it.filter(x => x.ok).length;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Monthly money routine</p><h2 class="hero-v">${ok} of ${it.length}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">${ok === it.length ? 'All done for this month 🎉' : 'About 5 minutes, once a month'}</p></section>
+    <section class="sec box">${it.map(x => `<div class="rt-row"><span class="rt-c ${x.ok ? 'on' : ''}">${x.ok ? '✓' : ''}</span><span class="rt-t">${esc(x.t)}${x.hint && !x.ok ? `<br><span class="small muted">${esc(x.hint)}</span>` : ''}<br><span class="small muted">${x.auto ? 'Ticks itself when done' : 'Tick when done'}</span></span>
+      <span class="rt-a">${x.auto ? '' : `<button class="secondary" data-rt-tick="${x.id}" style="margin:0;width:auto;padding:6px 12px">${x.ok ? 'Undo' : 'Done'}</button>`}<button class="edit-btn sm" data-gotab="${x.tab}">Go</button></span></div>`).join('')}</section>`;
+}
+function bindRoutine() {
+  document.querySelectorAll('[data-rt-tick]').forEach(b => b.onclick = () => { const ym = isoToday().slice(0, 7), all = LS.get('routine', {}), m = all[ym] || (all[ym] = {}); m[b.dataset.rtTick] = !m[b.dataset.rtTick]; LS.set('routine', all); render(); });
 }
 
 /* ======================================================================
@@ -3798,11 +3992,11 @@ function viewGlance() {
 /* all tools on one screen */
 function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
-  return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review']])
+  return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
-    + g('Tax', [['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
+    + g('Tax', [['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
     + g('Life', [['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
-    + g('App', [['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+    + g('App', [['routine', '✅', 'Monthly routine'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
   return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
