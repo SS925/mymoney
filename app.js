@@ -2324,6 +2324,7 @@ function ccDays(d) { const x = pDate(d); return x ? Math.round((x - dayOnly(new 
 function viewCards() {
   const list = (state.docs.ccards || []).slice(), ed = state.ccEdit, sum = f => list.reduce((a, c) => a + (Number(c[f]) || 0), 0);
   const owe = sum('outstanding'), lim = sum('limit'), use = lim ? owe / lim : 0;
+  const cap = sum('budget'), capPlan = Number(((state.plan || {}).limits || {})['Credit Card Bills']) || 0;
   const form = c => `<section class="card"><h2 style="margin-top:0">${ed.isNew ? 'Add a card' : 'Update ' + esc(c.name || 'card')}</h2>
       ${ed.fromShot ? `<p class="small ${ed.found ? 'good' : 'warn'}" style="margin:0 0 8px">${ed.found ? 'Read from your screenshot – check the numbers, then save.' : 'Couldn’t read much from that screenshot – fill in the rest.'}</p>` : ''}
       ${ed.fromShot && (state.docs.ccards || []).length ? `<label class="f" for="cc-which">Which card is this?</label><select class="inp" id="cc-which">${(state.docs.ccards || []).map((x, k) => `<option value="${k}" ${!ed.isNew && ed.i === k ? 'selected' : ''}>${esc(x.name)}${x.last4 ? ' •• ' + esc(x.last4) : ''}</option>`).join('')}<option value="new" ${ed.isNew ? 'selected' : ''}>A new card</option></select>` : ''}
@@ -2331,6 +2332,8 @@ function viewCards() {
       <label class="f" for="cc-last4">Last 4 digits (optional)</label><input class="inp num" id="cc-last4" inputmode="numeric" maxlength="4" value="${esc(c.last4 || '')}" placeholder="1234">
       <div class="row2"><div><label class="f" for="cc-limit">Credit limit (₹)</label><input class="inp num" id="cc-limit" inputmode="decimal" value="${esc(c.limit ?? '')}"></div>
       <div><label class="f" for="cc-out">You owe now (₹)</label><input class="inp num" id="cc-out" inputmode="decimal" value="${esc(c.outstanding ?? '')}"></div></div>
+      <div class="row2"><div><label class="f" for="cc-budget">Monthly spend limit (₹)</label><input class="inp num" id="cc-budget" inputmode="decimal" value="${esc(c.budget ?? '')}" placeholder="12000"></div>
+      <div><label class="f" for="cc-use">Use this card for</label><input class="inp" id="cc-use" value="${esc(c.useFor || '')}" placeholder="Groceries, food"></div></div>
       <div class="row2"><div><label class="f" for="cc-min">Minimum due (₹)</label><input class="inp num" id="cc-min" inputmode="decimal" value="${esc(c.minDue ?? '')}"></div>
       <div><label class="f" for="cc-due">Payment due date</label><input class="inp" id="cc-due" type="date" value="${esc(c.dueDate || '')}"></div></div>
       <button class="primary" id="cc-save">Save</button>
@@ -2339,13 +2342,15 @@ function viewCards() {
   if (ed) return form(ed.item);
   return `${viewCardPayPrompts()}<section class="hero"><p class="hero-k" style="margin-top:0">You owe on cards</p><h2 class="hero-v num">${inr(owe)}</h2>
       <p class="hero-s" style="margin:-6px 0 0">${list.length} card${list.length === 1 ? '' : 's'} · limit ${inr(lim)} · ${Math.round(use * 100)}% used</p>
-      ${lim ? `<div class="cc-bar"><i style="width:${Math.min(100, use * 100).toFixed(1)}%;background:${use > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}</section>
+      ${lim ? `<div class="cc-bar"><i style="width:${Math.min(100, use * 100).toFixed(1)}%;background:${use > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
+      ${cap || capPlan ? `<p class="hero-s" style="margin:8px 0 0">Monthly card limit <b class="num">${inr(cap || capPlan)}</b>${cap && list.some(c => c.budget) ? ' · ' + list.filter(c => c.budget).map(c => `${esc(c.name)} ${inr(c.budget)}`).join(' · ') : ''}${owe > (cap || capPlan) ? ' · <span class="bad">you owe more than a month’s limit</span>' : ''}</p>` : ''}</section>
     <div class="row2"><label class="secondary cc-shot" style="margin:0">📷 From screenshot<input type="file" id="cc-file" accept="image/*" hidden></label><button class="primary" id="cc-add" style="margin:0">＋ Add card</button></div>
     <p class="small muted" style="margin:6px 4px 12px">A screenshot of the card page in your bank or CRED app. It’s read on this phone – the picture isn’t uploaded anywhere.</p>
     ${state.ccBusy ? `<p class="small" style="margin:0 4px 12px">${esc(state.ccBusy)}</p>` : ''}
     ${list.map((c, i) => { const l = Number(c.limit) || 0, o = Number(c.outstanding) || 0, u = l ? o / l : 0, dd = c.dueDate ? ccDays(c.dueDate) : null;
       return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="edit-btn" data-cc-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Update</button></div>
         <div class="kv"><span>You owe</span><b class="num">${inr(o)}</b></div>
+        ${c.budget ? `<div class="kv"><span>Monthly limit${c.useFor ? ' · ' + esc(c.useFor) : ''}</span><span class="num ${o > c.budget ? 'bad' : ''}">${inr(c.budget)}${o > c.budget ? ` · ${inr(o - c.budget)} over` : ''}</span></div>` : ''}
         <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
         ${c.dueDate ? `<a class="linkbtn" href="${esc(calLink(c))}" target="_blank" rel="noopener">📅 Add monthly due date to Google Calendar</a>` : ''}
         ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
@@ -2394,7 +2399,7 @@ function bindCards() {
     const e = state.ccEdit, it = e.item, n = id => { const v = $(id).value.replace(/[,₹\s]/g, ''); return v === '' ? null : Number(v); };
     it.name = $('cc-name').value.trim(); it.last4 = $('cc-last4').value.replace(/\D/g, '').slice(0, 4);
     if ($('cc-last4').value.replace(/\D/g, '').length > 4) { toast('Only the last 4 digits, please – never the full card number'); return; }
-    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.dueDate = $('cc-due').value; it.updated = isoToday();
+    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.budget = n('cc-budget'); it.useFor = $('cc-use').value.trim(); it.dueDate = $('cc-due').value; it.updated = isoToday();
     if (!it.name) { toast('Enter the card name'); return; }
     const old = list.slice(); if (e.isNew) list.push(it); else list[e.i] = it;
     try { await saveDoc('ccards', `${e.isNew ? 'Add' : 'Update'} card ${it.name}`); state.ccEdit = null; toast('Saved'); render(); }
