@@ -1308,7 +1308,8 @@ function viewTrade() {
   return `${state.tradeFromAdd && !t.editId && !t.replaceRow ? `<div class="seg seg5" id="tr-addtype" style="margin-bottom:12px">${['Expenses', 'Income', 'Savings', 'Transfer'].map(x => `<button data-t="${x}">${x === 'Expenses' ? 'Spent' : x}</button>`).join('')}<button class="on">Buy / sell</button></div>` : ''}<section class="card">
     <div class="seg" id="tr-side">${['Buy', 'Sell'].map(s => `<button data-v="${s}" class="${t.side === s ? 'on' : ''}">${s}</button>`).join('')}</div>
     <div class="seg" id="tr-kind" style="margin-top:8px">${[['MF', 'Mutual fund'], ['Stock', 'Stock / ETF']].map(([k, l]) => `<button data-v="${k}" class="${t.kind === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    ${mine.length ? `<label class="f">Your holdings</label><div class="pay" id="tr-mine">${mine.slice(0, 12).map((h, i) => `<button class="chip ${t.name === h.name ? 'on' : ''}" data-i="${i}">${esc(h.name.length > 28 ? h.name.slice(0, 27) + '…' : h.name)}</button>`).join('')}</div>` : ''}
+    ${(() => { const isMf = h => /^\d+$/.test(h.code || '') || /MF|fund|ELSS/i.test(h.type || ''), list = mine.map((h, i) => ({ h, i })).filter(x => x.h.units > 1e-6 && isMf(x.h) === (t.kind === 'MF'));
+      return list.length ? `<label class="f" for="tr-mine">Pick from your ${t.kind === 'MF' ? 'funds' : 'stocks'} (${list.length})</label><select class="inp" id="tr-mine"><option value="">– or type a new one below –</option>${list.map(x => `<option value="${x.i}" ${t.name === x.h.name ? 'selected' : ''}>${esc(x.h.name)}</option>`).join('')}</select>` : ''; })()}
     <label class="f" for="tr-name">${t.kind === 'MF' ? 'Fund name' : 'Stock name'}</label>
     <input class="inp" id="tr-name" autocomplete="off" placeholder="${t.kind === 'MF' ? 'Type 3+ letters to search, e.g. Parag Parikh' : 'Type the company name or symbol, e.g. Infosys'}" value="${esc(t.name)}">
     <div id="tr-results" class="group" ${t.results.length ? '' : 'hidden'}>${t.results.map((r, i) => resultRow(r, i)).join('')}</div>
@@ -1373,13 +1374,14 @@ function bindTrade() {
   document.querySelectorAll('#tr-side button').forEach(b => b.onclick = () => { read(); t.side = b.dataset.v; render(); });
   document.querySelectorAll('#tr-kind button').forEach(b => b.onclick = () => { read(); t.kind = b.dataset.v; t.type = t.kind === 'MF' ? 'Equity MF' : 'Stock'; t.results = []; render(); });
   const mine = invHoldings();
-  document.querySelectorAll('#tr-mine .chip').forEach(b => b.onclick = () => {
-    read(); const h = mine[Number(b.dataset.i)];
+  const pickSel = $('tr-mine'); if (pickSel) pickSel.onchange = () => {
+    if (pickSel.value === '') return;
+    read(); const h = mine[Number(pickSel.value)];
     Object.assign(t, { name: h.name, code: h.code, type: h.type || t.type, platform: INV_PLATFORMS.includes(h.platform) ? h.platform : t.platform, results: [] });
     t.kind = /^\d+$/.test(h.code) || /MF|fund|ELSS/i.test(h.type) ? 'MF' : 'Stock';
     const p = priceOf(h.code); if (p && !t.price) t.price = String(p.price);
     render();
-  });
+  };
   // units × price = amount
   $('tr-units').oninput = $('tr-price').oninput = () => { const u = n($('tr-units').value), p = n($('tr-price').value); if (u > 0 && p > 0) $('tr-amt').value = (Math.round(u * p * 100) / 100).toString(); };
   $('tr-amt').oninput = () => { const u = n($('tr-units').value), a = n($('tr-amt').value); if (u > 0 && a > 0) $('tr-price').value = (Math.round(a / u * 10000) / 10000).toString(); };
