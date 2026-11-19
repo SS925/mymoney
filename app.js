@@ -235,6 +235,9 @@ async function sync(opts = {}) {
       try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
       })(),
       (async () => {
+      try { const r = await GH.call('GET', 'settings/sideincome.json', { raw: true }); if (r.ok) { state.side = await r.json(); LS.set('side', state.side); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
       try { const r = await GH.call('GET', 'settings/platforms.json', { raw: true }); if (r.ok) { state.plats = await r.json(); LS.set('plats', state.plats); } } catch (e) { /* optional */ }
       })(),
       (async () => {
@@ -355,7 +358,7 @@ function render() {
   if (state.tab === 'shared') bindShared();
   if (state.tab === 'year') bindYear();
   if (state.tab === 'family') bindFamily();
-  if (state.tab === 'coaching') bindCoachingMoney();
+  if (state.tab === 'coaching') { bindCoachingMoney(); bindSideIncome(); }
   document.querySelectorAll('[data-sheet-open]').forEach(b => b.onclick = () => { state.sheet = b.dataset.sheetOpen; state.sheetQ = ''; state.tab = 'sheet'; window.scrollTo(0, 0); render(); });
   if (state.tab === 'future') {
     if (state.retireEdit) bindRetireEdit();
@@ -3539,11 +3542,43 @@ function excel80C() {
 function excelSideIncome() {
   return sheetTable('Side Income', /^Job$/, /^(Total|Used in plan)/).filter(r => r.Job).map(r => ({ job: r.Job, expected: num(r['Expected / month']), avg: num(r['Avg / month (last 6)']), months: r['Months paid (of 6)'], fy: num(r['This FY so far']) }));
 }
+function sideJobsSaved() { const x = state.side || LS.get('side', null); return x && Array.isArray(x.jobs) ? x : null; }
+function sidePending() {
+  const sv = sideJobsSaved(); if (!sv) return false;
+  const ex = sheetTable('Side Income', /^Job$/, /^(Total|Used in plan)/).filter(r => r.Job || r['Bank keyword']).map(r => String(r['Bank keyword'] || '').trim().toUpperCase());
+  const want = sv.jobs.filter(j => j.keyword).map(j => j.keyword.trim().toUpperCase());
+  return want.join('|') !== ex.join('|');
+}
 function viewSideIncome() {
-  const jobs = excelSideIncome(); if (!jobs.length) return '';
-  return `<section class="sec box"><div class="sec-h"><h3>Part-time jobs</h3><span class="small">from Excel · Side Income</span></div>
+  const jobs = excelSideIncome(), ed = state.sideEdit;
+  if (ed) return `<section class="card"><h2 style="margin-top:0">Part-time jobs</h2>
+      <p class="small muted" style="margin:0 0 8px">Each job is found in your bank credits by a word in the bank text (the payer’s name, or e.g. REMITLY). Up to 3 jobs.</p>
+      ${[0, 1, 2].map(i => { const j = ed[i] || {}; return `<div class="sj"><label class="f" for="sj-n${i}">Job ${i + 1} name</label><input class="inp" id="sj-n${i}" value="${esc(j.name || '')}" maxlength="40">
+        <div class="row2"><div><label class="f" for="sj-k${i}">Bank word</label><input class="inp" id="sj-k${i}" value="${esc(j.keyword || '')}" maxlength="30" autocapitalize="characters"></div>
+        <div><label class="f" for="sj-e${i}">Expected a month (₹)</label><input class="inp num" id="sj-e${i}" inputmode="numeric" value="${esc(j.expected ?? '')}" placeholder="leave empty to use the average"></div></div></div>`; }).join('')}
+      <button class="primary" id="sj-save">Save</button><button class="secondary" id="sj-cancel">Cancel</button></section>`;
+  const wait = sidePending() ? `<p class="small warn" style="margin:2px 0 8px">Changes saved – Excel updates the Side Income sheet next time it opens on the PC.</p>` : '';
+  if (!jobs.length && !sideJobsSaved()) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Part-time jobs</h3><button class="edit-btn" id="sj-edit">Edit</button></div>${wait}
     ${jobs.map(j => `<div class="kv"><span>${esc(j.job)}<br><span class="small muted">expected ${inr(j.expected)} · avg ${inr(j.avg)} · paid ${esc(j.months)} of 6 months</span></span><span class="num" style="text-align:right">${inr(j.fy)}<br><span class="small muted">this FY</span></span></div>`).join('')}
     <button class="linkbtn" data-sheet-open="Side Income">Open the sheet</button></section>`;
+}
+function bindSideIncome() {
+  const $ = id => document.getElementById(id);
+  const e = $('sj-edit'); if (e) e.onclick = () => {
+    const sv = sideJobsSaved();
+    state.sideEdit = sv ? sv.jobs.map(j => ({ ...j })) : sheetTable('Side Income', /^Job$/, /^(Total|Used in plan)/).filter(r => r.Job || r['Bank keyword']).map(r => ({ name: r.Job, keyword: r['Bank keyword'], expected: num(r['Expected / month']) || null }));
+    render(); };
+  const c = $('sj-cancel'); if (c) c.onclick = () => { state.sideEdit = null; render(); };
+  const s = $('sj-save'); if (s) s.onclick = async () => {
+    const jobs = [0, 1, 2].map(i => ({ name: $('sj-n' + i).value.trim(), keyword: $('sj-k' + i).value.trim().toUpperCase(), expected: Number($('sj-e' + i).value.replace(/[,₹\s]/g, '')) || null }))
+      .filter(j => j.keyword).map((j, i) => ({ ...j, name: j.name || `Part-time job ${i + 1}` }));
+    if (jobs.some(j => j.keyword.length < 3)) { toast('Bank word needs at least 3 letters'); return; }
+    const saved = { id: uid('sj'), note: 'Part-time jobs for the Side Income sheet (AppLink fills B6:D8)', jobs };
+    s.disabled = true; s.textContent = 'Saving…';
+    try { await GH.putJson('settings/sideincome.json', saved, 'Part-time jobs from the app'); state.side = saved; LS.set('side', saved); state.sideEdit = null; toast('Saved. Excel updates Side Income next time it opens'); render(); }
+    catch (err) { toast(err.message || 'Couldn’t reach GitHub – try again'); s.disabled = false; s.textContent = 'Save'; }
+  };
 }
 function viewSheetsList() {
   const list = sheetList(), at = state.sheets && state.sheets.exportedAt ? new Date(state.sheets.exportedAt) : null;
