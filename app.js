@@ -166,7 +166,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ 
 function tone(s) { s = String(s || ''); return /^[✓✅]/.test(s) ? 'good' : /^⚠/.test(s) ? (/Fix|Short|Runs out|off by|overdue/i.test(s) ? 'bad' : 'warn') : ''; }
 
 /* Make bank details readable: "bank: {SBI} UPI/DR/123/SWIGGY/ICIC/... [key]" -> "Swiggy" */
-function describe(t) {
+function describe(t, raw) {
   let d = String(t.Details || '');
   const bank = (d.match(/^bank:\s*\{([^}]*)\}/i) || [])[1] || '';
   d = d.replace(/^bank:\s*(\{[^}]*\})?\s*/i, '').replace(/\s*\[[^\]]*\]\s*$/, '');
@@ -176,6 +176,7 @@ function describe(t) {
   const upi = d.match(/UPI\/(?:DR|CR)\/\d+\/([^/]+)/i) || d.match(/UPI-([A-Za-z][A-Za-z .]{2,})/);
   if (upi) title = upi[1];
   title = title.replace(/\s+/g, ' ').trim();
+  if (!raw && upi) { const nk = nickOf(title); if (nk) title = nk; }
   if (/^[A-Z0-9 .&\-]+$/.test(title) && title.length > 3) title = title.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   if (!title || /^from payslip/i.test(title)) title = t.Category || 'Entry';
   if (title.length > 42) title = title.slice(0, 40) + '…';
@@ -551,7 +552,7 @@ function viewHome() {
     worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
     salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
     budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
-    remind1: () => `  ${homeRoutineCard() || homeMissingCard()}`,
+    remind1: () => `  ${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
     remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
     quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
@@ -1490,10 +1491,10 @@ async function refreshTrades() {
 /* ======================================================================
    SIPs, bills & subscriptions, goals (app-owned files in the data repo: app/*.json)
    ====================================================================== */
-const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
+const DOCS = { payees: 'app/payees.json', sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
 async function loadDocs() {
   await Promise.all(Object.keys(DOCS).map(async k => {
-    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax/.test(k) ? {} : []; }
+    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax|payees/.test(k) ? {} : []; }
     catch (e) { /* keep the copy on this phone */ }
   }));
   LS.set('docs', state.docs);
@@ -2929,14 +2930,35 @@ function forecast() {
   const variable = Math.max(0, avgSpend - billMonthly) * daysLeft / dim;
   return { now, salary, fixed, fixedNames, variable, end: now + salary - fixed - variable, endDate: end, asOf: be };
 }
+function spendForecast() {
+  const tx = allTx().filter(t => t.Type === 'Expenses'), ym = isoToday().slice(0, 7);
+  const cur = tx.filter(t => String(t.Date).startsWith(ym)); if (!cur.length) return null;
+  const asOf = cur.reduce((m, t) => String(t.Date).slice(0, 10) > m ? String(t.Date).slice(0, 10) : m, ''), day = Number(asOf.slice(8, 10));
+  const spent = cur.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), now = new Date(), rest = [];
+  for (let i = 1; i <= 3; i++) { const k = ymKey(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    const mt = tx.filter(t => String(t.Date).startsWith(k)); if (!mt.length) continue;
+    rest.push(mt.filter(t => Number(String(t.Date).slice(8, 10)) > day).reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0)); }
+  if (!rest.length) return null;
+  const more = rest.reduce((a, x) => a + x, 0) / rest.length, total = spent + more, net = netPay(), p = activePlan(), limit = isFinite(net) ? net - (Number(p.savings) || 0) : null;
+  return { asOf, spent, more, total, limit, over: limit != null && total > limit, months: rest.length };
+}
+function homeForecastCard() {
+  const f = spendForecast(); if (!f || !f.over || new Date().getDate() < 15) return '';
+  return `<button class="strip" data-gotab="money"><span class="strip-i bad">📈</span><span class="strip-t"><span>Heading over your limit this month</span><b class="num">≈ ${inr(f.total)} vs ${inr(f.limit)}</b></span><span class="strip-a">See ›</span></button>`;
+}
 function viewForecast() {
-  const f = forecast(); if (!f) return '';
+  const sf = spendForecast(), sfHtml = sf ? `<section class="sec box"><div class="sec-h"><h3>Spending by month end</h3><span class="small">at your usual pace</span></div>
+    <div class="kv"><span>Spent so far<br><span class="small muted">to ${esc(fDay(pDate(sf.asOf)).replace(/ \d{4}$/, ''))}</span></span><span class="num">${inr(sf.spent)}</span></div>
+    <div class="kv"><span>Usually still to go<br><span class="small muted">what you spent after day ${Number(sf.asOf.slice(8, 10))} in the last ${sf.months} months – EMIs, rent, bills too</span></span><span class="num">+${inr(sf.more)}</span></div>
+    <div class="kv"><span><b>Likely total</b></span><span class="num ${sf.over ? 'bad' : 'good'}"><b>${inr(sf.total)}</b></span></div>
+    ${sf.limit != null ? `<p class="small ${sf.over ? 'bad' : 'good'}" style="margin:8px 0 0">${sf.over ? `About ${inr(sf.total - sf.limit)} over your net-pay limit of ${inr(sf.limit)}. Cutting about ${inr((sf.total - sf.limit) / Math.max(1, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1))} a day for the rest of the month would close it.` : `About ${inr(sf.limit - sf.total)} under your net-pay limit of ${inr(sf.limit)}.`}</p>` : ''}</section>` : '';
+  const f = forecast(); if (!f) return sfHtml;
   return `<section class="sec box"><div class="sec-h"><h3>Month-end forecast</h3><span class="small">${fDay(f.endDate).replace(/ \d{4}$/, '')}</span></div>
     <div class="kv"><span>In your banks now<br><span class="small muted">${f.asOf ? 'as of ' + esc(fDay(f.asOf)) : ''}</span></span><span class="num">${inr(f.now)}</span></div>
     ${f.salary ? `<div class="kv"><span>Salary still to come</span><span class="num good">+${inr(f.salary)}</span></div>` : ''}
     <div class="kv"><span>SIPs and bills still due<br><span class="small muted">${esc(f.fixedNames.slice(0, 4).join(', ')) || 'none tracked'}</span></span><span class="num">−${inr(f.fixed)}</span></div>
     <div class="kv"><span>Usual day-to-day spending<br><span class="small muted">3-month average, rest of the month</span></span><span class="num">−${inr(f.variable)}</span></div>
-    <div class="kv"><span><b>Expected at month end</b></span><span class="num ${f.end < 0 ? 'bad' : ''}"><b>${inr(f.end)}</b></span></div></section>`;
+    <div class="kv"><span><b>Expected at month end</b></span><span class="num ${f.end < 0 ? 'bad' : ''}"><b>${inr(f.end)}</b></span></div></section>` + sfHtml;
 }
 
 /* ======================================================================
@@ -3086,7 +3108,7 @@ function viewSort() {
   return `<section class="hero"><p class="hero-k" style="margin-top:0">“UPI – Other”, ${state.sortAll ? 'all time' : 'last 6 months'}</p><h2 class="hero-v num">${inr(tot)}</h2>
       <p class="hero-s" style="margin:0">${cnt} payments to ${gs.length} payees left to sort. Pick a category for the big ones – every past and future payment to them moves.</p></section>
     <div class="seg" id="sort-range" style="margin:0 0 12px">${[['6', 'Last 6 months'], ['all', 'All time']].map(([v, l]) => `<button data-v="${v}" class="${(v === 'all') === !!state.sortAll ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <section class="sec box">${gs.slice(0, shown).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(x.payee)}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
+    <section class="sec box">${gs.slice(0, shown).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(nickOf(x.payee) || x.payee)}</b>${nickOf(x.payee) ? ` <span class="small muted">(${esc(x.payee)})</span>` : ''}<br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
         <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-sort-cat="${i}"><option value="">Choose category…</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option>${esc(c)}</option>`).join('')}</select>
         <button class="chip" data-sort-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
       ${gs.length > shown ? `<button class="more-btn" data-sort-more>Show all ${gs.length} payees</button>` : ''}</section>
@@ -3111,12 +3133,22 @@ function bindSort() {
 /* ======================================================================
    Where the money goes: top payees by month, and small UPI spends
    ====================================================================== */
-function payeeOf(t) {
+function payeeRaw(t) {
   const d = String(t.Details || '').replace(/^bank:\s*\{[^}]*\}\s*/i, '');
   if (/ATM|CASH WITHDRAWAL|NFS\//i.test(d) && !/UPI\//i.test(d)) return 'Cash (ATM)';
   const named = d.match(/(?:IMPS|NEFT|RTGS)[-/][A-Z]*\/?\d+\/([A-Za-z][^/]{2,})/i) || d.match(/^NACH\/([^/]+)/i);
-  const p = upiParts(t.Details).payee && /UPI\//i.test(d) ? upiParts(t.Details).payee : named ? named[1] : describe(t).title || t.Category || 'Other';
+  const p = upiParts(t.Details).payee && /UPI\//i.test(d) ? upiParts(t.Details).payee : named ? named[1] : describe(t, true).title || t.Category || 'Other';
   return String(p).replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w+/g, w => w.toLowerCase());
+}
+function nickOf(raw) { const m = state.docs && state.docs.payees; return (m && typeof m === 'object' && !Array.isArray(m) && m[String(raw || '').trim().toUpperCase()]) || ''; }
+function payeeOf(t) { const r = payeeRaw(t); return nickOf(r) || r; }
+async function savePayeeName(raw, name) {
+  const key = String(raw).trim().toUpperCase(), old = Object.assign({}, state.docs.payees && !Array.isArray(state.docs.payees) ? state.docs.payees : {}), map = Object.assign({}, old);
+  if (name && name.trim() && name.trim().toUpperCase() !== key) map[key] = name.trim().slice(0, 40); else delete map[key];
+  state.docs.payees = map; LS.set('docs', state.docs);
+  try { await GH.putJson('app/payees.json', map, `Payee name: ${raw}`); toast(map[key] ? `${raw} → ${map[key]}` : 'Name removed'); }
+  catch (e) { state.docs.payees = old; toast(e.message || 'Couldn’t reach GitHub – try again'); }
+  render();
 }
 function spendMonths() {
   const set = new Set(); allTx().forEach(t => { if (t.Type === 'Expenses') set.add(String(t.Date).slice(0, 7)); });
@@ -3127,7 +3159,7 @@ function viewSpends() {
   const m = state.spM && months.includes(state.spM) ? state.spM : months[0], prev = months[months.indexOf(m) + 1];
   const SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i;
   const group = ym => { const g = {}; allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(ym) || SKIP.test(t.Category || '')) return;
-    const k = payeeOf(t), o = g[k] || (g[k] = { name: k, sum: 0, n: 0, cat: t.Category }); o.sum += Math.abs(n(t.Amount)); o.n++; }); return g; };
+    const k = payeeOf(t), o = g[k] || (g[k] = { name: k, raw: payeeRaw(t), sum: 0, n: 0, cat: t.Category }); o.sum += Math.abs(n(t.Amount)); o.n++; }); return g; };
   const cur = group(m), old = prev ? group(prev) : {}, top = Object.values(cur).sort((a, b) => b.sum - a.sum).slice(0, state.spAll ? 60 : 15);
   const tot = Object.values(cur).reduce((a, x) => a + x.sum, 0);
   // small UPI spends (under ₹200) – last 12 months
@@ -3138,7 +3170,9 @@ function viewSpends() {
   return `<section class="card"><label class="f" for="sp-m">Month</label><select class="inp" id="sp-m">${months.map(x => `<option value="${x}" ${x === m ? 'selected' : ''}>${ymLabel(x)}</option>`).join('')}</select></section>
     <section class="sec box"><div class="sec-h"><h3>Top payees, ${ymLabel(m)}</h3><span class="small muted num">${inr(tot)}</span></div>
       ${top.map(x => { const o = old[x.name], d = o ? x.sum - o.sum : null;
-        return `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · ${esc(x.cat)}</span></span><span style="text-align:right"><b class="num">${inr(x.sum)}</b><br><span class="small ${d == null || Math.abs(d) < 1 ? 'muted' : d > 0 ? 'bad' : 'good'}">${d == null ? 'new this month' : Math.abs(d) < 1 ? 'same as ' + MON[pDate(prev + '-01').getMonth()] : (d > 0 ? '+' : '−') + inr(Math.abs(d)) + ' vs ' + MON[pDate(prev + '-01').getMonth()]}</span></span></div>`; }).join('')}
+        if (state.pyEdit === x.raw) return `<div class="py-edit"><label class="f" for="py-name">Name for “${esc(x.raw)}”</label><div class="row" style="gap:8px"><input class="inp" id="py-name" value="${esc(nickOf(x.raw) || x.raw)}" maxlength="40"><button class="chip" id="py-save">Save</button><button class="chip" id="py-cancel">Cancel</button></div>
+          <p class="small muted" style="margin:6px 0 0">Your bank shortens names to 8 letters. The new name shows everywhere in the app${nickOf(x.raw) ? ' – clear it to go back to the bank’s name' : ''}.</p></div>`;
+        return `<div class="kv"><span>${esc(x.name)} <button class="py-pen" data-py="${esc(x.raw)}" aria-label="Rename ${esc(x.name)}">✎</button><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · ${esc(x.cat)}${x.name !== x.raw ? ' · bank: ' + esc(x.raw) : ''}</span></span><span style="text-align:right"><b class="num">${inr(x.sum)}</b><br><span class="small ${d == null || Math.abs(d) < 1 ? 'muted' : d > 0 ? 'bad' : 'good'}">${d == null ? 'new this month' : Math.abs(d) < 1 ? 'same as ' + MON[pDate(prev + '-01').getMonth()] : (d > 0 ? '+' : '−') + inr(Math.abs(d)) + ' vs ' + MON[pDate(prev + '-01').getMonth()]}</span></span></div>`; }).join('')}
       ${Object.keys(cur).length > 15 ? `<button class="more-btn" data-sp-all>${state.spAll ? 'Show top 15' : `Show all ${Object.keys(cur).length}`}</button>` : ''}
       <p class="small muted" style="margin:8px 0 0">Leaves out transfers between your accounts, investments, loan EMIs and card bill payments.</p></section>
     <section class="sec box"><div class="sec-h"><h3>Small UPI spends (under ₹200)</h3></div>
@@ -3149,6 +3183,9 @@ function viewSpends() {
 function bindSpends() {
   const s = document.getElementById('sp-m'); if (s) s.onchange = () => { state.spM = s.value; render(); };
   const a = document.querySelector('[data-sp-all]'); if (a) a.onclick = () => { state.spAll = !state.spAll; render(); };
+  document.querySelectorAll('[data-py]').forEach(b => b.onclick = () => { state.pyEdit = b.dataset.py; render(); const i = document.getElementById('py-name'); if (i) { i.focus(); i.select(); } });
+  const c = document.getElementById('py-cancel'); if (c) c.onclick = () => { state.pyEdit = null; render(); };
+  const sv = document.getElementById('py-save'); if (sv) sv.onclick = () => { const raw = state.pyEdit; state.pyEdit = null; sv.disabled = true; savePayeeName(raw, document.getElementById('py-name').value); };
 }
 
 /* ======================================================================
