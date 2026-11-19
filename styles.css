@@ -460,3 +460,32 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .gr-s{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px;color:var(--muted)}
 .gr-s b{color:var(--text);font-weight:600}
 .he-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}.he-row:last-child{border-bottom:0}.he-mv{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--text);font-size:13px;cursor:pointer}.he-mv:disabled{opacity:.3}
+/* top payees / small spends */
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:6px}
+.bar-c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
+.bar-c i{display:block;width:100%;min-height:2px;border-radius:4px 4px 0 0;background:var(--blue1)}
+.bar-c span{font-size:11px;color:var(--muted)}
+/* savings rate */
+.sr-chart{position:relative;display:flex;gap:4px;height:140px;padding-bottom:16px}
+.sr-chart .sr-t,.sr-chart .sr-z{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--muted);z-index:1}
+.sr-chart .sr-z{border-top:1px solid var(--line)}
+.sr-c{position:relative;flex:1;height:calc(100% - 0px)}
+.sr-c b{position:absolute;left:12%;right:12%;border-radius:3px}
+.sr-c b.ok{background:var(--good,#2fa36b)}.sr-c b.mid{background:#c9a23a}.sr-c b.neg{background:var(--bad,#d0574f)}
+.sr-c span{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+/* monthly routine */
+.rt-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.rt-row:last-child{border-bottom:0}
+.rt-c{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:13px}
+.rt-c.on{background:var(--good,#2fa36b);border-color:transparent;color:#fff}
+.rt-t{flex:1;min-width:0}
+.rt-a{display:flex;gap:6px;align-items:center;flex:none}
+/* rent receipts */
+.rent-r{background:#fff;color:#111;border:1px solid #bbb;border-radius:8px;padding:18px;margin:0 0 14px;font-size:14px;line-height:1.55}
+.rent-r h3{margin:0 0 8px;font-size:16px;color:#111}
+.rent-sig{display:flex;justify-content:space-between;align-items:flex-end;margin-top:18px;gap:12px}
+.rent-sign{border-top:1px solid #333;padding-top:4px;min-width:130px;text-align:center;font-size:12px}
+@media print{
+  body.print-rent #view > :not(.rent-receipts){display:none!important}
+  body.print-rent .rent-r{break-inside:avoid;border:1px solid #888;margin:0 0 10mm}
+}
