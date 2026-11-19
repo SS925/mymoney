@@ -235,6 +235,10 @@ async function sync(opts = {}) {
       try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
       })(),
       (async () => {
+      try { const r = await GH.call('GET', 'rulestidy.json', { raw: true }); if (r.ok) { state.tidy = await r.json(); LS.set('tidy', state.tidy); } } catch (e) { /* optional */ }
+      try { const r = await GH.call('GET', 'settings/tidy.json', { raw: true }); if (r.ok) { state.tidyReq = await r.json(); LS.set('tidyReq', state.tidyReq); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
       try { const r = await GH.call('GET', 'settings/sideincome.json', { raw: true }); if (r.ok) { state.side = await r.json(); LS.set('side', state.side); } } catch (e) { /* optional */ }
       })(),
       (async () => {
@@ -289,8 +293,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { lic: 'Is LIC worth it?', subcheck: 'Subscriptions check', newpay: 'New payees', spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions check', newpay: 'New payees', spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -317,7 +321,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { lic: viewLic, subcheck: viewSubsCheck, newpay: viewNewPayees, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { tidy: viewTidy, lic: viewLic, subcheck: viewSubsCheck, newpay: viewNewPayees, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -355,6 +359,7 @@ function render() {
   if (state.tab === 'spends') bindSpends();
   if (state.tab === 'newpay') bindNewPayees();
   if (state.tab === 'lic') bindLic();
+  if (state.tab === 'tidy') bindTidy();
   if (state.tab === 'subcheck') bindSubsCheck();
   if (state.tab === 'afford') bindAfford();
   if (state.tab === 'rent') bindRent();
@@ -3561,6 +3566,38 @@ function bindEfPlan() {
   ['ef-base', 'ef-month', 'ef-loan'].forEach(id => { const e = $(id); if (e) e.onchange = save; });
 }
 
+
+/* ======================================================================
+   Tidy category rules: Excel's report (rulestidy.json) and the go-ahead (settings/tidy.json)
+   ====================================================================== */
+function viewTidy() {
+  const t = state.tidy || LS.get('tidy', null), q = state.tidyReq || LS.get('tidyReq', null);
+  if (!t) return `<div class="empty">Excel hasn’t sent a rules report yet.<br><br>Import AppLink 2026-11-19f on the PC, open the workbook once, then come back here.</div>`;
+  const waiting = q && q.approve && q.id !== t.applied, rm = t.remove || [], lk = t.lock || [], after = t.rules - rm.length - lk.length;
+  const list = (l, f) => l.slice(0, state.tidyAll ? 999 : 8).map(f).join('') + (l.length > 8 && !state.tidyAll ? `<button class="more-btn" data-tidy-all>Show all ${l.length}</button>` : '');
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Category rules in Excel</p><h2 class="hero-v num">${t.rules}</h2>
+      <p class="hero-s" style="margin:0">${t.phone} added from this phone. ${rm.length + lk.length ? `Tidying brings it to <b>${after}</b>, with every transaction keeping its category.` : 'Nothing to tidy – all rules are in use.'}</p></section>
+    ${waiting ? `<p class="small warn" style="margin:0 4px 12px">Waiting for Excel: the tidy-up runs next time the workbook opens on the PC. Save it afterwards.</p>` : ''}
+    ${lk.length ? `<section class="sec box"><div class="sec-h"><h3>Move to Locked History</h3><span class="small">${lk.length}</span></div>
+      <p class="small muted" style="margin:-4px 0 8px">Rules for a single transaction (a bike payment, one rent, one EMI…). The transaction keeps its category through Locked History, which Excel checks almost for free.</p>
+      ${list(lk, x => `<div class="kv"><span class="small">${esc(x.kw)}</span><span class="small muted">${esc(x.cat)}</span></div>`)}</section>` : ''}
+    ${rm.length ? `<section class="sec box"><div class="sec-h"><h3>Remove</h3><span class="small">${rm.length}</span></div>
+      <p class="small muted" style="margin:-4px 0 8px">These change nothing today: they match no transaction, or another rule always wins first.</p>
+      ${list(rm, x => `<div class="kv"><span class="small">${esc(x.kw)}<br><span class="muted">${esc(x.why)}</span></span><span class="small muted">${esc(x.cat)}</span></div>`)}</section>` : ''}
+    ${rm.length + lk.length && !waiting ? `<button class="primary" id="tidy-go">Tidy ${rm.length + lk.length} rules</button>` : ''}
+    <p class="note">Only rules added from this phone are touched – your own rules in Excel stay as they are. Excel saves a copy of all rules to GitHub (backups/rules-…) before changing anything. Report from ${t.at ? esc(fDay(pDate(t.at))) : 'Excel'}.</p>`;
+}
+function bindTidy() {
+  const a = document.querySelector('[data-tidy-all]'); if (a) a.onclick = () => { state.tidyAll = true; render(); };
+  const g = document.getElementById('tidy-go'); if (g) g.onclick = async () => {
+    if (!confirmInline(g)) { g.textContent = 'Tap again to confirm'; return; }
+    const req = { id: uid('tidy'), approve: true, at: new Date().toISOString(), note: 'Tidy category rules – applied by AppLink on the next Excel sync' };
+    g.disabled = true; g.textContent = 'Saving…';
+    try { await GH.putJson('settings/tidy.json', req, 'Tidy category rules'); state.tidyReq = req; LS.set('tidyReq', req); toast('Saved. Excel tidies the rules next time it opens'); render(); }
+    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); g.disabled = false; g.textContent = 'Tidy rules'; }
+  };
+}
+
 /* ======================================================================
    Shared expenses: who owes whom (app/shared.json)
    ====================================================================== */
@@ -4299,7 +4336,7 @@ function viewTools() {
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
     + g('Tax', [['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
     + g('Life', [['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
-    + g('App', [['routine', '✅', 'Monthly routine'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+    + g('App', [['routine', '✅', 'Monthly routine'], ['tidy', '🧹', 'Tidy rules'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
   return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
