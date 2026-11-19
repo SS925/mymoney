@@ -1504,10 +1504,10 @@ async function refreshTrades() {
 /* ======================================================================
    SIPs, bills & subscriptions, goals (app-owned files in the data repo: app/*.json)
    ====================================================================== */
-const DOCS = { payees: 'app/payees.json', sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
+const DOCS = { efplan: 'app/efplan.json', payees: 'app/payees.json', sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
 async function loadDocs() {
   await Promise.all(Object.keys(DOCS).map(async k => {
-    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax|payees/.test(k) ? {} : []; }
+    try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax|payees|efplan/.test(k) ? {} : []; }
     catch (e) { /* keep the copy on this phone */ }
   }));
   LS.set('docs', state.docs);
@@ -3542,7 +3542,7 @@ function efLiquid() { return invHoldings().filter(h => h.units > 0 && /liquid|ov
 function viewEfPlan(w) {
   const bank = w.banks.reduce((a, x) => a + x.bal, 0), liquid = efLiquid(), _x = invHoldings().filter(h => h.units > 0 && /liquid|overnight|money market/i.test((h.type || '') + ' ' + h.name)).reduce((a, h) => a + (Number(h.value) || 0), 0);
   const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), avg = rows.length ? rows.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / rows.length : 0;
-  const P = LS.get('efPlan', {}), base = num(P.base) || Math.round(avg / 1000) * 1000, monthly = num(P.monthly) || 0, target = LS.get('efTarget', 6), have = bank + liquid;
+  const P = efPlanGet(), base = num(P.base) || Math.round(avg / 1000) * 1000, monthly = num(P.monthly) || 0, target = LS.get('efTarget', 6), have = bank + liquid;
   const ends = loanEnds(), addLoan = P.addLoan !== false;
   const months = goal => { if (have >= goal) return 0; let h = have, m = 0; const now = new Date();
     while (h < goal && m < 600) { m++; const d = new Date(now.getFullYear(), now.getMonth() + m, 1); h += monthly + (addLoan ? ends.filter(x => d >= x.free).reduce((a, x) => a + x.emi, 0) : 0); }
@@ -3560,9 +3560,12 @@ function viewEfPlan(w) {
     ${start ? `<div class="kv"><span>Progress since ${esc(fDay(pDate(start.date)))}</span><span class="num ${have - start.have >= 0 ? 'good' : 'bad'}">${have - start.have >= 0 ? '+' : '−'}${inr(Math.abs(have - start.have))}</span></div>` : ''}
     <p class="small muted" style="margin:8px 0 0">Keep it in a separate savings account or a liquid fund (Invest › Buy / sell – it’s then counted here), not in the account you spend from.</p></section>`;
 }
+function efPlanGet() { const d = state.docs && state.docs.efplan; return d && !Array.isArray(d) && Object.keys(d).length ? d : LS.get('efPlan', {}); }
 function bindEfPlan() {
-  const $ = id => document.getElementById(id), save = () => { const P = LS.get('efPlan', {}); P.base = $('ef-base').value; P.monthly = $('ef-month').value; if ($('ef-loan')) P.addLoan = $('ef-loan').checked;
-    if (num(P.monthly) > 0 && !P.start) { const w = worthNow(); P.start = { date: isoToday(), have: w.banks.reduce((a, x) => a + x.bal, 0) + efLiquid() }; } LS.set('efPlan', P); render(); };
+  const $ = id => document.getElementById(id), save = async () => { const P = Object.assign({}, efPlanGet()); P.base = $('ef-base').value; P.monthly = $('ef-month').value; if ($('ef-loan')) P.addLoan = $('ef-loan').checked;
+    if (num(P.monthly) > 0 && !P.start) { const w = worthNow(); P.start = { date: isoToday(), have: w.banks.reduce((a, x) => a + x.bal, 0) + efLiquid() }; }
+    LS.set('efPlan', P); state.docs.efplan = P; render();
+    try { await saveDoc('efplan', 'Emergency fund plan'); } catch (e) { toast('Saved on this phone – couldn’t reach GitHub'); } };
   ['ef-base', 'ef-month', 'ef-loan'].forEach(id => { const e = $(id); if (e) e.onchange = save; });
 }
 
