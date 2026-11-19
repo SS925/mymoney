@@ -196,21 +196,50 @@ async function sync(opts = {}) {
     state.data = data; state.fetchedAt = new Date().toISOString(); state.lastError = null;
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
     try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
-    try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
-    try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'settings/codes.json', { raw: true }); if (r.ok) { state.codeFixes = await r.json(); LS.set('codeFixes', state.codeFixes); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'settings/loans.json', { raw: true }); if (r.ok) { state.loansSaved = await r.json(); LS.set('loansSaved', state.loansSaved); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
-    try { await refreshTrades(); } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'tradedel'); if (r.status === 404) state.tradeDels = []; else if (r.ok) { const fl = (await r.json()).filter(f => /\.json$/.test(f.name)), known = Object.fromEntries(state.tradeDels.map(d => [d.id, d])), out = [];
-      for (const f of fl) { const id = f.name.replace(/\.json$/, ''); let d = known[id]; if (!d) { try { d = { id, entry: await GH.getEntry(f.path) }; } catch (e) { continue; } } out.push(d); } state.tradeDels = out; }
-      LS.set('tradeDels', state.tradeDels); } catch (e) { /* optional */ }
-    await loadDocs();
-    try { await refreshRecats(); } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'settings/platforms.json', { raw: true }); if (r.ok) { state.plats = await r.json(); LS.set('plats', state.plats); } } catch (e) { /* optional */ }
-    try { const r = await GH.call('GET', 'mfholdings.json', { raw: true }); if (r.ok) { state.mfh = await r.json(); LS.set('mfh', state.mfh); } } catch (e) { /* optional */ }
+    render();                                   // show the main figures straight away; the rest loads together
+    await Promise.all([
+      (async () => {
+      try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'settings/retirement.json', { raw: true }); if (r.ok) { state.retireSaved = await r.json(); LS.set('retireSaved', state.retireSaved); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'settings/codes.json', { raw: true }); if (r.ok) { state.codeFixes = await r.json(); LS.set('codeFixes', state.codeFixes); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'settings/loans.json', { raw: true }); if (r.ok) { state.loansSaved = await r.json(); LS.set('loansSaved', state.loansSaved); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'settings/balances.json', { raw: true }); if (r.ok) { state.balSaved = await r.json(); LS.set('balSaved', state.balSaved); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { await refreshTrades(); } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'tradedel'); if (r.status === 404) state.tradeDels = []; else if (r.ok) { const fl = (await r.json()).filter(f => /\.json$/.test(f.name)), known = Object.fromEntries(state.tradeDels.map(d => [d.id, d])), out = [];
+        for (const f of fl) { const id = f.name.replace(/\.json$/, ''); let d = known[id]; if (!d) { try { d = { id, entry: await GH.getEntry(f.path) }; } catch (e) { continue; } } out.push(d); } state.tradeDels = out; }
+        LS.set('tradeDels', state.tradeDels); } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      await loadDocs();
+      })(),
+      (async () => {
+      try { await refreshRecats(); } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'settings/platforms.json', { raw: true }); if (r.ok) { state.plats = await r.json(); LS.set('plats', state.plats); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'mfholdings.json', { raw: true }); if (r.ok) { state.mfh = await r.json(); LS.set('mfh', state.mfh); } } catch (e) { /* optional */ }
+      })()
+    ]);
     await refreshPending();
     try { await autoEmi(); } catch (e) { /* optional */ }
     if (opts.toast) toast('Up to date');
@@ -255,8 +284,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -283,7 +312,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -311,6 +340,7 @@ function render() {
   if (state.tab === 'recat') bindRecat();
   if (state.tab === 'loans') bindLoans();
   if (state.tab === 'ccards') bindCards();
+  if (state.tab === 'homeedit') bindHomeEdit();
   if (state.tab === 'gains') bindGains();
   if (state.tab === 'overlap') { const b = document.querySelector('[data-ovall]'); if (b) b.onclick = () => { state.ovAll = !state.ovAll; render(); }; }
   if (state.tab === 'restore') bindRestore();
@@ -501,8 +531,8 @@ function viewHome() {
   const recent = allTx().slice(0, 3), ps = latestPayslip();
   const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0, left = limit - spent;
   const qa = (attrs, icon, label) => `<${attrs.startsWith('href') ? 'a' : 'button'} class="qa" ${attrs}><span class="qa-i">${icon}</span><span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
-  return `
-  ${(() => { const banks = bankAccounts().filter(a => a.type === 'Bank' || a.bal), tot = banks.reduce((x, a) => x + a.bal, 0);
+  const S = {
+    banks: () => `  ${(() => { const banks = bankAccounts().filter(a => a.type === 'Bank' || a.bal), tot = banks.reduce((x, a) => x + a.bal, 0);
     const asOf = banks.map(a => a.asOf).filter(Boolean).sort((a, b) => (pDate(a) || 0) - (pDate(b) || 0)).pop();
     return `<section class="hero">
     <p class="hero-k" style="margin-top:0">In your banks</p>
@@ -513,33 +543,65 @@ function viewHome() {
       <div><span>Income${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(k.income_month)}</b></div>
       <div><span>Spent${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(spent)}</b></div>
     </div>
-  </section>`; })()}
-  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>
-  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}
-  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}
-  ${homeMissingCard()}
-  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}
-  <div class="qas">
+  </section>`; })()}`,
+    worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
+    salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
+    budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
+    remind1: () => `  ${homeMissingCard()}`,
+    remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
+    quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
     ${qa('href="receipts.html"', IC.receipt, 'Receipt')}
     ${qa('data-gotab="invest"', IC.invest, 'Invest')}
     ${qa('data-gotab="future"', IC.retire, 'Retirement')}
-  </div>
-  ${(() => { const td = portfolioToday(); return td ? `<button class="today-strip" data-gotab="invest"><span>Stocks & funds today</span><b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} · ${pctTxt(td.pct, 2)}</b></button>` : ''; })()}
-  ${viewShortcuts()}
-  ${(() => { const d = tokenDays(); return d != null && d <= 14 ? `<section class="sec box warnbox"><div class="sec-h"><h3>GitHub token ${d < 0 ? 'has expired' : `expires in ${d} day${d === 1 ? '' : 's'}`}</h3></div><p class="small" style="margin:0">Make a new token on GitHub (same settings), then paste it in More → Notifications and settings and in Excel’s AppLink module.</p></section>` : ''; })()}
-  ${viewLowBalance()}
-  <section class="sec box">
+  </div>`,
+    today: () => `  ${(() => { const td = portfolioToday(); return td ? `<button class="today-strip" data-gotab="invest"><span>Stocks & funds today</span><b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} · ${pctTxt(td.pct, 2)}</b></button>` : ''; })()}`,
+    shortcuts: () => `  ${viewShortcuts()}`,
+    token: () => `  ${(() => { const d = tokenDays(); return d != null && d <= 14 ? `<section class="sec box warnbox"><div class="sec-h"><h3>GitHub token ${d < 0 ? 'has expired' : `expires in ${d} day${d === 1 ? '' : 's'}`}</h3></div><p class="small" style="margin:0">Make a new token on GitHub (same settings), then paste it in More → Notifications and settings and in Excel’s AppLink module.</p></section>` : ''; })()}`,
+    lowbal: () => `  ${viewLowBalance()}`,
+    recent: () => `  <section class="sec box">
     <div class="sec-h"><h3>Recent activity</h3><button data-gotab="tx">See all</button></div>
     ${recent.map(t => txRow(t, true)).join('')}
-  </section>
-  ${alerts.length ? `<section class="sec box"><div class="sec-h"><h3>Needs attention</h3><span class="small muted">${alerts.length}</span></div>
+  </section>`,
+    attention: () => `  ${alerts.length ? `<section class="sec box"><div class="sec-h"><h3>Needs attention</h3><span class="small muted">${alerts.length}</span></div>
     ${(state.homeAlertsAll ? alerts : alerts.slice(0, 3)).map(x => `<div class="alert-row"><span class="dot ${/^⚠/.test(x) ? 'warn' : 'info'}"></span><span>${esc(x.replace(/^[⚠ℹ]\s*/, ''))}</span></div>`).join('')}
-    ${alerts.length > 3 ? `<button class="more-btn" data-homeall>${state.homeAlertsAll ? 'Show fewer' : `Show all ${alerts.length}`}</button>` : ''}</section>` : ''}
-  <section class="sec">
+    ${alerts.length > 3 ? `<button class="more-btn" data-homeall>${state.homeAlertsAll ? 'Show fewer' : `Show all ${alerts.length}`}</button>` : ''}</section>` : ''}`,
+    health: () => `  <section class="sec">
     <button class="health-row" data-health>${ring(k.health_score)}<span class="ht"><b>${esc(String(k.health_label || '').replace(/^[^A-Za-z]+/, ''))}</b><span>Financial health, ${esc(k.health_score)} out of 100</span></span><span class="chev">${state.healthOpen ? '⌃' : '›'}</span></button>
     ${state.healthOpen ? `<ul class="checks">${tbl('AppHealth').map(h => `<li><span>${esc(h.Check)}<br><span class="small muted">${esc(h.Value)}</span></span><span class="st small ${tone(h.Status)}">${esc(String(h.Status).replace(/\s*–\s*/, ', '))}</span></li>`).join('')}</ul>` : ''}
-  </section>`;
+  </section>`
+  };
+  const fixed = ['remind1', 'remind2', 'token'].map(k => S[k]()).join('');
+  const order = homeLayout().filter(x => x.on && S[x.id]).map(x => x.id);
+  return order.map((id, j) => S[id]() + (j === 0 ? fixed : '')).join('\n') + (order.length ? '' : fixed)
+    + `<button class="secondary" data-gotab="homeedit" style="margin:4px 0 16px">Customise Home</button>`;
+}
+/* Home layout: which sections show, in what order (kept on this phone) */
+const HOME_SECTIONS = [['banks', 'Money in your banks'], ['worth', 'Net worth'], ['salary', 'Salary credited'], ['budget', 'Left to spend this month'],
+  ['quick', 'Quick buttons (add, receipt, invest, retirement)'], ['today', 'Stocks and funds today'], ['shortcuts', 'Shortcuts'], ['lowbal', 'Low balance warning'],
+  ['recent', 'Recent activity'], ['attention', 'Needs attention'], ['health', 'Financial health score']];
+function homeLayout() {
+  const saved = LS.get('homeLayout', null), ids = HOME_SECTIONS.map(x => x[0]);
+  if (!Array.isArray(saved)) return ids.map(id => ({ id, on: true }));
+  const out = saved.filter(x => ids.includes(x.id));
+  ids.forEach(id => { if (!out.some(x => x.id === id)) out.push({ id, on: true }); });       // new sections appear at the end
+  return out;
+}
+function viewHomeEdit() {
+  const L = homeLayout(), name = Object.fromEntries(HOME_SECTIONS);
+  return `<section class="card"><h2 style="margin-top:0">Customise Home</h2>
+    <p class="small muted" style="margin:0 0 10px">Tick what you want on Home and move it up or down. Reminders (missing statements, card bills to match, token expiry) always show.</p>
+    <div class="group" style="padding:2px 12px">${L.map((x, i) => `<div class="he-row"><label class="tick" style="flex:1;margin:0"><input type="checkbox" data-he-on="${i}" ${x.on ? 'checked' : ''}> ${esc(name[x.id])}</label>
+      <button class="he-mv" data-he-up="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">▲</button><button class="he-mv" data-he-dn="${i}" ${i === L.length - 1 ? 'disabled' : ''} aria-label="Move down">▼</button></div>`).join('')}</div>
+    <button class="primary" data-gotab="home">Done</button>
+    <button class="secondary" id="he-reset">Back to the standard layout</button></section>`;
+}
+function bindHomeEdit() {
+  const L = homeLayout(), save = () => { LS.set('homeLayout', L); render(); };
+  document.querySelectorAll('[data-he-on]').forEach(c => c.onchange = () => { L[Number(c.dataset.heOn)].on = c.checked; save(); });
+  document.querySelectorAll('[data-he-up]').forEach(b => b.onclick = () => { const i = Number(b.dataset.heUp); [L[i - 1], L[i]] = [L[i], L[i - 1]]; save(); });
+  document.querySelectorAll('[data-he-dn]').forEach(b => b.onclick = () => { const i = Number(b.dataset.heDn); [L[i + 1], L[i]] = [L[i], L[i + 1]]; save(); });
+  const r = document.getElementById('he-reset'); if (r) r.onclick = () => { LS.set('homeLayout', null); render(); };
 }
 
 function allTx() {
@@ -1426,10 +1488,10 @@ async function refreshTrades() {
    ====================================================================== */
 const DOCS = { sips: 'app/sips.json', bills: 'app/bills.json', goals: 'app/goals.json', profile: 'app/profile.json', coaching: 'app/coaching.json', shared: 'app/shared.json', family: 'app/family.json' };
 async function loadDocs() {
-  for (const k of Object.keys(DOCS)) {
+  await Promise.all(Object.keys(DOCS).map(async k => {
     try { const r = await GH.call('GET', DOCS[k], { raw: true }); if (r.ok) { const j = await r.json(); if (Array.isArray(j) || (j && typeof j === 'object')) state.docs[k] = j; } else if (r.status === 404 && state.docs[k] == null) state.docs[k] = /profile|coaching|family|emergency|advtax/.test(k) ? {} : []; }
     catch (e) { /* keep the copy on this phone */ }
-  }
+  }));
   LS.set('docs', state.docs);
 }
 async function saveDoc(k, msg) { await GH.putJson(DOCS[k], state.docs[k], msg || `Update ${k}`); LS.set('docs', state.docs); }
