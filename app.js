@@ -1066,7 +1066,7 @@ function tradeLog() {
 /* Long-term gain watch: every stock you hold, lots older than 1 year (FIFO), worth more than they cost.
    The notification job does the same check on every price update and tells you once per crossing. */
 function longTermWatch() {
-  const isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
+  const isStock = h => !/debt|gilt|liquid|bond/i.test((h.type || '') + ' ' + h.name);      // stocks and equity funds
   const log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const now = new Date(), yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
   return invHoldings().filter(h => h.units > 1e-6 && isStock(h)).map(h => {
@@ -1088,9 +1088,9 @@ function viewLongTerm() {
   const w = longTermWatch(); if (!w.length) return '';
   const ready = w.filter(x => x.gain > 0);
   return `<section class="sec box"><div class="sec-h"><h3>Long-term gain watch</h3><span class="small muted">automatic</span></div>
-    <p class="small muted" style="margin:-4px 0 8px">Every stock you hold is watched. When shares you’ve held for more than a year are worth more than you paid, your phone gets a notification straight after the next price update (hourly while the market is open).</p>
-    ${ready.length ? `<p class="small good" style="margin:0 0 8px">${ready.length} stock${ready.length === 1 ? '' : 's'} in long-term gain now.</p>` : ''}
-    ${w.map(x => `<div class="kv"><span>${esc(x.h.name)}<br><span class="small muted">${x.units > 0 ? `${fUnits(x.units)} of ${fUnits(x.h.units)} shares over 1 year · cost ${inr(x.cost)}` : 'No shares over 1 year yet'}${x.next ? ` · ${fUnits(x.nextUnits)} more turn 1 year on ${fDay(x.next)}` : ''}</span></span>
+    <p class="small muted" style="margin:-4px 0 8px">Every stock and equity fund you hold is watched. When units you’ve held for more than a year are worth more than you paid, your phone gets a notification straight after the next price update (hourly while the market is open).</p>
+    ${ready.length ? `<p class="small good" style="margin:0 0 8px">${ready.length} holding${ready.length === 1 ? '' : 's'} in long-term gain now.</p>` : ''}
+    ${w.map(x => `<div class="kv"><span>${esc(x.h.name)}<br><span class="small muted">${x.units > 0 ? `${fUnits(x.units)} of ${fUnits(x.h.units)} units over 1 year · cost ${inr(x.cost)}` : 'Nothing over 1 year yet'}${x.next ? ` · ${fUnits(x.nextUnits)} more turn 1 year on ${fDay(x.next)}` : ''}</span></span>
       <span class="num" style="text-align:right">${x.gain == null ? '<span class="muted">–</span>' : `<b class="${x.gain >= 0 ? 'good' : 'bad'}">${x.gain >= 0 ? '+' : '−'}${inr(Math.abs(x.gain))}</b><br><span class="small muted">${x.cost > 0 ? ((x.gain / x.cost) * 100).toFixed(1) + '%' : ''}</span>`}</span></div>`).join('')}
   </section>`;
 }
