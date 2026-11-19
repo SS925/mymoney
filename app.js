@@ -483,9 +483,39 @@ const SUGGEST = { 'Housing': 30000, 'Loans/EMI': 15000, 'Credit Card Bills': 240
   'Insurance': 4000, 'Subscriptions': 3000, 'Groceries': 2500, 'Food Online': 1000, 'Paytm': 1000, 'Utilities': 600, 'Medical': 1000,
   'Shopping': 1000, 'Travel': 500, 'Donation': 500, 'Amazon': 300, 'Bank Charges': 0, 'Cash': 0 };
 const FIXED = new Set(['Housing', 'Loans/EMI', 'Insurance']);
-function netPay() {
-  const m = String(kpis().salary_line || '').match(/\/\s*₹\s*([\d,]+)/);
-  return m ? Number(m[1].replace(/,/g, '')) : NaN;
+/* Monthly budget = the salary credited at the end of the PREVIOUS month. Part-time income and family transfers are kept aside. */
+function budgetYm() { const m = pDate(kpis().month); return m ? ymKey(m) : isoToday().slice(0, 7); }
+function payslipNet(label) {
+  const sh = sheetList().find(x => x.name === 'Payslips'); if (!sh || sh.rows.length < 2) return NaN;
+  const head = sh.rows[0].c, iM = head.indexOf('Month'), iN = head.indexOf('Net Pay'); if (iM < 0 || iN < 0) return NaN;
+  const r = sh.rows.slice(1).find(x => String(x.c[iM]).trim() === label); return r ? num(r.c[iN]) || NaN : NaN;
+}
+function netPay(ym) {
+  const [y, m] = String(ym || budgetYm()).split('-').map(Number), prev = new Date(y, m - 2, 1);
+  const v = payslipNet(`${MON[prev.getMonth()]} ${prev.getFullYear()}`); if (isFinite(v)) return v;
+  const mm = String(kpis().salary_line || '').match(/\/\s*₹\s*([\d,]+)/);         // fallback: latest payslip
+  return mm ? Number(mm[1].replace(/,/g, '')) : NaN;
+}
+const ASIDE_OUT = /^Family & Transfers$/i, ASIDE_IN = /^(Family Support|Other Income)$/i;
+function sideKeywords() { const sv = sideJobsSaved(); return (sv ? sv.jobs.map(j => j.keyword) : sheetTable('Side Income', /^Job$/, /^(Total|Used in plan)/).map(r => String(r['Bank keyword'] || '').trim())).filter(k => k && k.length >= 3).map(k => k.toUpperCase()); }
+function budgetSpent(ym) {
+  ym = ym || budgetYm(); let spent = 0;
+  for (const t of allTx()) if (t.Type === 'Expenses' && String(t.Date).startsWith(ym) && !ASIDE_OUT.test(t.Category || '')) spent += Math.abs(n(t.Amount) || 0);
+  return spent;
+}
+function budgetAside(ym) {
+  ym = ym || budgetYm(); const kw = sideKeywords(); let familyOut = 0, familyIn = 0, partTime = 0;
+  for (const t of allTx()) {
+    if (!String(t.Date).startsWith(ym)) continue; const a = Math.abs(n(t.Amount) || 0), d = String(t.Details || '').toUpperCase();
+    if (t.Type === 'Expenses' && ASIDE_OUT.test(t.Category || '')) familyOut += a;
+    else if (t.Type === 'Income' && kw.some(k => d.includes(k))) partTime += a;
+    else if (t.Type === 'Income' && /Family Support/i.test(t.Category || '')) familyIn += a;
+  }
+  return { familyOut, familyIn, partTime };
+}
+function asideNote(ym) {
+  const a = budgetAside(ym); if (!a.familyOut && !a.familyIn && !a.partTime) return '';
+  return `<p class="small muted" style="margin:8px 0 0">Kept aside, not in this budget: ${[a.partTime ? `part-time income ${inr(a.partTime)}` : '', a.familyIn ? `from family ${inr(a.familyIn)}` : '', a.familyOut ? `family transfers ${inr(a.familyOut)}` : ''].filter(Boolean).join(' · ')}.</p>`;
 }
 function budgetCats() { return tbl('AppBudget').map(r => r.Category).filter(Boolean); }
 function suggestedPlan() {
@@ -511,7 +541,7 @@ function monthProgress() {                                   // how far through 
 }
 function netPayCard(compact) {
   const k = kpis(), net = netPay(); if (!isFinite(net)) return '';
-  const p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0;
+  const p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent();
   const used = limit > 0 ? spent / limit : 0, left = limit - spent, mp = monthProgress(), m = pDate(k.month);
   const pace = !mp.complete && mp.done > 0 ? spent / mp.done : spent;
   const head = left < 0 ? `${inr(-left)}` : `${inr(left)}`;
@@ -519,11 +549,11 @@ function netPayCard(compact) {
   if (left >= 0 && mp.left > 0) sub += `, about <b>${inr(left / mp.left)}</b> a day for ${mp.left} days`;
   if (!mp.complete && mp.done < 1 && pace > limit && left >= 0) sub += `. At this pace you’ll reach ${inr(pace)}`;
   return `<section class="hero">
-    <div class="hero-top"><span>${m ? MONF[m.getMonth()] + ' ' + m.getFullYear() : ''}</span><span>Net pay ${inr(net)}</span></div>
+    <div class="hero-top"><span>${m ? MONF[m.getMonth()] + ' ' + m.getFullYear() : ''}</span><span>${m ? MON[new Date(m.getFullYear(), m.getMonth() - 1, 1).getMonth()] + ' salary' : 'Net pay'} ${inr(net)}</span></div>
     <p class="hero-k">${left < 0 ? 'Over your spending limit' : 'Left to spend this month'}</p>
     <h2 class="hero-v num">${head}</h2>
     <div class="meter ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i>${used > 1 ? `<span class="tick" style="left:${(100 / used).toFixed(1)}%"></span>` : ''}</div>
-    <p class="hero-s">${sub}.</p>
+    <p class="hero-s">${sub}.</p>${compact ? '' : asideNote()}
   </section>`;
 }
 
@@ -548,7 +578,7 @@ function viewHome() {
   const k = kpis(), m = pDate(k.month);
   const alerts = tbl('AppAlerts').map(x => String(x.Alert || '')).filter(x => /^[⚠ℹ]/.test(x)).filter(x => !(/over budget/i.test(x) && homeForecastCard()));
   const recent = allTx().slice(0, 3), ps = latestPayslip();
-  const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0, left = limit - spent;
+  const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent(), left = limit - spent;
   const qa = (attrs, icon, label) => `<${attrs.startsWith('href') ? 'a' : 'button'} class="qa" ${attrs}><span class="qa-i">${icon}</span><span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
   const S = {
     banks: () => `  ${(() => { const banks = bankAccounts().filter(a => a.type === 'Bank' || a.bal), tot = banks.reduce((x, a) => x + a.bal, 0);
@@ -559,7 +589,7 @@ function viewHome() {
     <p class="hero-s" style="margin:-6px 0 0">${banks.length} account${banks.length === 1 ? '' : 's'}${asOf ? ` · latest statement ${esc(asOf)}` : ''}</p>
     <div class="bank-list">${banks.map(a => `<div class="bank-row"><span>${esc(a.name)}<br><small>${esc(a.asOf || '–')}</small></span><b class="num">${inr(a.bal)}</b></div>`).join('')}</div>
     <div class="hero-tiles">
-      <div><span>Income${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(k.income_month)}</b></div>
+      <div><span>Budget${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(netPay())}</b></div>
       <div><span>Spent${m ? ', ' + MON[m.getMonth()] : ''}</span><b class="num">${inr(spent)}</b></div>
     </div>
   </section>`; })()}`,
@@ -1054,13 +1084,14 @@ function viewMoney() {
         <h2 class="hero-v num">${inr(tot)}</h2><p class="hero-s" style="margin:0">${rows.length} credits, by the date they reached your bank</p></section>
       <section class="sec box"><div class="sec-h"><h3>Where it came from</h3></div>${list.length ? bars(list, 'inc') : '<p class="small muted">No income this month yet.</p>'}</section>`;
   } else {
-    const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = n(k.spending_month) || 0, used = limit > 0 ? spent / limit : 0;
-    const list = tbl('AppBudget').filter(r => r.Category && n(r.Spent) > 0).map(r => ({ name: r.Category, v: n(r.Spent) })).sort((x, y) => y.v - x.v);
+    const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent(), used = limit > 0 ? spent / limit : 0;
+    const list = tbl('AppBudget').filter(r => r.Category && n(r.Spent) > 0 && !ASIDE_OUT.test(r.Category)).map(r => ({ name: r.Category, v: n(r.Spent) })).sort((x, y) => y.v - x.v);
     body = `<section class="hero"><div class="row"><p class="hero-k" style="margin:0">Total spent${m ? ' in ' + MONF[m.getMonth()] : ''}</p>
           ${isFinite(net) ? `<p class="hero-k" style="margin:0;text-align:right">Limit ${inr(limit)}</p>` : ''}</div>
         <h2 class="hero-v num">${inr(spent)}</h2>
         ${isFinite(net) ? `<div class="meter ${used > 1 ? 'over' : ''}"><i style="width:${Math.min(100, used * 100).toFixed(1)}%"></i></div>
-        <p class="hero-s">${used > 1 ? `${inr(spent - limit)} over your net-pay limit (${Math.round(used * 100)}%)` : `${inr(limit - spent)} left, ${Math.round(used * 100)}% of your net-pay limit used`}</p>` : ''}</section>
+        <p class="hero-s">${used > 1 ? `${inr(spent - limit)} over your net-pay limit (${Math.round(used * 100)}%)` : `${inr(limit - spent)} left, ${Math.round(used * 100)}% of your net-pay limit used`}</p>
+        <p class="small muted" style="margin:6px 0 0">Limit = ${(() => { const d = pDate(kpis().month); return d ? MONF[new Date(d.getFullYear(), d.getMonth() - 1, 1).getMonth()] : 'last month’s'; })()} salary ${inr(net)} − savings ${inr(Number(p.savings) || 0)}.</p>${asideNote()}` : ''}</section>
       <section class="sec box"><div class="sec-h"><h3>Where your money went</h3><button data-gotab="budget">Plan</button></div>${bars(list)}</section>
       <section class="sec"><div class="group"><button class="navrow" data-gotab="review"><span class="nt">${(() => { const d = pDate(kpis().month); return d ? MONF[d.getMonth()] : 'Monthly'; })()} review<br><span class="small muted">What went over and three things to change</span></span><span class="chev">›</span></button></div></section>
       ${viewForecast()}
@@ -2949,7 +2980,7 @@ function forecast() {
   return { now, salary, fixed, fixedNames, variable, end: now + salary - fixed - variable, endDate: end, asOf: be };
 }
 function spendForecast() {
-  const tx = allTx().filter(t => t.Type === 'Expenses'), ym = isoToday().slice(0, 7);
+  const tx = allTx().filter(t => t.Type === 'Expenses' && !ASIDE_OUT.test(t.Category || '')), ym = isoToday().slice(0, 7);
   const cur = tx.filter(t => String(t.Date).startsWith(ym)); if (!cur.length) return null;
   const asOf = cur.reduce((m, t) => String(t.Date).slice(0, 10) > m ? String(t.Date).slice(0, 10) : m, ''), day = Number(asOf.slice(8, 10));
   const spent = cur.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), now = new Date(), rest = [];
@@ -3223,7 +3254,7 @@ function viewAfford() {
     spendAvg ? [efAfter >= 3, `Emergency fund: ${efBefore.toFixed(1)} → ${efAfter.toFixed(1)} months of spending${efAfter < 3 ? ' (below 3 months)' : ''}`] : null,
     A.mode === 'emi' ? [emiShare == null || emiShare <= 0.4, `EMIs would take ${emiShare == null ? '–' : Math.round(emiShare * 100) + '%'} of your net pay${emiShare > 0.4 ? ' – more than the 40% lenders see as a stretch' : ''}`] : null,
     A.mode === 'emi' ? [interest <= price * 0.1, `Interest over ${nM} months: ${inr(interest)} (${price ? Math.round(interest / price * 100) : 0}% extra)`] : null,
-    limit != null ? [limit - (n(k.spending_month) || 0) - (A.mode === 'cash' ? price : emi) >= 0, `Left to spend this month after it: ${inr(limit - (n(k.spending_month) || 0) - (A.mode === 'cash' ? price : emi))}`] : null,
+    limit != null ? [limit - budgetSpent() - (A.mode === 'cash' ? price : emi) >= 0, `Left to spend this month after it: ${inr(limit - budgetSpent() - (A.mode === 'cash' ? price : emi))}`] : null,
   ].filter(Boolean) : [];
   const ok = checks.filter(c => c[0]).length;
   return `<section class="card"><h2 style="margin-top:0">Can I afford it?</h2>
@@ -4380,7 +4411,7 @@ function bindEduCalc() {
 /* glance: one small screen with the essentials */
 function viewGlance() {
   const k = kpis(), bal = bankAccounts().reduce((s, a) => s + a.bal, 0), next = statuses('bills').concat(statuses('sips')).filter(x => x.st.s === 'due').sort((a, b) => a.st.due - b.st.due)[0];
-  const today = portfolioToday(), net = netPay(), plan = activePlan(), lim = isFinite(net) ? net - (Number(plan.savings) || 0) : null, spent = n(k.spending_month) || 0;
+  const today = portfolioToday(), net = netPay(), plan = activePlan(), lim = isFinite(net) ? net - (Number(plan.savings) || 0) : null, spent = budgetSpent();
   return `<div class="glance">
     <div><span>In your banks</span><b class="num">${inr(bal)}</b></div>
     <div><span>Spent this month</span><b class="num">${inr(spent)}</b>${lim ? `<i class="${spent > lim ? 'bad' : 'good'}">${spent > lim ? 'over by ' + inr(spent - lim) : inr(lim - spent) + ' left'}</i>` : ''}</div>
