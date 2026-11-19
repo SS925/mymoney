@@ -999,8 +999,9 @@ function viewInvest() {
     </section>
     <section class="sec box">
       <div class="stack" style="margin:2px 0 12px">${parts.map(r => `<i style="width:${(r.v / (tot || 1) * 100).toFixed(1)}%;background:${COL[r.k]}"></i>`).join('')}</div>
-      ${parts.map(r => `<button class="worth-row" data-gotab="${go[r.k]}"><span class="wr-t"><b><i class="dot-c" style="background:${COL[r.k]}"></i>${esc(r.name)}</b>${r.sub ? `<small>${esc(r.sub.replace(/ · invested.*$/, ''))}</small>` : ''}</span>
+      ${parts.map(r => `<button class="worth-row" data-gotab="${go[r.k]}"><span class="wr-t"><b><i class="dot-c" style="background:${COL[r.k]}"></i>${esc(r.name)}</b>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</span>
         <span class="wr-v"><b class="num">${inr(r.v)}</b><small class="${r.gain == null ? '' : r.gain >= 0 ? 'good' : 'bad'}">${r.gain == null ? Math.round(r.v / (tot || 1) * 100) + '%' : (r.gain >= 0 ? '+' : '−') + inr(Math.abs(r.gain))}</small></span></button>`).join('')}
+      ${mkt.length ? (() => { const v = mkt.reduce((a, r) => a + r.v, 0), inv = v - gain; return `<button class="worth-row total" data-gotab="holdings"><span class="wr-t"><b>Mutual funds + stocks</b><small>invested ${inr(inv)}</small></span><span class="wr-v"><b class="num">${inr(v)}</b><small class="${gain >= 0 ? 'good' : 'bad'}">${gain >= 0 ? '+' : '−'}${inr(Math.abs(gain))}</small></span></button>`; })() : ''}
     </section>
     <button class="primary" data-gotab="trade">Add buy / sell</button>`;
 }
