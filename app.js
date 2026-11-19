@@ -1110,8 +1110,8 @@ function viewInvestFunds() {
     </section>
     ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
       ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${r.bonus || (r.pending && r.side === 'Buy' && !(Number(r.amount) > 0)) ? 'Bonus / split +' : esc(r.side) + ' '}${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
-        <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="linkbtn" data-trade-edit="${esc(r.id)}">Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
-          : r.row && !r.deleting ? `<br><button class="linkbtn" data-log-edit="${esc(r.row)}">Edit</button> · <button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
+        <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="edit-btn sm" data-trade-edit="${esc(r.id)}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
+          : r.row && !r.deleting ? `<br><button class="edit-btn sm" data-log-edit="${esc(r.row)}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button> · <button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
       ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}</section>` : ''}`;
 }
 function viewInvestPf() {
@@ -2214,7 +2214,7 @@ function viewCards() {
     <p class="small muted" style="margin:6px 4px 12px">A screenshot of the card page in your bank or CRED app. It’s read on this phone – the picture isn’t uploaded anywhere.</p>
     ${state.ccBusy ? `<p class="small" style="margin:0 4px 12px">${esc(state.ccBusy)}</p>` : ''}
     ${list.map((c, i) => { const l = Number(c.limit) || 0, o = Number(c.outstanding) || 0, u = l ? o / l : 0, dd = c.dueDate ? ccDays(c.dueDate) : null;
-      return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="chip" data-cc-edit="${i}">Update</button></div>
+      return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="edit-btn" data-cc-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Update</button></div>
         <div class="kv"><span>You owe</span><b class="num">${inr(o)}</b></div>
         <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
         ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
@@ -2482,7 +2482,7 @@ function viewLoans() {
       const n0 = loanMonths(bal, emi, mr), n1 = loanMonths(bal - p, emi, mr), saved = isFinite(n0) && isFinite(n1) ? emi * n0 - (emi * n1 + p) : 0;
       const end = new Date(); end.setMonth(end.getMonth() + (left || n0));
       if (ed && ed.i === i) return `<section class="sec box"><div class="sec-h"><h3>${esc(l.name)}</h3></div>${form(ed.l, i)}</section>`;
-      return `<section class="sec box"><div class="sec-h"><h3>${esc(l.name)}</h3><button class="chip" data-le-edit="${i}">Edit</button></div>
+      return `<section class="sec box"><div class="sec-h"><h3>${esc(l.name)}</h3><button class="edit-btn" data-le-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button></div>
         <div class="kv"><span>Still owed</span><span class="num">${inr(bal)}</span></div>
         <div class="kv"><span>EMI</span><span class="num">${inr(emi)}</span></div>
         <div class="kv"><span>EMIs left</span><span class="num">${left}</span></div>
@@ -2496,7 +2496,7 @@ function viewLoans() {
         <p class="small ${p ? 'good' : 'muted'}" style="margin:4px 0 0">${p ? `Ends ${n0 - n1} month${n0 - n1 === 1 ? '' : 's'} sooner and saves about ${inr(saved)} in interest` : 'Move the slider to see the interest you’d save'}</p></details>
       </section>`; }).join('') || '<p class="small muted" style="margin:12px 4px">No active loans – nice.</p>'}
     ${done.length ? `<section class="sec box"><div class="sec-h"><h3>Cleared</h3></div>${done.map(l => { const i = all.indexOf(l);
-      return ed && ed.i === i ? form(ed.l, i) : `<div class="kv"><span>${esc(l.name)}${l.borrowed ? `<br><span class="small muted">Borrowed ${inr(l.borrowed)}</span>` : ''}</span><span><span class="good">Closed ✓</span> <button class="linkbtn" data-le-edit="${i}">Edit</button></span></div>`; }).join('')}</section>` : ''}
+      return ed && ed.i === i ? form(ed.l, i) : `<div class="kv"><span>${esc(l.name)}${l.borrowed ? `<br><span class="small muted">Borrowed ${inr(l.borrowed)}</span>` : ''}</span><span><span class="good">Closed ✓</span> <button class="edit-btn sm" data-le-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button></span></div>`; }).join('')}</section>` : ''}
     <p class="note">EMIs left and cleared loans are saved to Excel’s Loans sheet the next time the workbook opens; new loans go under “Other loans (added in the app)”. The interest rate is only kept on this phone.</p>`;
 }
 function bindLoans() {

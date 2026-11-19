@@ -443,3 +443,9 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .cc-shot{display:flex;align-items:center;justify-content:center;cursor:pointer}
 .worth-row.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px}.worth-row.total b{font-weight:600}
 .seg.seg5{grid-template-columns:repeat(5,1fr)}.seg.seg5 button{font-size:13px;padding-left:2px;padding-right:2px;white-space:nowrap}
+.edit-btn,.sec-h .edit-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1px solid #3f74b3;background:rgba(63,116,179,.16);color:#a9cdf5;font-size:14px;font-weight:600;cursor:pointer;flex:none}
+.edit-btn:hover,.edit-btn:active,.sec-h .edit-btn:hover{background:rgba(63,116,179,.3)}
+.edit-btn.sm{padding:4px 11px;font-size:13px;margin-top:4px}
+.edit-btn .eb-i{flex:none}
+.sec-h .edit-btn{padding:7px 14px;border:1px solid #3f74b3;background:rgba(63,116,179,.16);color:#a9cdf5;font-size:14px}
+.row2 .secondary{border:1px solid var(--line)}
