@@ -1,7 +1,7 @@
 /* Offline support: the app files are cached; GitHub data is never cached here
    (the app keeps the last data it loaded in its own storage). */
-const CACHE = 'mymoney-v46';
-const FILES = ['./', 'index.html', 'receipts.html', 'styles.css', 'app.js', 'styles.css?v=46', 'app.js?v=46', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon.svg?v=2', 'icon-192.png?v=2', 'icon-512.png?v=2'];
+const CACHE = 'mymoney-v47';
+const FILES = ['./', 'index.html', 'receipts.html', 'styles.css', 'app.js', 'styles.css?v=47', 'app.js?v=47', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon.svg?v=2', 'icon-192.png?v=2', 'icon-512.png?v=2'];
 // 'reload' = never take old copies from the browser cache when installing a new version
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
