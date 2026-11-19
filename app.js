@@ -288,8 +288,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { newpay: 'New payees', spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -316,7 +316,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { newpay: viewNewPayees, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -352,6 +352,7 @@ function render() {
   if (state.tab === 'cover') bindCover();
   if (state.tab === 'sort') bindSort();
   if (state.tab === 'spends') bindSpends();
+  if (state.tab === 'newpay') bindNewPayees();
   if (state.tab === 'afford') bindAfford();
   if (state.tab === 'rent') bindRent();
   if (state.tab === 'routine') bindRoutine();
@@ -2278,6 +2279,7 @@ function viewCards() {
   const owe = sum('outstanding'), lim = sum('limit'), use = lim ? owe / lim : 0;
   const form = c => `<section class="card"><h2 style="margin-top:0">${ed.isNew ? 'Add a card' : 'Update ' + esc(c.name || 'card')}</h2>
       ${ed.fromShot ? `<p class="small ${ed.found ? 'good' : 'warn'}" style="margin:0 0 8px">${ed.found ? 'Read from your screenshot – check the numbers, then save.' : 'Couldn’t read much from that screenshot – fill in the rest.'}</p>` : ''}
+      ${ed.fromShot && (state.docs.ccards || []).length ? `<label class="f" for="cc-which">Which card is this?</label><select class="inp" id="cc-which">${(state.docs.ccards || []).map((x, k) => `<option value="${k}" ${!ed.isNew && ed.i === k ? 'selected' : ''}>${esc(x.name)}${x.last4 ? ' •• ' + esc(x.last4) : ''}</option>`).join('')}<option value="new" ${ed.isNew ? 'selected' : ''}>A new card</option></select>` : ''}
       <label class="f" for="cc-name">Card name</label><input class="inp" id="cc-name" value="${esc(c.name || '')}" placeholder="HDFC Millennia">
       <label class="f" for="cc-last4">Last 4 digits (optional)</label><input class="inp num" id="cc-last4" inputmode="numeric" maxlength="4" value="${esc(c.last4 || '')}" placeholder="1234">
       <div class="row2"><div><label class="f" for="cc-limit">Credit limit (₹)</label><input class="inp num" id="cc-limit" inputmode="decimal" value="${esc(c.limit ?? '')}"></div>
@@ -2298,6 +2300,7 @@ function viewCards() {
       return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="edit-btn" data-cc-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Update</button></div>
         <div class="kv"><span>You owe</span><b class="num">${inr(o)}</b></div>
         <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
+        ${c.dueDate ? `<a class="linkbtn" href="${esc(calLink(c))}" target="_blank" rel="noopener">📅 Add monthly due date to Google Calendar</a>` : ''}
         ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
         ${c.dueDate ? `<div class="kv"><span>Due ${esc(fDay(pDate(c.dueDate)))}${c.minDue ? ` · minimum ${inr(c.minDue)}` : ''}</span><span class="${dd != null && dd < 0 ? 'bad' : dd != null && dd <= 3 ? 'warn' : 'muted'}">${dd == null ? '' : dd < 0 ? `${-dd} days late` : dd === 0 ? 'today' : `in ${dd} days`}</span></div>` : ''}
         <p class="small muted" style="margin:6px 0 0">Updated ${c.updated ? esc(fDay(pDate(c.updated))) : '–'}${u > .3 ? ' · using more than 30% of the limit can lower your credit score' : ''}</p></section>`; }).join('') || '<div class="empty">No cards yet. Add one, or pick a screenshot of the card page in your bank or CRED app.</div>'}`;
@@ -2335,18 +2338,11 @@ function bindCards() {
   const add = $('cc-add'); if (add) add.onclick = () => { state.ccEdit = { isNew: true, item: { id: uid('cc') } }; render(); };
   bindCardPayPrompts();
   document.querySelectorAll('[data-cc-edit]').forEach(b => b.onclick = () => { state.ccEdit = { isNew: false, i: Number(b.dataset.ccEdit), item: { ...list[Number(b.dataset.ccEdit)] } }; render(); });
-  const f = $('cc-file'); if (f) f.onchange = async () => {
-    const file = f.files && f.files[0]; if (!file) return;
-    state.ccBusy = 'Reading the screenshot… (the first time takes a few seconds)'; render();
-    try {
-      const p = parseCardText(await ocrImage(file)), found = ['outstanding', 'limit', 'minDue', 'dueDate'].some(k => p[k] != null);
-      const i = list.findIndex(c => (p.last4 && c.last4 === p.last4) || (p.bank && new RegExp(p.bank, 'i').test(c.name || '')));
-      const base = i >= 0 ? { ...list[i] } : { id: uid('cc'), name: p.bank ? p.bank + ' card' : '' };
-      for (const k of ['outstanding', 'limit', 'minDue', 'dueDate', 'last4']) if (p[k] != null && p[k] !== '') base[k] = p[k];
-      state.ccEdit = { isNew: i < 0, i, item: base, fromShot: true, found };
-    } catch (e) { toast(e.message || 'Couldn’t read that picture'); }
-    state.ccBusy = null; render();
-  };
+  const f = $('cc-file'); if (f) f.onchange = () => { const file = f.files && f.files[0]; if (file) cardFromShot(file); };
+  const pick = $('cc-which'); if (pick) pick.onchange = () => { const e = state.ccEdit, v = pick.value;
+    if (v === 'new') { e.isNew = true; e.i = -1; e.item = Object.assign({ id: uid('cc'), name: e.guess ? e.guess + ' card' : '' }, e.read); }
+    else { e.isNew = false; e.i = Number(v); e.item = Object.assign({ ...list[e.i] }, e.read); }
+    render(); };
   const sv = $('cc-save'); if (sv) sv.onclick = async () => {
     const e = state.ccEdit, it = e.item, n = id => { const v = $(id).value.replace(/[,₹\s]/g, ''); return v === '' ? null : Number(v); };
     it.name = $('cc-name').value.trim(); it.last4 = $('cc-last4').value.replace(/\D/g, '').slice(0, 4);
@@ -2514,6 +2510,7 @@ function viewGains() {
       ${hv.plan.length ? hv.plan.map(p => `<div class="kv"><span>${esc(p.name)}<br><span class="small muted">sell ${p.all ? 'all ' : ''}${fUnits(p.units)} ${p.isFund ? 'units' : 'shares'} held over a year (about ${inr(p.value)})</span></span><span class="num good">+${inr(p.gain)}</span></div>`).join('')
         + `<p class="small muted" style="margin:8px 0 0">Selling these and buying back straight away books ${inr(hv.used)} of gain tax-free and raises your cost, so less tax later. Do it before 31 March. Check exit loads on funds; brokerage and STT apply.</p>`
         : '<p class="small muted" style="margin:0">Nothing in long-term gain right now.</p>'}</section>` : ''}
+    ${cur ? viewLossPlan(fy) : ''}
     <section class="sec box"><div class="sec-h"><h3>Each redemption</h3></div>
       ${g.rows.map(x => `<div class="gain-row"><div class="gr-h"><span><b>${esc(x.name.replace(/\s+(Fund|Direct|Growth).*$/i, ''))}</b><br><span class="small muted">${esc(fDay(pDate(x.sell)))} · ${esc(x.plat)} · ${fUnits(x.units)} units · ${inr(x.proceeds)}</span></span>${sg(x.gain)}</div>
         <div class="gr-s">${x.lt.units > 1e-9 ? `<span>Long-term ${fUnits(x.lt.units)} units <b class="num">${x.ltGain >= 0 ? '+' : '−'}${inr(Math.abs(x.ltGain))}</b></span>` : ''}${x.st.units > 1e-9 ? `<span>Short-term ${fUnits(x.st.units)} units <b class="num">${x.stGain >= 0 ? '+' : '−'}${inr(Math.abs(x.stGain))}</b></span>` : ''}${x.debt ? '<span>Debt fund – slab rate</span>' : ''}${x.missing > 1e-6 ? `<span class="warn">${fUnits(x.missing)} units: buy not found</span>` : ''}</div>
@@ -3310,7 +3307,7 @@ function routineItems() {
     { id: 'excel', t: 'Open Excel on the PC so it takes everything in', auto: true, ok: !!pushed && (Date.now() - pushed) < 3 * DAY, tab: 'home' },
     { id: 'cards', t: 'Update what you owe on each credit card', auto: true, ok: !cards.length || cards.every(c => String(c.updated || '') >= ym + '-01' && c.outstanding != null), tab: 'ccards', hint: cards.length ? cards.filter(c => !(String(c.updated || '') >= ym + '-01' && c.outstanding != null)).map(c => c.name).join(', ') : '' },
     { id: 'match', t: 'Match card bill payments to cards', auto: true, ok: !cardPayments().length, tab: 'ccards' },
-    { id: 'sort', t: 'Sort new “UPI – Other” payees', auto: false, ok: !!done.sort, tab: 'sort' },
+    (() => { const np = state.data ? newPayees().length : 0; return { id: 'sort', t: 'Sort new UPI payees', auto: true, ok: !np, tab: 'newpay', hint: np ? `${np} new payee${np === 1 ? '' : 's'} to sort` : '' }; })(),
     { id: 'review', t: `Look over ${ymLabel(last)}: spending, budget and goals`, auto: false, ok: !!done.review, tab: 'review' },
   ];
 }
@@ -3328,6 +3325,116 @@ function viewRoutine() {
 }
 function bindRoutine() {
   document.querySelectorAll('[data-rt-tick]').forEach(b => b.onclick = () => { const ym = isoToday().slice(0, 7), all = LS.get('routine', {}), m = all[ym] || (all[ym] = {}); m[b.dataset.rtTick] = !m[b.dataset.rtTick]; LS.set('routine', all); render(); });
+}
+
+/* ======================================================================
+   New payees: UPI payees paid for the first time last month or this month, still in "UPI – Other"
+   ====================================================================== */
+function newPayees() {
+  const now = new Date(), from = ymKey(new Date(now.getFullYear(), now.getMonth() - 1, 1)) + '-01', first = {}, g = {};
+  for (const t of allTx()) {
+    if (t.Type !== 'Expenses') continue;
+    const p = upiParts(t.Details).payee; if (!p || !/UPI\//i.test(String(t.Details))) continue;
+    const k = p.trim().toUpperCase(), d = String(t.Date).slice(0, 10);
+    if (!first[k] || d < first[k]) first[k] = d;
+    if (d >= from && /UPI – Other|Uncategorised/.test(t.Category || '')) { const o = g[k] || (g[k] = { payee: p.trim(), n: 0, sum: 0, last: t }); o.n++; o.sum += Math.abs(n(t.Amount)); if (t.Date > o.last.Date) o.last = t; }
+  }
+  return Object.entries(g).filter(([k]) => first[k] >= from).map(([k, o]) => ({ ...o, first: first[k] })).sort((a, b) => b.sum - a.sum);
+}
+function viewNewPayees() {
+  const gs = newPayees(), cats = catsFor('Expenses').filter(c => !/UPI – Other/.test(c));
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">New payees since ${esc(ymLabel(ymKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1))))}</p>
+      <h2 class="hero-v">${gs.length ? gs.length + ' to sort' : 'All sorted'}</h2>
+      <p class="hero-s" style="margin:0">People and shops you paid for the first time. Pick a category once – future payments to them follow.</p></section>
+    <section class="sec box">${gs.map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(nickOf(x.payee) || x.payee.replace(/\b\w+/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase()))}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · first ${esc(fDay(pDate(x.first)))}</span></span><b class="num">${inr(x.sum)}</b></div>
+        <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-np-cat="${i}"><option value="">Choose category…</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select>
+        <button class="chip" data-np-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted" style="margin:0">Nothing new to sort. 🎉</p>'}</section>
+    <p class="note">Older payees: Money › Sort UPI.</p>`;
+}
+function bindNewPayees() {
+  const gs = newPayees();
+  document.querySelectorAll('[data-np-go]').forEach(b => b.onclick = async () => {
+    const g = gs[Number(b.dataset.npGo)], sel = document.querySelector(`[data-np-cat="${b.dataset.npGo}"]`);
+    if (!sel.value) { toast('Choose a category first'); return; }
+    if (g.payee.length < 3) { toast('Payee name too short to match safely'); return; }
+    b.disabled = true; b.textContent = 'Saving…';
+    const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, keyword: g.payee.slice(0, 60),
+      direction: 'Debit', type: 'Expenses', category: sel.value, scope: 'payee', tx: txKey(g.last), note: 'New payee sorted from phone', createdAt: now.toISOString() };
+    try { await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`); state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats); toast(`${g.payee} → ${sel.value}`); render(); }
+    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; b.textContent = 'Save'; }
+  });
+}
+
+/* ======================================================================
+   Book losses: sell loss-making units and buy back, to cancel this year's taxable gains
+   ====================================================================== */
+function lossPlan(fy) {
+  const g = gainsSummary(realisedGains(), fy), log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const yearAgo = (() => { const d = new Date(); return ymKey(new Date(d.getFullYear() - 1, d.getMonth(), 1)) + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const items = [];
+  for (const h of invHoldings().filter(h => h.units > 1e-6 && h.price > 0 && !/debt|gilt|liquid|bond/i.test((h.type || '') + ' ' + h.name))) {
+    const lots = [];
+    for (const r of log.filter(r => String(r.name).toLowerCase() === h.name.toLowerCase())) {
+      if (r.side === 'Buy') { lots.push({ date: String(r.date).slice(0, 10), units: Number(r.units), cost: Number(r.amount) || 0 }); continue; }
+      let u = Number(r.units);
+      while (u > 1e-9 && lots.length) { const l = lots[0], take = Math.min(u, l.units); l.cost -= l.cost * take / l.units; l.units -= take; u -= take; if (l.units < 1e-9) lots.shift(); }
+    }
+    const loss = lots.map(l => ({ ...l, value: l.units * h.price })).filter(l => l.value < l.cost - 0.5);
+    if (!loss.length || loss.reduce((x, l) => x + l.cost - l.value, 0) < 50) continue;   // skip tiny losses
+    const st = loss.filter(l => l.date > yearAgo), lt = loss.filter(l => l.date <= yearAgo), s = (a, f) => a.reduce((x, l) => x + f(l), 0);
+    items.push({ name: h.name, isStock: /stock|share|etf/i.test(h.type || '') || !/^\d+$/.test(h.code || ''), units: s(loss, l => l.units), value: s(loss, l => l.value),
+      stLoss: s(st, l => l.cost - l.value), ltLoss: s(lt, l => l.cost - l.value), allUnits: h.units, price: h.price });
+  }
+  items.sort((a, b) => (b.stLoss + b.ltLoss) - (a.stLoss + a.ltLoss));
+  const stLoss = items.reduce((a, x) => a + x.stLoss, 0), ltLoss = items.reduce((a, x) => a + x.ltLoss, 0);
+  // set-off: short-term losses against short-term gains first, then taxable long-term; long-term losses only against long-term
+  const useSt = Math.min(stLoss, g.stNet), stLeft = stLoss - useSt, ltTaxable = g.ltTaxable;
+  const useLt = Math.min(ltLoss, ltTaxable), useSt2 = Math.min(stLeft, ltTaxable - useLt);
+  const save = (useSt * 0.20 + (useLt + useSt2) * 0.125) * 1.04, carry = stLoss + ltLoss - useSt - useLt - useSt2;
+  return { g, items, stLoss, ltLoss, save, carry, useSt, gainToCancel: g.stNet + g.ltTaxable };
+}
+function viewLossPlan(fy) {
+  const L = lossPlan(fy); if (!L.items.length) return '';
+  return `<section class="sec box noprint"><div class="sec-h"><h3>Book losses to save tax</h3></div>
+    <p style="margin:0 0 8px">${L.gainToCancel > 0 ? `You have <b class="num">${inr(L.gainToCancel)}</b> of taxable gain this year. ` : 'No taxable gain this year yet, so losses only carry forward. '}
+      Your holdings below are in loss: <b class="num bad">${inr(L.stLoss + L.ltLoss)}</b> (short-term ${inr(L.stLoss)}, long-term ${inr(L.ltLoss)}).</p>
+    ${L.items.map(x => `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">sell ${x.units >= x.allUnits - 1e-6 ? 'all ' : ''}${fUnits(x.units)} ${x.isStock ? 'shares' : 'units'} (about ${inr(x.value)})${x.stLoss && x.ltLoss ? ' · short and long-term' : x.ltLoss ? ' · long-term' : ' · short-term'}</span></span><span class="num bad">−${inr(x.stLoss + x.ltLoss)}</span></div>`).join('')}
+    <div class="kv"><span><b>Tax saved this year</b></span><b class="num good">${inr(L.save)}</b></div>
+    <div class="kv"><span>Loss carried forward (8 years)<br><span class="small muted">only if you file your ITR by 31 July</span></span><span class="num">${inr(L.carry)}</span></div>
+    <p class="small muted" style="margin:8px 0 0">Sell, then buy the same back the next trading day – you keep your holdings, and the loss is booked. Do it before 31 March. Short-term losses cancel any gain; long-term losses only cancel long-term gains. Brokerage, STT and fund exit loads apply.</p></section>`;
+}
+
+/* ======================================================================
+   Card screenshot → card dues (also used when a picture is shared to MyMoney)
+   ====================================================================== */
+async function cardFromShot(file) {
+  const list = state.docs.ccards || (state.docs.ccards = []);
+  state.tab = 'ccards'; state.ccBusy = 'Reading the screenshot… (the first time takes a few seconds)'; render();
+  try {
+    const p = parseCardText(await ocrImage(file)), found = ['outstanding', 'limit', 'minDue', 'dueDate'].some(k => p[k] != null);
+    const i = list.findIndex(c => (p.last4 && c.last4 === p.last4) || (p.bank && new RegExp(p.bank, 'i').test(c.name || '')));
+    const read = {}; for (const k of ['outstanding', 'limit', 'minDue', 'dueDate', 'last4']) if (p[k] != null && p[k] !== '') read[k] = p[k];
+    const base = Object.assign(i >= 0 ? { ...list[i] } : { id: uid('cc'), name: p.bank ? p.bank + ' card' : '' }, read);
+    state.ccEdit = { isNew: i < 0, i, item: base, fromShot: true, found, read, guess: p.bank || '' };
+  } catch (e) { toast(e.message || 'Couldn’t read that picture'); }
+  state.ccBusy = null; render();
+}
+async function handleSharedImage() {
+  if (!/(^|[?&])shared=image\b/.test(location.search)) return;
+  history.replaceState(null, '', location.pathname);
+  try {
+    const c = await caches.open('mymoney-share'), r = await c.match('shared-image'); if (!r) { toast('Couldn’t find the shared picture – try again'); return; }
+    const blob = await r.blob(); await c.delete('shared-image');
+    const wait = () => state.data ? cardFromShot(new File([blob], 'shared.png', { type: blob.type || 'image/png' })) : setTimeout(wait, 400);
+    wait();
+  } catch (e) { toast('Couldn’t open the shared picture'); }
+}
+function calLink(c) {
+  const d = pDate(c.dueDate); if (!d) return '';
+  const ymd = x => `${x.getFullYear()}${String(x.getMonth() + 1).padStart(2, '0')}${String(x.getDate()).padStart(2, '0')}`, nx = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: `💳 ${c.name} bill due`, dates: `${ymd(d)}/${ymd(nx)}`, recur: `RRULE:FREQ=MONTHLY;BYMONTHDAY=${d.getDate()}`,
+    details: 'Credit card payment due. Pay the full amount to avoid interest. Added from MyMoney.' });
+  return 'https://calendar.google.com/calendar/render?' + q.toString();
 }
 
 /* ======================================================================
@@ -4540,6 +4647,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localh
 { const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
 applyTheme();
 handleShared();
+handleSharedImage();
 handleFamilyLink();
 if (location.hash === '#voice' && state.cfg) { history.replaceState(null, '', location.pathname); state.tab = 'add'; setTimeout(() => { if (voiceSupported()) startVoice(); }, 600); }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(v => v || navigator.storage.persist()).then(v => { state.storageSafe = !!v; }).catch(() => {});
