@@ -1003,7 +1003,7 @@ function viewInvest() {
         <span class="wr-v"><b class="num">${inr(r.v)}</b><small class="${r.gain == null ? '' : r.gain >= 0 ? 'good' : 'bad'}">${r.gain == null ? Math.round(r.v / (tot || 1) * 100) + '%' : (r.gain >= 0 ? '+' : '−') + inr(Math.abs(r.gain))}</small></span></button>`).join('')}
       ${mkt.length ? (() => { const v = mkt.reduce((a, r) => a + r.v, 0), inv = v - gain; return `<button class="worth-row total" data-gotab="holdings"><span class="wr-t"><b>Mutual funds + stocks</b><small>invested ${inr(inv)}</small></span><span class="wr-v"><b class="num">${inr(v)}</b><small class="${gain >= 0 ? 'good' : 'bad'}">${gain >= 0 ? '+' : '−'}${inr(Math.abs(gain))}</small></span></button>`; })() : ''}
     </section>
-    <button class="primary" data-gotab="trade">Add buy / sell</button>`;
+    <div style="height:64px"></div><button class="fab" data-newtrade><span>＋</span> Add buy / sell</button>`;
 }
 function viewHoldings() {
   const hs = invHoldings().filter(h => h.units > 1e-6), isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
@@ -1013,7 +1013,8 @@ function viewHoldings() {
     return `<div class="worth-row ${cls || ''}"><span class="wr-t"><b>${name}</b><small>invested ${inr(g.inv)}</small></span><span class="wr-v"><b class="num">${inr(g.val)}</b><small class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : '−'}${inr(Math.abs(d))} (${d >= 0 ? '+' : '−'}${Math.abs(pc).toFixed(1)}%)</small></span></div>`; };
   return `<section class="sec box">${row(`Mutual funds <span class="small muted">${f.n}</span>`, f)}${row(`Stocks <span class="small muted">${st.n}</span>`, st)}${row('Funds + stocks', all, 'total')}</section>
     ${viewInvestFunds()}${viewInvestChart()}
-    <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>`;
+    <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>
+    <div style="height:64px"></div><button class="fab" data-newtrade><span>＋</span> Add buy / sell</button>`;
 }
 /* ---------------- Investments: holdings at latest prices, buy / sell from the phone ---------------- */
 const INV_TYPES = ['Equity MF', 'Index fund', 'ELSS (tax saver)', 'Small / Mid cap MF', 'Hybrid MF', 'Debt MF', 'Stock', 'ETF', 'Gold'];
@@ -1381,6 +1382,7 @@ function bindInvest() {
     try { await GH.remove(`tradedel/${d.id}.json`, 'Undo delete'); state.tradeDels = state.tradeDels.filter(x => x !== d); LS.set('tradeDels', state.tradeDels); render(); } catch (e) { toast(e.message || 'Couldn’t reach GitHub'); }
   });
   const de = document.getElementById('log-del-empty'); if (de) de.onclick = () => { if (!confirmInline(de)) { de.textContent = 'Tap again to delete the empty rows'; return; } deleteLogRows(logRows().filter(r => r.empty && !r.deleting)); };
+  document.querySelectorAll('[data-newtrade]').forEach(b => b.onclick = () => { state.trade = newTrade(); state.tradeFromAdd = false; state.tab = 'trade'; window.scrollTo(0, 0); render(); });
   document.querySelectorAll('[data-trade-edit]').forEach(b => b.onclick = () => editTrade(b.dataset.tradeEdit));
   document.querySelectorAll('[data-log-edit]').forEach(b => b.onclick = () => { const r = tradeLog().find(x => !x.pending && String(x.row) === b.dataset.logEdit); if (r) editLogRow(r); });
   document.querySelectorAll('[data-hcode]').forEach(b => b.onclick = () => { const h = invHoldings().find(x => x.name === b.dataset.hcode); if (!h) return;
