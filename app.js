@@ -1983,7 +1983,9 @@ function parseTxnText(txt) {
   });
   return out.sort((a, b) => a.date.localeCompare(b.date) || b.order - a.order);
 }
+function isStockName(name) { return /\b(limited|ltd)\b\.?/i.test(name) && !/\b(fund|scheme|plan|etf)\b/i.test(name); }
 function mfType(name) {
+  if (isStockName(name)) return 'Stock';
   return /elss|tax saver/i.test(name) ? 'ELSS (tax saver)' : /index|nifty|sensex/i.test(name) ? 'Index fund' : /small|mid ?cap/i.test(name) && !/large/i.test(name) ? 'Small / Mid cap MF'
     : /hybrid|balanced/i.test(name) ? 'Hybrid MF' : /debt|liquid|gilt|bond/i.test(name) ? 'Debt MF' : 'Equity MF';
 }
@@ -2096,8 +2098,8 @@ function viewImportTxns(im) {
   const T = im.txns, fresh = T.rows.filter(r => !r.dup), over = fresh.filter(r => r.over), dups = T.rows.length - fresh.length;
   const take = fresh.filter(r => !r.over || T.anyway);
   return `<div class="sec-h" style="margin-top:14px"><h3>Price codes</h3></div>
-    <div class="group">${Object.entries(T.funds).map(([nm, f], i) => `<div class="kv" style="align-items:flex-start"><span>${esc(nm)}<br><span class="small ${f.code ? 'muted' : 'warn'}">${f.looking ? 'Finding the AMFI code…' : f.code ? esc(f.match) : 'Not found – type the AMFI code, or add it later with Edit'}</span>${f.held ? `<br><span class="small warn">Already holding ${fUnits(f.held)} units – make sure these aren’t the same buys</span>` : ''}</span>
-      <input class="inp" style="width:96px;margin:0" inputmode="numeric" data-imcode="${i}" value="${esc(f.code)}" placeholder="code" aria-label="AMFI code for ${esc(nm)}"></div>`).join('')}</div>
+    <div class="group">${Object.entries(T.funds).map(([nm, f], i) => `<div class="kv" style="align-items:flex-start"><span>${esc(nm)}<br><span class="small ${f.code ? 'muted' : 'warn'}">${f.looking ? 'Finding the AMFI code…' : f.code ? esc(f.match) : isStockName(nm) ? 'Share – type its NSE symbol (e.g. ITC) or BSE:code' : 'Not found – type the AMFI code, or add it later with Edit'}</span>${f.held ? `<br><span class="small warn">Already holding ${fUnits(f.held)} units – make sure these aren’t the same buys</span>` : ''}</span>
+      <input class="inp" style="width:110px;margin:0" autocapitalize="characters" data-imcode="${i}" value="${esc(f.code)}" placeholder="code" aria-label="AMFI code for ${esc(nm)}"></div>`).join('')}</div>
     <div class="sec-h" style="margin-top:14px"><h3>${fresh.length} new row${fresh.length === 1 ? '' : 's'}</h3>${dups ? `<span class="small muted">${dups} already added</span>` : ''}</div>
     <div class="group">${T.rows.map(r => `<div class="kv ${r.dup || (r.over && !T.anyway) ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.over ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.side} ${fUnits(r.units)} units at ₹${r.nav}${r.dup ? ' · already added' : r.over ? ` · ${fUnits(r.short)} more units sold than bought before this` : ''}</span></span><span class="num ${r.side === 'Sell' ? 'good' : ''}">${r.side === 'Sell' ? '+' : ''}${inr(r.amount)}</span></div>`).join('')}</div>
     ${over.length ? `<p class="small warn">${over.length} sell${over.length === 1 ? '' : 's'} sold more units than the buys in this list – older buys are probably missing from what you copied. They’re skipped so the fund doesn’t go below zero.</p>
@@ -2115,7 +2117,7 @@ function bindImport() {
       Object.entries(im.txns.funds).forEach(async ([nm, f]) => {
         const known = invHoldings().find(h => h.name.toLowerCase() === nm.toLowerCase() && h.code);
         const lastNav = [...im.txns.rows].reverse().find(x => x.name === nm && x.nav > 0);
-        const r = known ? { code: known.code, match: 'Code you already use' } : await findMfCode(nm, lastNav ? lastNav.nav : 0);
+        const r = known ? { code: known.code, match: 'Code you already use' } : isStockName(nm) ? { code: '', match: 'Share – type its NSE symbol (e.g. ITC) or BSE:code' } : await findMfCode(nm, lastNav ? lastNav.nav : 0);
         f.looking = false; if (r) { f.code = r.code; f.match = r.match + (r.unsure ? ' – NAV doesn’t match your history, check this code' : ''); }
         if (state.imp === im && state.tab === 'import') render();
       });
@@ -2125,7 +2127,7 @@ function bindImport() {
   };
   const T = im.txns;
   if (T) {
-    const keepCodes = () => document.querySelectorAll('[data-imcode]').forEach(i => { const f = Object.values(T.funds)[Number(i.dataset.imcode)]; f.code = i.value.trim().replace(/\D/g, ''); });
+    const keepCodes = () => document.querySelectorAll('[data-imcode]').forEach(i => { const k = Object.keys(T.funds)[Number(i.dataset.imcode)], f = T.funds[k]; f.code = isStockName(k) ? i.value.trim().toUpperCase().replace(/[^A-Z0-9:&-]/g, '') : i.value.trim().replace(/\D/g, ''); });
     document.querySelectorAll('[data-imcode]').forEach(i => i.onchange = keepCodes);
     const aw = $('im-anyway'); if (aw) aw.onchange = () => { keepCodes(); im.text = $('im-text').value; T.anyway = aw.checked; render(); };
     const sv = $('im-save-tx'); if (sv) sv.onclick = async () => {
