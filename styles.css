@@ -459,3 +459,4 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .gr-h{display:flex;justify-content:space-between;gap:10px}
 .gr-s{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px;color:var(--muted)}
 .gr-s b{color:var(--text);font-weight:600}
+.he-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}.he-row:last-child{border-bottom:0}.he-mv{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--text);font-size:13px;cursor:pointer}.he-mv:disabled{opacity:.3}
