@@ -1006,7 +1006,13 @@ function viewInvest() {
     <button class="primary" data-gotab="trade">Add buy / sell</button>`;
 }
 function viewHoldings() {
-  return `${viewInvestFunds()}${viewInvestChart()}
+  const hs = invHoldings().filter(h => h.units > 1e-6), isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
+  const grp = l => ({ inv: l.reduce((a, h) => a + (Number(h.invested) || 0), 0), val: l.reduce((a, h) => a + (Number(h.value) || 0), 0), n: l.length });
+  const f = grp(hs.filter(h => !isStock(h))), st = grp(hs.filter(isStock)), all = { inv: f.inv + st.inv, val: f.val + st.val };
+  const row = (name, g, cls) => { const d = g.val - g.inv, pc = g.inv ? d / g.inv * 100 : 0;
+    return `<div class="worth-row ${cls || ''}"><span class="wr-t"><b>${name}</b><small>invested ${inr(g.inv)}</small></span><span class="wr-v"><b class="num">${inr(g.val)}</b><small class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : '−'}${inr(Math.abs(d))} (${d >= 0 ? '+' : '−'}${Math.abs(pc).toFixed(1)}%)</small></span></div>`; };
+  return `<section class="sec box">${row(`Mutual funds <span class="small muted">${f.n}</span>`, f)}${row(`Stocks <span class="small muted">${st.n}</span>`, st)}${row('Funds + stocks', all, 'total')}</section>
+    ${viewInvestFunds()}${viewInvestChart()}
     <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>`;
 }
 /* ---------------- Investments: holdings at latest prices, buy / sell from the phone ---------------- */
