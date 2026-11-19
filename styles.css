@@ -449,3 +449,8 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .edit-btn .eb-i{flex:none}
 .sec-h .edit-btn{padding:7px 14px;border:1px solid #3f74b3;background:rgba(63,116,179,.16);color:#a9cdf5;font-size:14px}
 .row2 .secondary{border:1px solid var(--line)}
+.cc-pay{padding:10px 0;border-bottom:1px solid var(--line)}
+.cc-pay:last-of-type{border-bottom:0}
+.cc-pay-b{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cc-pay-b .secondary,.cc-pay-b .edit-btn{margin:0;width:auto;padding:7px 14px}
+@media print{.noprint{display:none!important}}

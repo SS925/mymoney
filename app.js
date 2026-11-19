@@ -26,7 +26,7 @@ const state = {
   trades: LS.get('trades', []), tradeDels: LS.get('tradeDels', []),     // buys/sells saved on the phone (trades/*.json), not yet in Excel
   prices: LS.get('prices', null),   // prices.json from the daily GitHub price check
   trade: null,
-  balSaved: LS.get('balSaved', null), pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
+  balSaved: LS.get('balSaved', null), mfh: LS.get('mfh', null), gainsFy: null, pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
   docs: Object.assign({ sips: [], bills: [], goals: [] }, LS.get('docs', {})), docEdit: null,   // app/*.json in the data repo
   history: LS.get('history', null),  // history.json: daily value of funds and stocks
   locked: false,
@@ -209,7 +209,9 @@ async function sync(opts = {}) {
     await loadDocs();
     try { await refreshRecats(); } catch (e) { /* optional */ }
     try { const r = await GH.call('GET', 'history.json', { raw: true }); if (r.ok) { state.history = await r.json(); LS.set('history', state.history); } } catch (e) { /* optional */ }
+    try { const r = await GH.call('GET', 'mfholdings.json', { raw: true }); if (r.ok) { state.mfh = await r.json(); LS.set('mfh', state.mfh); } } catch (e) { /* optional */ }
     await refreshPending();
+    try { await autoEmi(); } catch (e) { /* optional */ }
     if (opts.toast) toast('Up to date');
   } catch (e) {
     state.lastError = (e instanceof AppError) ? e.message
@@ -252,8 +254,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { trade: 'invest', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -280,7 +282,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -308,6 +310,10 @@ function render() {
   if (state.tab === 'recat') bindRecat();
   if (state.tab === 'loans') bindLoans();
   if (state.tab === 'ccards') bindCards();
+  if (state.tab === 'gains') bindGains();
+  if (state.tab === 'overlap') { const b = document.querySelector('[data-ovall]'); if (b) b.onclick = () => { state.ovAll = !state.ovAll; render(); }; }
+  if (state.tab === 'restore') bindRestore();
+  if (state.tab === 'worth') bindWorth();
   if (state.tab === 'cover') bindCover();
   if (state.tab === 'sort') bindSort();
   if (state.tab === 'shared') bindShared();
@@ -351,7 +357,7 @@ function render() {
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
   money: [['money', 'Spending'], ['tx', 'Transactions'], ['review', 'Review'], ['bills', 'Bills'], ['subs', 'Repeating'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Cards'], ['budget', 'Plan'], ['add', '＋ Add']],
-  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
+  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', '80C'], ['regime', 'Old vs new'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency'], ['documents', 'Documents']],
 };
 const VIEW_SUBS = new Set(['coverage', 'sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
@@ -511,6 +517,7 @@ function viewHome() {
   ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}
   ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}
   ${homeMissingCard()}
+  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}
   <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
     ${qa('href="receipts.html"', IC.receipt, 'Receipt')}
@@ -2184,6 +2191,7 @@ function viewWorth() {
     <section class="sec box"><div class="sec-h"><h3>What you owe</h3><span class="small num">${inr(w.owe)}</span></div>
       <button class="worth-row" data-gotab="loans"><span class="wr-t"><b>Loans</b></span><span class="wr-v"><b class="num">${inr(w.loans)}</b></span></button>
       <button class="worth-row" data-gotab="ccards"><span class="wr-t"><b>Credit card dues</b><small>${((state.docs && state.docs.ccards) || []).length ? `${state.docs.ccards.length} cards` : 'Add your cards to track them'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></button></section>
+    ${viewEmergencyMeter(w)}
     ${viewNetWorthChart()}
     <p class="small muted" style="margin:0 4px 16px">Banks are the last statement balances; funds and stocks use today’s prices; EPF and PPF are your passbook figures. The EPS pension part of EPF is paid as a monthly pension, not as cash.</p>`;
 }
@@ -2207,7 +2215,7 @@ function viewCards() {
       ${ed.isNew ? '' : '<button class="secondary" id="cc-del" style="color:var(--bad)">Delete card</button>'}
       <button class="secondary" id="cc-cancel">Cancel</button></section>`;
   if (ed) return form(ed.item);
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">You owe on cards</p><h2 class="hero-v num">${inr(owe)}</h2>
+  return `${viewCardPayPrompts()}<section class="hero"><p class="hero-k" style="margin-top:0">You owe on cards</p><h2 class="hero-v num">${inr(owe)}</h2>
       <p class="hero-s" style="margin:-6px 0 0">${list.length} card${list.length === 1 ? '' : 's'} · limit ${inr(lim)} · ${Math.round(use * 100)}% used</p>
       ${lim ? `<div class="cc-bar"><i style="width:${Math.min(100, use * 100).toFixed(1)}%;background:${use > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}</section>
     <div class="row2"><label class="secondary cc-shot" style="margin:0">📷 From screenshot<input type="file" id="cc-file" accept="image/*" hidden></label><button class="primary" id="cc-add" style="margin:0">＋ Add card</button></div>
@@ -2252,6 +2260,7 @@ function parseCardText(t) {
 function bindCards() {
   const $ = id => document.getElementById(id), list = state.docs.ccards || (state.docs.ccards = []);
   const add = $('cc-add'); if (add) add.onclick = () => { state.ccEdit = { isNew: true, item: { id: uid('cc') } }; render(); };
+  bindCardPayPrompts();
   document.querySelectorAll('[data-cc-edit]').forEach(b => b.onclick = () => { state.ccEdit = { isNew: false, i: Number(b.dataset.ccEdit), item: { ...list[Number(b.dataset.ccEdit)] } }; render(); });
   const f = $('cc-file'); if (f) f.onchange = async () => {
     const file = f.files && f.files[0]; if (!file) return;
@@ -2279,6 +2288,294 @@ function bindCards() {
     const old = list.slice(); list.splice(state.ccEdit.i, 1);
     try { await saveDoc('ccards', 'Delete card'); state.ccEdit = null; toast('Deleted'); render(); } catch (err) { state.docs.ccards = old; toast(err.message || 'Couldn’t reach GitHub'); } };
   const cc = $('cc-cancel'); if (cc) cc.onclick = () => { state.ccEdit = null; render(); };
+}
+/* ======================================================================
+   Automatic EMIs: a loan EMI in the bank statement lowers "EMIs left" by one (once per payment)
+   ====================================================================== */
+async function autoEmi() {
+  if (isViewer() || (state.cfg && state.cfg.viewOnly) || !state.data) return;
+  const saved = state.loansSaved, since = (saved && (saved.emiSince || String(saved.savedAt || '').slice(0, 10))) || LS.get('emiSince', null);
+  if (!since) { LS.set('emiSince', isoToday()); return; }                 // first run: only payments from today on
+  const seen = new Set((saved && saved.emiSeen) || []), all = allLoans(), act = all.filter(l => !l.cleared && l.emi > 0 && l.left > 0);
+  if (!act.length) return;
+  const words = l => String(l.name).toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !['loan', 'bank', 'first', 'finance'].includes(w));
+  const ALIAS = { 'credit saison': ['creditsaison', 'kisetsu'], 'fibe': ['earlysalary', 'fibe'], 'kreditbee': ['kreditbee', 'krazybee'], 'groww credit': ['groww'] };
+  const pays = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /loan|emi/i.test(t.Category || '') && String(t.Date).slice(0, 10) > since);
+  const list = all.map(l => ({ ...l })), newSeen = [], notes = [];
+  for (const t of pays) {
+    const amt = Number(t.Amount) || 0, det = String(t.Details || '').toLowerCase().replace(/\s+/g, ''), key = `${String(t.Date).slice(0, 10)}|${amt}|${det.slice(0, 30)}`;
+    if (seen.has(key)) continue;
+    const near = act.filter(l => Math.abs(amt - l.emi) <= Math.max(2, l.emi * 0.02));
+    let hit = near.filter(l => (ALIAS[l.name.toLowerCase()] || words(l)).some(w => det.includes(w.replace(/\s+/g, ''))));
+    if (!hit.length && near.length === 1) hit = near;
+    if (hit.length !== 1) continue;
+    const L = list.find(x => x.name === hit[0].name); if (!(L.left > 0)) continue;
+    L.left -= 1; if (!L.left) L.cleared = true; newSeen.push(key);
+    notes.push(`${L.name}: EMI of ${inr(amt)} on ${fDay(pDate(String(t.Date).slice(0, 10)))} – ${L.left ? L.left + ' left' : 'loan cleared'}`);
+  }
+  if (!newSeen.length) return;
+  await saveLoans(list, 'EMIs from bank statement', newSeen);
+  toast(notes.length === 1 ? notes[0] : `${notes.length} EMIs found in your bank statement – loans updated`);
+}
+
+/* ======================================================================
+   Card bills: payments to cards in the bank statement, matched to a card in one tap
+   ====================================================================== */
+function cardPayments() {
+  const cards = ((state.docs && state.docs.ccards) || []).filter(c => Number(c.outstanding) > 0 && c.updated);
+  if (!cards.length) return [];
+  const seen = new Set(((state.docs.ccards) || []).flatMap(c => c.seenPays || [])), from = cards.map(c => c.updated).sort()[0];
+  return tbl('AppRecent').filter(t => t.Type === 'Expenses' && String(t.Date).slice(0, 10) >= from
+      && (/credit card/i.test(t.Category || '') || /cred club|cred\.cl|creditcard|credit card|cc pay|card payment|billdesk.*card/i.test(t.Details || '')))
+    .map(t => { const amt = Number(t.Amount) || 0, d = String(t.Date).slice(0, 10), det = String(t.Details || ''), key = `${d}|${amt}|${det.replace(/\s+/g, '').slice(0, 30)}`;
+      const match = cards.filter(c => d >= c.updated && (String(c.name).toLowerCase().split(/\s+/).some(w => w.length > 2 && det.toLowerCase().includes(w)) || Math.abs(amt - c.outstanding) <= Math.max(5, c.outstanding * 0.02)));
+      return { key, amt, d, det, cards: cards.filter(c => d >= c.updated), suggest: match.length === 1 ? match[0].id : null }; })
+    .filter(p => !seen.has(p.key) && p.cards.length);
+}
+function viewCardPayPrompts() {
+  const ps = cardPayments(); if (!ps.length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>Card bills paid – which card?</h3></div>
+    ${ps.slice(0, 5).map((p, i) => `<div class="cc-pay"><p style="margin:0 0 6px"><b class="num">${inr(p.amt)}</b> on ${esc(fDay(pDate(p.d)))}<br><span class="small muted">${esc(p.det.replace(/^bank:\s*/, '').slice(0, 70))}</span></p>
+      <div class="cc-pay-b">${p.cards.map(c => `<button class="${p.suggest === c.id ? 'edit-btn' : 'secondary'}" data-ccpay="${i}" data-card="${esc(c.id)}">${esc(c.name)}</button>`).join('')}<button class="linkbtn" data-ccpay-no="${i}">Not a card bill</button></div></div>`).join('')}
+    <p class="small muted" style="margin:6px 0 0">Choosing a card lowers what you owe on it by the amount paid.</p></section>`;
+}
+function bindCardPayPrompts() {
+  const ps = cardPayments(), list = state.docs.ccards || [];
+  const save = async (msg, ok) => { try { await saveDoc('ccards', msg); toast(ok); render(); } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); } };
+  document.querySelectorAll('[data-ccpay]').forEach(b => b.onclick = () => { const p = ps[Number(b.dataset.ccpay)], c = list.find(x => x.id === b.dataset.card); if (!p || !c) return;
+    c.outstanding = Math.max(0, Math.round(((Number(c.outstanding) || 0) - p.amt) * 100) / 100); c.lastPaid = p.d; (c.seenPays || (c.seenPays = [])).push(p.key);
+    save(`Card paid: ${c.name}`, c.outstanding ? `${c.name}: ${inr(c.outstanding)} still to pay` : `${c.name} paid in full`); });
+  document.querySelectorAll('[data-ccpay-no]').forEach(b => b.onclick = () => { const p = ps[Number(b.dataset.ccpayNo)]; if (!p) return;
+    list.forEach(c => { (c.seenPays || (c.seenPays = [])).push(p.key); }); save('Not a card bill', 'Ignored'); });
+}
+
+/* ======================================================================
+   Capital gains: every sell matched to its buys (oldest first), split short / long term, by financial year
+   Rules (Budget 2024, unchanged in Budget 2026): listed shares and equity funds held more than 12 months are
+   long-term – 12.5% above ₹1.25 lakh a year; short-term 20%. Sells before 23 Jul 2024: 10% above ₹1 lakh / 15%.
+   Debt funds bought from April 2023: taxed at your slab rate.
+   ====================================================================== */
+const fyOf = d => { const [y, m] = String(d).split('-').map(Number); const s = m >= 4 ? y : y - 1; return `${s}-${String((s + 1) % 100).padStart(2, '0')}`; };
+const plusYear = d => { const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${Number(y) + 1}-${m}-${dd}`; };
+function realisedGains() {
+  const typeOf = {}; invHoldings().forEach(h => { typeOf[h.name.toLowerCase()] = h.type || ''; });
+  const log = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.side === 'Buy' ? -1 : 1) - (b.side === 'Buy' ? -1 : 1));
+  const lots = {}, rows = [];
+  for (const r of log) {
+    const k = String(r.name).toLowerCase(), d = String(r.date).slice(0, 10), debt = /debt|gilt|liquid|bond/i.test((typeOf[k] || '') + ' ' + r.name);
+    if (r.side === 'Buy') { (lots[k] || (lots[k] = [])).push({ date: d, units: Number(r.units), cost: Number(r.amount) || 0 }); continue; }
+    let u = Number(r.units); const per = (Number(r.amount) || 0) / u;
+    while (u > 1e-9 && lots[k] && lots[k].length) {
+      const l = lots[k][0], take = Math.min(u, l.units), c = l.cost * take / l.units;
+      l.cost -= c; l.units -= take; u -= take; if (l.units < 1e-9) lots[k].shift();
+      rows.push({ sell: d, buy: l.date, name: r.name, units: take, proceeds: per * take, cost: c, gain: per * take - c, term: debt ? 'debt' : plusYear(l.date) < d ? 'LT' : 'ST' });
+    }
+    if (u > 1e-6) rows.push({ sell: d, buy: null, name: r.name, units: u, proceeds: per * u, cost: null, gain: null, term: 'missing' });
+  }
+  return rows;
+}
+function gainsSummary(rows, fy) {
+  const r = rows.filter(x => fyOf(x.sell) === fy), sum = (t, f) => r.filter(x => x.term === t).reduce((a, x) => a + (x[f] || 0), 0);
+  const fyStart = Number(fy.slice(0, 4)), exempt = fyStart >= 2024 ? 125000 : 100000;
+  const rate = (t, d) => t === 'LT' ? (d < '2024-07-23' ? 0.10 : 0.125) : (d < '2024-07-23' ? 0.15 : 0.20);
+  const avg = t => { const g = r.filter(x => x.term === t && x.gain > 0); const tot = g.reduce((a, x) => a + x.gain, 0); return tot ? g.reduce((a, x) => a + x.gain * rate(t, x.sell), 0) / tot : rate(t, '2099'); };
+  let st = sum('ST', 'gain'), lt = sum('LT', 'gain'); const debt = sum('debt', 'gain');
+  let stNet = st, ltNet = lt, carry = 0;
+  if (stNet < 0) { ltNet += stNet; stNet = 0; }                     // short-term loss is set off against long-term gains too
+  if (ltNet < 0) { carry = -ltNet; ltNet = 0; }
+  const ltTaxable = Math.max(0, ltNet - exempt), tax = (stNet * avg('ST') + ltTaxable * avg('LT')) * 1.04;
+  return { rows: r, st, lt, debt, stNet, ltNet, exempt, ltTaxable, carry, tax, missing: r.filter(x => x.term === 'missing').length, proceeds: r.reduce((a, x) => a + x.proceeds, 0) };
+}
+function harvestPlan(fy) {
+  const g = gainsSummary(realisedGains(), fy), room = Math.max(0, g.exempt - g.ltNet), out = [];
+  let left = room;
+  for (const x of longTermWatch().filter(x => x.gain > 0).sort((a, b) => b.gain - a.gain)) {
+    if (left <= 0) break;
+    const share = Math.min(1, left / x.gain), units = x.units * share;
+    out.push({ name: x.h.name, units, gain: x.gain * share, value: (x.value || 0) * share, all: share >= 0.999, isFund: /^\d+$/.test(x.h.code || '') });
+    left -= x.gain * share;
+  }
+  return { room, plan: out, used: room - Math.max(0, left), available: longTermWatch().reduce((a, x) => a + Math.max(0, x.gain || 0), 0) };
+}
+function viewGains() {
+  const rows = realisedGains(), fys = [...new Set(rows.map(r => fyOf(r.sell)).concat([fyOf(isoToday())]))].sort().reverse();
+  const fy = state.gainsFy && fys.includes(state.gainsFy) ? state.gainsFy : fys[0], g = gainsSummary(rows, fy), cur = fy === fyOf(isoToday());
+  const sg = v => `<span class="num ${v >= 0 ? 'good' : 'bad'}">${v >= 0 ? '+' : '−'}${inr(Math.abs(v))}</span>`;
+  const hv = cur ? harvestPlan(fy) : null;
+  return `<section class="card noprint-pad"><div class="row2" style="align-items:end"><div><label class="f" for="g-fy">Financial year</label>
+      <select class="inp" id="g-fy">${fys.map(f => `<option ${f === fy ? 'selected' : ''}>${f}</option>`).join('')}</select></div>
+      <button class="secondary noprint" id="g-print" style="margin:0">Print / save PDF</button></div></section>
+    <section class="hero"><p class="hero-k" style="margin-top:0">Capital gains, FY ${esc(fy)}</p><h2 class="hero-v num">${inr(g.st + g.lt + g.debt)}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">${g.rows.length} sale${g.rows.length === 1 ? '' : 's'} · sold for ${inr(g.proceeds)} · estimated tax ${inr(g.tax)}</p></section>
+    <section class="sec box">
+      <div class="kv"><span>Short-term (held 12 months or less)<br><span class="small muted">taxed at ${fy >= '2025' ? '20%' : '15% / 20%'}</span></span>${sg(g.st)}</div>
+      <div class="kv"><span>Long-term (held more than 12 months)<br><span class="small muted">first ${inr(g.exempt)} tax-free, then 12.5%</span></span>${sg(g.lt)}</div>
+      ${g.debt ? `<div class="kv"><span>Debt funds<br><span class="small muted">added to your income, slab rate</span></span>${sg(g.debt)}</div>` : ''}
+      <div class="kv"><span>Long-term gain above the tax-free limit</span><span class="num">${inr(g.ltTaxable)}</span></div>
+      <div class="kv"><span><b>Estimated tax on these gains</b><br><span class="small muted">incl. 4% cess${g.debt ? ', excluding debt funds' : ''}</span></span><b class="num">${inr(g.tax)}</b></div>
+      ${g.carry ? `<p class="small warn" style="margin:8px 0 0">Net loss of ${inr(g.carry)} – show it in your ITR to carry it forward for 8 years.</p>` : ''}
+      ${g.missing ? `<p class="small warn" style="margin:8px 0 0">${g.missing} sale${g.missing === 1 ? '' : 's'} had no matching buy – add the older buys (Import) for a correct figure.</p>` : ''}
+    </section>
+    ${hv ? `<section class="sec box noprint"><div class="sec-h"><h3>Tax-free gains still available</h3></div>
+      <p style="margin:0 0 8px">You can book <b class="num">${inr(hv.room)}</b> more long-term gain this year without tax${hv.available ? ` – you have <b class="num">${inr(hv.available)}</b> of long-term gain in your holdings now` : ''}.</p>
+      ${hv.plan.length ? hv.plan.map(p => `<div class="kv"><span>${esc(p.name)}<br><span class="small muted">sell ${p.all ? 'all ' : ''}${fUnits(p.units)} ${p.isFund ? 'units' : 'shares'} held over a year (about ${inr(p.value)})</span></span><span class="num good">+${inr(p.gain)}</span></div>`).join('')
+        + `<p class="small muted" style="margin:8px 0 0">Selling these and buying back straight away books ${inr(hv.used)} of gain tax-free and raises your cost, so less tax later. Do it before 31 March. Check exit loads on funds; brokerage and STT apply.</p>`
+        : '<p class="small muted" style="margin:0">Nothing in long-term gain right now.</p>'}</section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>Sales</h3></div>
+      ${g.rows.map(x => `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">${fUnits(x.units)} sold ${esc(fDay(pDate(x.sell)))}${x.buy ? ` · bought ${esc(fDay(pDate(x.buy)))}` : ' · buy not found'} · ${x.term === 'LT' ? 'long-term' : x.term === 'ST' ? 'short-term' : x.term === 'debt' ? 'debt fund' : '–'}</span></span>
+        <span style="text-align:right">${x.gain == null ? '<span class="muted">?</span>' : sg(x.gain)}<br><span class="small muted num">${inr(x.proceeds)}</span></span></div>`).join('') || '<p class="small muted">No sales in this year.</p>'}</section>
+    <p class="note">Worked out from your buys and sells, oldest units sold first. Check with your broker’s capital gains statement before filing.</p>`;
+}
+function bindGains() {
+  const f = document.getElementById('g-fy'); if (f) f.onchange = () => { state.gainsFy = f.value; render(); };
+  const p = document.getElementById('g-print'); if (p) p.onclick = () => window.print();
+}
+
+/* ======================================================================
+   Fund overlap: how much of your funds is the same companies (mfholdings.json from the weekly job)
+   ====================================================================== */
+function overlapData() {
+  const m = state.mfh && state.mfh.funds; if (!m) return null;
+  const norm = s => String(s).toLowerCase().replace(/&/g, ' ').replace(/\b(ltd|limited|the|co|company|corporation|corp|inc|and)\b\.?/g, ' ').replace(/[^a-z0-9]/g, '');
+  const junk = /^(repo|treps|t-?bill|cblo|cash|net (current|receivable)|others|tri.?party|call money|reverse repo|margin|clearing|govt|government|gsec)/i;
+  const hs = invHoldings().filter(h => h.units > 1e-6), funds = [], exp = {};
+  for (const h of hs) {
+    const f = m[h.code]; if (!f) continue;
+    const w = {}; for (const [n, p] of f.holdings) if (!junk.test(n)) w[norm(n)] = { n, p: Number(p) || 0 };
+    funds.push({ h, w });
+    for (const [k, v] of Object.entries(w)) { const e = exp[k] || (exp[k] = { name: v.n, amt: 0, via: [] }); e.amt += (h.value || 0) * v.p / 100; e.via.push(h.name.replace(/\s+(Fund|Direct|Growth).*$/i, '')); }
+  }
+  for (const h of hs.filter(h => /stock|share|etf/i.test(h.type || '') && !/^\d+$/.test(h.code || ''))) { const k = norm(h.name), e = exp[k] || (exp[k] = { name: h.name, amt: 0, via: [] }); e.amt += h.value || 0; e.via.push('your shares'); }
+  const pairs = [];
+  for (let i = 0; i < funds.length; i++) for (let j = i + 1; j < funds.length; j++) {
+    const a = funds[i], b = funds[j], common = Object.keys(a.w).filter(k => b.w[k]);
+    const ov = common.reduce((s, k) => s + Math.min(a.w[k].p, b.w[k].p), 0);
+    pairs.push({ a: a.h.name, b: b.h.name, ov, n: common.length, top: common.sort((x, y) => Math.min(b.w[y].p, a.w[y].p) - Math.min(b.w[x].p, a.w[x].p)).slice(0, 3).map(k => a.w[k].n) });
+  }
+  const total = hs.reduce((s, h) => s + (h.value || 0), 0);
+  return { pairs: pairs.sort((x, y) => y.ov - x.ov), top: Object.values(exp).sort((x, y) => y.amt - x.amt).slice(0, 15), total, missing: hs.filter(h => /^\d+$/.test(h.code || '') && !m[h.code]).map(h => h.name), asOf: state.mfh.updatedAt };
+}
+function viewOverlap() {
+  const o = overlapData();
+  if (!o) return '<div class="empty">Fund portfolios haven’t been fetched yet – they update every Monday. Pull down to refresh in a while.</div>';
+  const short = n => esc(n.replace(/\s+(Fund|Direct|Growth).*$/i, ''));
+  return `<section class="sec box"><div class="sec-h"><h3>Same companies in two funds</h3></div>
+      ${o.pairs.slice(0, state.ovAll ? 99 : 6).map(p => `<div class="kv"><span>${short(p.a)} + ${short(p.b)}<br><span class="small muted">${p.n} shared${p.top.length ? ': ' + esc(p.top.join(', ')) : ''}</span></span><b class="num ${p.ov >= 40 ? 'bad' : p.ov >= 20 ? 'warn' : 'good'}">${Math.round(p.ov)}%</b></div>`).join('') || '<p class="small muted">You need two or more funds for this.</p>'}
+      ${o.pairs.length > 6 ? `<button class="more-btn" data-ovall>${state.ovAll ? 'Show fewer' : `Show all ${o.pairs.length} pairs`}</button>` : ''}
+      <p class="small muted" style="margin:8px 0 0">Over 40% means the two funds mostly hold the same companies – you could keep one and put the SIP into the other.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Where your money really is</h3><span class="small muted">top 15</span></div>
+      ${o.top.map(e => `<div class="kv"><span>${esc(e.name)}<br><span class="small muted">via ${esc([...new Set(e.via)].join(', '))}</span></span><span style="text-align:right"><b class="num">${inr(e.amt)}</b><br><span class="small muted">${o.total ? (e.amt / o.total * 100).toFixed(1) : 0}%</span></span></div>`).join('')}</section>
+    ${o.missing.length ? `<p class="small muted" style="margin:0 4px 8px">No portfolio for: ${esc(o.missing.join(', '))}.</p>` : ''}
+    <p class="note">Fund portfolios from Groww, updated ${o.asOf ? esc(fDay(new Date(o.asOf))) : '–'}; funds publish them once a month.</p>`;
+}
+
+/* ======================================================================
+   Dividends from your bank statements
+   ====================================================================== */
+function dividendRows() {
+  const RE = /\bdiv(idend)?\b|\bfnl\b|\bfinal\b|\binterim\b|\bint div|fin div/i, ACH = /achcr|ach c-|cemtex|nach.*\bcr\b/i, NOT = /refund|cashback|cash back|discount|cashless|reversal|redbus|paytm|\bptm\b|fuel|petrol|service|salary|interest|\bint\.?pd|sbint/i;
+  const traded = [...new Set(tradeLog().map(r => String(r.name).toLowerCase().split(/\s+/)[0]).filter(w => w.length >= 3 && !/^(the|indian|india|nippon|icici|axis|kotak|sbi|hdfc|invesco|motilal)$/.test(w)))];
+  const STOP = new Set(['bank', 'nach', 'achcr', 'ach', 'cemtex', 'dep', 'credit', 'int', 'div', 'dividend', 'final', 'interim', 'fin', 'neft', 'imps', 'inb', 'sbi', 'hdfc', 'icici', 'idfc', 'first', 'axis', 'kotak', 'payment', 'ltd', 'limited']);
+  const held = invHoldings().filter(h => !/^\d+$/.test(h.code || ''));
+  return tbl('AppRecent').filter(t => { const det = String(t.Details || ''), low = det.toLowerCase().replace(/\s+/g, '');
+    if (t.Type !== 'Income' || !(Number(t.Amount) > 0) || Number(t.Amount) >= 50000) return false;
+    if (t.Category === 'Dividend') return true; if (NOT.test(det)) return false;
+    return RE.test(det) || (ACH.test(det) && (traded.some(w => low.includes(w)) || /\b(fnl|fin|div|int|final|interim)[a-z]*\s*\d*\s*\d*\s*$/i.test(det))); }).map(t => {
+    const det = String(t.Details || '').replace(/^bank:\s*\{[^}]*\}\s*/i, ''), low = det.toLowerCase().replace(/\s+/g, '');
+    const h = held.find(x => { const w = x.name.toLowerCase().split(/\s+/)[0]; return w.length >= 3 && low.includes(w); });
+    const guess = det.split(/[^A-Za-z]+/).filter(w => w.length >= 3 && !STOP.has(w.toLowerCase()) && !/^(fnl|fin|dep|cemtex)$/i.test(w)).slice(0, 2).join(' ');
+    return { date: String(t.Date).slice(0, 10), amt: Number(t.Amount), name: h ? h.name : (guess || 'Unknown'), det };
+  });
+}
+function viewDivs() {
+  const rows = dividendRows(), byFy = {};
+  rows.forEach(r => { const f = fyOf(r.date); (byFy[f] || (byFy[f] = [])).push(r); });
+  const fys = Object.keys(byFy).sort().reverse();
+  if (!fys.length) return '<div class="empty">No dividends found in your bank statements yet. They show here when a company pays one (bank details with “DIV” or “ACH Cr”).</div>';
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Dividends received</p><h2 class="hero-v num">${inr(rows.reduce((a, r) => a + r.amt, 0))}</h2>
+      <p class="hero-s" style="margin:-6px 0 0">${rows.length} payment${rows.length === 1 ? '' : 's'} since ${esc(fDay(pDate(rows.map(r => r.date).sort()[0])))}</p></section>
+    ${fys.map(f => { const by = {}; byFy[f].forEach(r => { (by[r.name] || (by[r.name] = [])).push(r); });
+      return `<section class="sec box"><div class="sec-h"><h3>FY ${esc(f)}</h3><span class="num">${inr(byFy[f].reduce((a, r) => a + r.amt, 0))}</span></div>
+        ${Object.entries(by).sort((a, b) => b[1].reduce((s, r) => s + r.amt, 0) - a[1].reduce((s, r) => s + r.amt, 0)).map(([n, l]) => `<div class="kv"><span>${esc(n)}<br><span class="small muted">${l.map(r => fDay(pDate(r.date)).replace(/ \d{4}$/, '')).join(', ')}</span></span><b class="num">${inr(l.reduce((s, r) => s + r.amt, 0))}</b></div>`).join('')}</section>`; }).join('')}
+    <p class="note">Dividends are added to your income and taxed at your slab rate; companies deduct 10% TDS above ₹10,000 a year (check Form 26AS / AIS).</p>`;
+}
+
+/* ======================================================================
+   Emergency fund meter (Worth tab): how many months of spending your bank money covers
+   ====================================================================== */
+function viewEmergencyMeter(w) {
+  const bank = w.banks.reduce((a, x) => a + x.bal, 0), ym = isoToday().slice(0, 7);
+  const months = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), avg = months.length ? months.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / months.length : 0;
+  if (!avg) return '';
+  const target = LS.get('efTarget', 6), cover = bank / avg, need = Math.max(0, target * avg - bank), pct = Math.min(100, cover / target * 100);
+  return `<section class="sec box"><div class="sec-h"><h3>Emergency fund</h3><span class="small muted">target ${target} months</span></div>
+    <p style="margin:0 0 8px">Your banks cover <b class="${cover >= target ? 'good' : cover >= target / 2 ? 'warn' : 'bad'}">${cover.toFixed(1)} months</b> of spending.</p>
+    <div class="cc-bar sm"><i style="width:${pct.toFixed(1)}%;background:${cover >= target ? 'var(--good)' : cover >= target / 2 ? 'var(--warn)' : 'var(--bad)'}"></i></div>
+    <div class="kv"><span>Average spending a month<br><span class="small muted">last ${months.length} months</span></span><span class="num">${inr(avg)}</span></div>
+    <div class="kv"><span>${need ? 'Still needed' : 'Target reached'}</span><b class="num">${need ? inr(need) : '✓'}</b></div>
+    <div class="row2" style="margin-top:8px"><button class="secondary" data-ef="-1" style="margin:0">− 1 month</button><button class="secondary" data-ef="1" style="margin:0">+ 1 month</button></div>
+    <p class="small muted" style="margin:8px 0 0">3–6 months of spending kept in a savings account or liquid fund is the usual advice; more if your income is irregular.</p></section>`;
+}
+function bindWorth() {
+  document.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { LS.set('efTarget', Math.max(1, Math.min(24, LS.get('efTarget', 6) + Number(b.dataset.ef)))); render(); });
+}
+
+/* ======================================================================
+   Backups and restore: weekly backups (backups/<date>/) plus "Back up now" from the phone
+   ====================================================================== */
+const BK_NAMES = { 'app/sips.json': 'SIPs', 'app/bills.json': 'Bills', 'app/goals.json': 'Goals', 'app/profile.json': 'Profile', 'app/coaching.json': 'Coaching receipts',
+  'app/shared.json': 'Shared expenses', 'app/family.json': 'Family view', 'app/cards.json': 'Card offers', 'app/creditcards.json': 'Credit cards', 'app/others.json': 'FD / NPS / other schemes',
+  'app/documents.json': 'Documents', 'app/alerts.json': 'Price alerts', 'app/emergency.json': 'Emergency card', 'app/advtax.json': 'Advance tax', 'plan.json': 'Net-pay plan',
+  'settings/loans.json': 'Loans', 'settings/balances.json': 'PF / PPF update', 'settings/retirement.json': 'Retirement plan', 'settings/codes.json': 'Price codes' };
+async function ghList(path) { const r = await GH.call('GET', path); if (r.status === 404) return []; if (!r.ok) throw httpError(r.status); const j = await r.json(); return Array.isArray(j) ? j : []; }
+async function ghCopy(from, to, msg) {
+  const r = await GH.call('GET', from, { raw: true }); if (!r.ok) throw httpError(r.status);
+  const text = await r.text(), sha = await GH.sha(to);
+  const w = await GH.call('PUT', to, { body: { message: msg, branch: state.cfg.branch || 'main', content: b64(text), ...(sha ? { sha } : {}) } });
+  if (!w.ok) throw httpError(w.status);
+}
+async function currentFiles() {
+  const out = [];
+  for (const dir of ['app', 'settings']) for (const f of await ghList(dir)) if (f.type === 'file' && BK_NAMES[f.path]) out.push(f.path);
+  if (await GH.exists('plan.json')) out.push('plan.json');
+  return out;
+}
+function viewRestore() {
+  const R = state.rs || (state.rs = { dates: null, date: null, files: null, sel: {} });
+  return `<section class="card"><h2 style="margin-top:0">Back up now</h2>
+      <p class="small muted" style="margin:0 0 10px">Copies your lists, cards, loans, plans and settings to a dated backup. A full backup also runs every Sunday; the last 8 are kept.</p>
+      <button class="primary" id="rs-now" ${R.busy ? 'disabled' : ''}>${R.busy === 'backup' ? 'Backing up…' : 'Back up now'}</button></section>
+    <section class="sec box"><div class="sec-h"><h3>Restore from a backup</h3></div>
+      ${R.dates == null ? '<p class="small muted">Loading backups…</p>' : !R.dates.length ? '<p class="small muted">No backups yet – tap Back up now.</p>'
+        : `<label class="f" for="rs-date">Backup</label><select class="inp" id="rs-date"><option value="">Choose a date</option>${R.dates.map(d => `<option ${R.date === d ? 'selected' : ''} value="${esc(d)}">${esc(d.replace(/-phone$/, ' (phone)').replace(/-before-restore$/, ' (before a restore)'))}</option>`).join('')}</select>`}
+      ${R.date ? (R.files == null ? '<p class="small muted">Loading…</p>' : !R.files.length ? '<p class="small muted">Nothing in this backup that can be restored here.</p>'
+        : `<div class="group" style="padding:4px 14px;margin-top:10px">${R.files.map(f => `<label class="tick"><input type="checkbox" data-rs="${esc(f)}" ${R.sel[f] ? 'checked' : ''}> ${esc(BK_NAMES[f] || f)}</label>`).join('')}</div>
+          <button class="primary" id="rs-go" ${R.busy || !Object.values(R.sel).some(Boolean) ? 'disabled' : ''}>${R.busy === 'restore' ? 'Restoring…' : 'Restore selected'}</button>
+          <p class="small muted" style="margin:8px 0 0">What you have now is saved as a backup first, so a restore can be undone.</p>`) : ''}
+    </section>
+    <p class="note">Excel’s own data (transactions, holdings) lives in the workbook; this restores what the app keeps. Every change is also in the data repo’s history on GitHub.</p>`;
+}
+function bindRestore() {
+  const R = state.rs, $ = id => document.getElementById(id);
+  if (R.dates == null && !R.loading) { R.loading = true; ghList('backups').then(l => { R.dates = l.filter(x => x.type === 'dir').map(x => x.name).sort().reverse(); }).catch(() => { R.dates = []; }).finally(() => { R.loading = false; if (state.tab === 'restore') render(); }); }
+  const d = $('rs-date'); if (d) d.onchange = async () => { R.date = d.value || null; R.files = null; R.sel = {}; render(); if (!R.date) return;
+    try { const fs = []; for (const dir of ['app', 'settings']) for (const f of await ghList(`backups/${R.date}/${dir}`)) if (f.type === 'file' && BK_NAMES[`${dir}/${f.name}`]) fs.push(`${dir}/${f.name}`);
+      if ((await ghList(`backups/${R.date}`)).some(f => f.name === 'plan.json')) fs.push('plan.json'); R.files = fs; } catch (e) { R.files = []; toast(e.message || 'Couldn’t read that backup'); }
+    if (state.tab === 'restore') render(); };
+  document.querySelectorAll('[data-rs]').forEach(c => c.onchange = () => { R.sel[c.dataset.rs] = c.checked; render(); });
+  const now = $('rs-now'); if (now) now.onclick = async () => { R.busy = 'backup'; render();
+    try { const stamp = isoToday() + '-phone', files = await currentFiles(); for (const f of files) await ghCopy(f, `backups/${stamp}/${f}`, `Backup ${stamp}`); toast(`Backed up ${files.length} files`); R.dates = null; }
+    catch (e) { toast(e.message || 'Backup failed – try again'); }
+    R.busy = null; render(); };
+  const go = $('rs-go'); if (go) go.onclick = async () => { if (!confirmInline(go)) { go.textContent = 'Tap again to restore'; return; }
+    R.busy = 'restore'; render();
+    try { const pick = Object.keys(R.sel).filter(k => R.sel[k]), stamp = isoToday() + '-before-restore';
+      for (const f of pick) if (await GH.exists(f)) await ghCopy(f, `backups/${stamp}/${f}`, 'Backup before restore');
+      for (const f of pick) await ghCopy(`backups/${R.date}/${f}`, f, `Restore ${f} from ${R.date}`);
+      toast(`Restored ${pick.length} item${pick.length === 1 ? '' : 's'} from ${R.date}`); R.sel = {}; R.dates = null; R.busy = null; await sync(); return; }
+    catch (e) { toast(e.message || 'Restore failed – nothing else was changed'); }
+    R.busy = null; render(); };
 }
 /* ======================================================================
    Accounts and balances (Balances sheet), low balance before SIPs / bills
@@ -2455,10 +2752,11 @@ function allLoans() {
     : loanRows().filter(r => r.kind === 'app').map(r => ({ kind: 'app', name: r.name, borrowed: num(r.Borrowed) || 0, emi: num(r.EMI) || 0, left: num(r['EMIs left']) || 0, cleared: /yes/i.test(r['Cleared?'] || ''), start: '' }));
   return out.concat(apps).map(l => ({ ...l, owed: l.cleared ? 0 : (l.emi || 0) * (l.left || 0) }));
 }
-async function saveLoans(list, msg) {
+async function saveLoans(list, msg, extraSeen) {
   const loans = list.map(l => ({ kind: l.kind, name: String(l.name).trim().slice(0, 60), borrowed: Math.round(Number(l.borrowed) || 0), emi: Math.round((Number(l.emi) || 0) * 100) / 100,
     left: Math.max(0, Math.round(Number(l.left) || 0)), cleared: !!l.cleared, start: l.start || '' }));
-  const saved = { id: uid('L'), savedAt: new Date().toISOString(), loans };
+  const prev = state.loansSaved || {};
+  const saved = { id: uid('L'), savedAt: new Date().toISOString(), emiSince: prev.emiSince || isoToday(), emiSeen: (prev.emiSeen || []).concat(extraSeen || []).slice(-200), loans };
   await GH.putJson('settings/loans.json', saved, msg || 'Loans from the app');
   state.loansSaved = saved; LS.set('loansSaved', saved);
 }
@@ -3418,10 +3716,10 @@ function viewGlance() {
 function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
   return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review']])
-    + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
+    + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
     + g('Tax', [['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
     + g('Life', [['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
-    + g('App', [['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+    + g('App', [['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
   return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
