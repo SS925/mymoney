@@ -1,7 +1,7 @@
 /* Offline support: the app files are cached; GitHub data is never cached here
    (the app keeps the last data it loaded in its own storage). */
-const CACHE = 'mymoney-v66';
-const FILES = ['./', 'index.html', 'receipts.html', 'styles.css', 'app.js', 'styles.css?v=65', 'app.js?v=65', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon.svg?v=2', 'icon-192.png?v=2', 'icon-512.png?v=2'];
+const V = 67, CACHE = 'mymoney-v' + V;   // bump V together with ?v= in index.html
+const FILES = ['./', 'index.html', 'receipts.html', 'styles.css', 'app.js', 'styles.css?v=' + V, 'app.js?v=' + V, 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon.svg?v=2', 'icon-192.png?v=2', 'icon-512.png?v=2'];
 // 'reload' = never take old copies from the browser cache when installing a new version
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -28,9 +28,16 @@ self.addEventListener('fetch', e => {
   }
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;   // GitHub API goes straight to the network
   // network first so updates you upload show up; fall back to the cached copy when offline
-  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => {   // always ask GitHub whether the file changed
-    const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r;
-  }).catch(() => caches.match(e.request).then(r => r || caches.match('index.html'))));
+  // on a slow connection, wait at most 3 seconds and then open the saved copy (the new one is still saved for next time)
+  const net = fetch(e.request, { cache: 'no-cache' }).then(r => {   // always ask GitHub whether the file changed
+    if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); } return r;
+  });
+  const saved = () => caches.match(e.request).then(r => r || caches.match('index.html'));
+  e.respondWith(new Promise(done => {
+    let settled = false; const finish = r => { if (!settled && r) { settled = true; done(r); } };
+    const t = setTimeout(() => saved().then(r => r && finish(r)), 3000);
+    net.then(r => { clearTimeout(t); finish(r); }).catch(() => { clearTimeout(t); saved().then(r => finish(r || Response.error())); });
+  }));
 });
 
 /* Phone notifications sent by the GitHub Action in the data repo */

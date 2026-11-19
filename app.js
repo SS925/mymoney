@@ -43,7 +43,7 @@ const GH = {
   async call(method, path, { body, raw } = {}) {
     if (method !== 'GET' && state.cfg && state.cfg.viewOnly) throw new AppError('This phone is view-only – changes are made on the owner’s phone.');
     const res = await fetch(this.url(path, method === 'GET'), {
-      method, cache: 'no-store',
+      method, cache: method === 'GET' ? 'no-cache' : 'no-store',   // GET: the phone asks GitHub "changed?" and reuses its copy when not (no full re-download)
       headers: {
         Authorization: 'Bearer ' + state.cfg.token,
         Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
@@ -193,10 +193,11 @@ async function sync(opts = {}) {
   state.syncing = true; document.getElementById('btn-sync').classList.add('spin');
   try {
     await flushOutbox();
+    const shP = GH.getSheets().catch(() => null);   // both big files download together
     const data = await GH.getData();
     state.data = data; state.fetchedAt = new Date().toISOString(); state.lastError = null;
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
-    try { const sh = await GH.getSheets(); if (sh) { state.sheets = sh; LS.set('sheets', sh); } } catch (e) { /* sheets are optional */ }
+    const sh = await shP; if (sh) { state.sheets = sh; LS.set('sheets', sh); }
     render();                                   // show the main figures straight away; the rest loads together
     await Promise.all([
       (async () => {
