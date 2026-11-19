@@ -274,7 +274,8 @@ async function refreshPending() {
     }
     out.push(p);
   }
-  state.pending = out; LS.set('pending', out);
+  state.removing = out.filter(p => p.entry && p.entry.remove).map(p => String(p.entry.remove));   // phone entries Excel will delete
+  state.pending = out.filter(p => !(p.entry && p.entry.remove)); LS.set('pending', state.pending); LS.set('removing', state.removing);
 }
 async function flushOutbox() {
   if (!state.outbox.length) return;
@@ -288,8 +289,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { newpay: 'New payees', spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { lic: 'Is LIC worth it?', subcheck: 'Subscriptions check', newpay: 'New payees', spends: 'Where money goes', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement plan', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills and subscriptions', goals: 'Goals', tax: 'Tax: 80C and gains', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance cover', review: 'Monthly review', sort: 'Sort UPI – Other', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Repeating payments', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups and restore', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD, NPS, gold bonds…', regime: 'Tax: old vs new', emergency: 'Emergency information', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -316,7 +317,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { newpay: viewNewPayees, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { lic: viewLic, subcheck: viewSubsCheck, newpay: viewNewPayees, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubs, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -353,6 +354,8 @@ function render() {
   if (state.tab === 'sort') bindSort();
   if (state.tab === 'spends') bindSpends();
   if (state.tab === 'newpay') bindNewPayees();
+  if (state.tab === 'lic') bindLic();
+  if (state.tab === 'subcheck') bindSubsCheck();
   if (state.tab === 'afford') bindAfford();
   if (state.tab === 'rent') bindRent();
   if (state.tab === 'routine') bindRoutine();
@@ -618,7 +621,8 @@ function allTx() {
   const p = pend.map(x => ({ Date: x.e.date, Type: x.e.type, Category: x.e.category, Amount: Number(x.e.amount),
     Details: (x.e.note || x.e.category) + (x.e.paidWith ? ` (${x.e.paidWith})` : '') + ` app#${x.e.id}`, Source: 'Manual entry',
     _pending: x.state, _id: x.e.id, _sha: x.sha }));
-  return p.concat(applyRecatsView(tbl('AppRecent')));
+  const rm = state.removing || LS.get('removing', []);
+  return p.concat(applyRecatsView(tbl('AppRecent').filter(t => !rm.length || !rm.some(id => String(t.Details || '').includes('app#' + id)))));
 }
 function txRow(t, compact) {
   const d = describe(t), a = n(t.Amount);
@@ -2264,6 +2268,7 @@ function viewWorth() {
       <button class="worth-row" data-gotab="loans"><span class="wr-t"><b>Loans</b></span><span class="wr-v"><b class="num">${inr(w.loans)}</b></span></button>
       <button class="worth-row" data-gotab="ccards"><span class="wr-t"><b>Credit card dues</b><small>${((state.docs && state.docs.ccards) || []).length ? `${state.docs.ccards.length} cards` : 'Add your cards to track them'}</small></span><span class="wr-v"><b class="num">${inr(w.cards)}</b></span></button></section>
     ${viewEmergencyMeter(w)}
+    ${viewEfPlan(w)}
     ${viewMilestones(w)}
     ${viewNetWorthChart()}
     ${viewSavingsRate()}
@@ -2608,6 +2613,7 @@ function viewEmergencyMeter(w) {
     <p class="small muted" style="margin:8px 0 0">3–6 months of spending kept in a savings account or liquid fund is the usual advice; more if your income is irregular.</p></section>`;
 }
 function bindWorth() {
+  bindEfPlan();
   document.querySelectorAll('[data-sr]').forEach(b => b.onclick = () => { LS.set('srTarget', Math.max(0, Math.min(80, LS.get('srTarget', 20) + Number(b.dataset.sr)))); render(); });
   document.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { LS.set('efTarget', Math.max(1, Math.min(24, LS.get('efTarget', 6) + Number(b.dataset.ef)))); render(); });
 }
@@ -2852,7 +2858,8 @@ async function saveLoans(list, msg, extraSeen) {
   state.loansSaved = saved; LS.set('loansSaved', saved);
 }
 function loanMonths(bal, emi, r) { if (bal <= 0) return 0; if (!r) return Math.ceil(bal / emi); const x = 1 - r * bal / emi; return x <= 0 ? Infinity : Math.ceil(-Math.log(x) / Math.log(1 + r)); }
-function viewLoans() {
+function viewLoans() { return viewLoansBody() + (state.loanEdit ? "" : viewLoanEnds()); }
+function viewLoansBody() {
   const all = allLoans(), act = all.filter(l => !l.cleared && l.owed > 0), done = all.filter(l => !(!l.cleared && l.owed > 0)), rates = LS.get('loanRates', {}), pre = state.prepay || {}, ed = state.loanEdit;
   const form = (l, i) => `<div class="loan-form">
       ${l.kind === 'app' || i === 'new' ? `<label class="f" for="le-name">Lender / loan name</label><input class="inp" id="le-name" value="${esc(l.name || '')}" placeholder="HDFC personal loan">
@@ -3435,6 +3442,123 @@ function calLink(c) {
   const q = new URLSearchParams({ action: 'TEMPLATE', text: `💳 ${c.name} bill due`, dates: `${ymd(d)}/${ymd(nx)}`, recur: `RRULE:FREQ=MONTHLY;BYMONTHDAY=${d.getDate()}`,
     details: 'Credit card payment due. Pay the full amount to avoid interest. Added from MyMoney.' });
   return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+
+/* ======================================================================
+   Is the LIC policy worth it? Premiums vs what the same money would grow to
+   ====================================================================== */
+function licDefaults() {
+  const sh = sheetList().find(s => s.name === 'LIC'), get = re => { if (!sh) return null; const r = sh.rows.find(x => re.test(String(x.c[0] || ''))); return r ? r.c[1] : null; };
+  const st = String(get(/^Policy start/) || ''), m = st.match(/([A-Za-z]{3})[a-z]*\s+(\d{4})/), mi = m ? MON.findIndex(x => x.toLowerCase() === m[1].toLowerCase()) : -1;
+  return { premium: num(get(/^Monthly premium/)) || 0, payYears: num(get(/^Premium paying term/)) || 16, termYears: num(get(/^Policy term/)) || 25,
+    start: mi >= 0 ? `${m[2]}-${String(mi + 1).padStart(2, '0')}` : isoToday().slice(0, 7), cover: '', maturity: '', term: '' };
+}
+function licFv(P, N, M, a) { const r = Math.pow(1 + a, 1 / 12) - 1; let s = 0; for (let k = 0; k < N; k++) s += P * Math.pow(1 + r, M - k); return s; }
+function viewLic() {
+  const L = state.lic || (state.lic = Object.assign(licDefaults(), LS.get('licCalc', {})));
+  const P = num(L.premium) || 0, N = Math.round((num(L.payYears) || 0) * 12), M = Math.round((num(L.termYears) || 0) * 12), mat = num(L.maturity) || 0, T = num(L.term) || 0;
+  const paid = P * N, endY = (() => { const [y, m] = String(L.start).split('-').map(Number); return y ? new Date(y, m - 1 + M, 1) : null; })();
+  let irr = null; if (mat > 0 && P > 0 && N > 0) { let lo = -0.2, hi = 0.3; for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (licFv(P, N, M, mid) > mat) hi = mid; else lo = mid; } irr = (lo + hi) / 2; }
+  const need = [['FD / PPF (7%)', 0.07], ['Index fund (11%)', 0.11]].map(([l, a]) => [l, licFv(P, N, M, a)]);
+  const mf = T > 0 && T < P ? licFv(P - T, N, M, 0.11) : null;
+  const verdict = irr == null ? '' : irr < 0.06 ? ['bad', 'Poor: grows slower than a fixed deposit.'] : irr < 0.08 ? ['warn', 'About the same as PPF or an FD.'] : ['good', 'Decent for a guaranteed-type policy.'];
+  return `<section class="card"><h2 style="margin-top:0">Is the LIC policy worth it?</h2>
+      <p class="small muted" style="margin:0 0 8px">Filled in from Excel’s LIC sheet. Add the maturity amount from your policy bond or the LIC app (sum assured + bonuses) for a full answer.</p>
+      <div class="row2"><div><label class="f" for="lc-p">Premium a month (₹)</label><input class="inp num" id="lc-p" inputmode="decimal" value="${esc(L.premium)}"></div>
+        <div><label class="f" for="lc-s">First premium (month)</label><input class="inp" id="lc-s" type="month" value="${esc(L.start)}"></div></div>
+      <div class="row2"><div><label class="f" for="lc-n">Pay for (years)</label><input class="inp num" id="lc-n" inputmode="numeric" value="${esc(L.payYears)}"></div>
+        <div><label class="f" for="lc-m">Policy ends after (years)</label><input class="inp num" id="lc-m" inputmode="numeric" value="${esc(L.termYears)}"></div></div>
+      <div class="row2"><div><label class="f" for="lc-mat">Maturity amount (₹)</label><input class="inp num" id="lc-mat" inputmode="decimal" value="${esc(L.maturity)}" placeholder="from the policy"></div>
+        <div><label class="f" for="lc-c">Life cover / sum assured (₹)</label><input class="inp num" id="lc-c" inputmode="decimal" value="${esc(L.cover)}"></div></div>
+      <label class="f" for="lc-t">Term insurance for the same cover (₹ a month, optional)</label><input class="inp num" id="lc-t" inputmode="decimal" value="${esc(L.term)}" placeholder="e.g. 900 – from any insurer’s quote"></section>
+    ${P && N && M ? `<section class="sec box"><div class="sec-h"><h3>The numbers</h3></div>
+      <div class="kv"><span>You pay in total<br><span class="small muted">${N} premiums of ${inr(P)}</span></span><b class="num">${inr(paid)}</b></div>
+      ${need.map(([l, v]) => `<div class="kv"><span>The same premiums in ${l}<br><span class="small muted">by ${endY ? MON[endY.getMonth()] + ' ' + endY.getFullYear() : 'the end'}</span></span><span class="num">${inr(v)}</span></div>`).join('')}
+      ${mat ? `<div class="kv"><span><b>LIC pays at maturity</b></span><b class="num">${inr(mat)}</b></div>
+        <div class="kv"><span><b>LIC’s return</b><br><span class="small muted">yearly, like an FD rate</span></span><b class="num ${verdict[0]}">${(irr * 100).toFixed(1)}%</b></div>
+        <p class="small ${verdict[0]}" style="margin:6px 0 0">${verdict[1]}${irr < 0.08 ? ` To match an index fund LIC would have to pay ${inr(need[1][1])}.` : ''}</p>`
+      : `<p class="small muted" style="margin:6px 0 0">For LIC to beat a fixed deposit it must pay more than <b>${inr(need[0][1])}</b> at maturity. Check your policy bond.</p>`}
+      ${mf != null ? `<div class="kv" style="margin-top:8px"><span>Term plan ${inr(T)}/month + invest the other ${inr(P - T)} at 11%<br><span class="small muted">same life cover${L.cover ? ' of ' + inr(num(L.cover)) : ''} while you pay</span></span><b class="num good">${inr(mf)}</b></div>` : ''}
+      <p class="small muted" style="margin:8px 0 0">Before stopping a policy: surrendering early usually returns much less than you paid, and a paid-up policy keeps a smaller cover. Get the surrender value from LIC and speak to an adviser – this is a comparison, not advice.</p></section>` : ''}`;
+}
+function bindLic() {
+  const L = state.lic, $ = id => document.getElementById(id), map = { 'lc-p': 'premium', 'lc-s': 'start', 'lc-n': 'payYears', 'lc-m': 'termYears', 'lc-mat': 'maturity', 'lc-c': 'cover', 'lc-t': 'term' };
+  Object.entries(map).forEach(([id, k]) => { const e = $(id); if (e) e.onchange = () => { L[k] = e.value; LS.set('licCalc', L); render(); }; });
+}
+
+/* ======================================================================
+   Subscriptions check: every repeating charge, its yearly cost, keep or cancel
+   ====================================================================== */
+function subsList() {
+  const since = (() => { const d = new Date(); return ymKey(new Date(d.getFullYear() - 1, d.getMonth(), 1)) + '-01'; })(), g = {};
+  for (const t of allTx()) {
+    if (t.Type !== 'Expenses' || !/Subscriptions/i.test(t.Category || '') || String(t.Date) < since) continue;
+    const k = payeeOf(t), o = g[k] || (g[k] = { name: k, n: 0, sum: 0, last: '', months: new Set(), amts: [] });
+    o.n++; o.sum += Math.abs(n(t.Amount)); o.months.add(String(t.Date).slice(0, 7)); o.amts.push(Math.abs(n(t.Amount))); if (t.Date > o.last) o.last = String(t.Date).slice(0, 10);
+  }
+  return Object.values(g).map(o => ({ ...o, monthly: o.months.size >= 3, yearly: o.sum })).sort((a, b) => b.yearly - a.yearly);
+}
+function viewSubsCheck() {
+  const l = subsList(), keep = LS.get('subKeep', {}), tot = l.reduce((a, x) => a + x.yearly, 0), cut = l.filter(x => (keep[x.name] || {}).v === 'cancel').reduce((a, x) => a + x.yearly, 0);
+  const tick = (x, v, label) => `<button class="chip ${(keep[x.name] || {}).v === v ? 'on' : ''}" data-sk="${esc(x.name)}" data-v="${v}">${label}</button>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Subscriptions, last 12 months</p><h2 class="hero-v num">${inr(tot)}</h2>
+      <p class="hero-s" style="margin:0">${l.length} services · about ${inr(tot / 12)} a month${cut ? ` · cancelling the marked ones saves ${inr(cut)} a year` : ''}</p></section>
+    <section class="sec box">${l.map(x => `<div class="sortrow"><div class="row"><span><b>${esc(x.name)}</b><br><span class="small muted">${x.n} charge${x.n === 1 ? '' : 's'}${x.monthly ? ' · every month' : ''} · last ${esc(fDay(pDate(x.last)))}</span></span><b class="num">${inr(x.yearly)}<span class="small muted"> /yr</span></b></div>
+        <div class="row" style="gap:8px;margin-top:6px;justify-content:flex-start">${tick(x, 'keep', 'Still using')}${tick(x, 'cancel', 'Cancel it')}</div></div>`).join('') || '<p class="small muted" style="margin:0">No subscriptions in the last 12 months.</p>'}</section>
+    <p class="note">Charges in the Subscriptions category. To stop one: Google Play › Payments & subscriptions, or the service’s own app – and cancel the UPI AutoPay mandate in PhonePe / your bank app. You’ll get a reminder to check these every January.</p>`;
+}
+function bindSubsCheck() {
+  document.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { const k = LS.get('subKeep', {}); k[b.dataset.sk] = { v: b.dataset.v, at: isoToday() }; LS.set('subKeep', k); render(); });
+}
+
+/* ======================================================================
+   After the last EMI: when each loan ends and what to do with the money it frees
+   ====================================================================== */
+function loanEnds() {
+  const now = new Date();
+  return allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0).map(l => {
+    const kw = l.name.split(/[\s(]/)[0].toUpperCase();
+    const paidThis = allTx().some(t => t.Type === 'Expenses' && /Loans/i.test(t.Category || '') && String(t.Details || '').toUpperCase().includes(kw) && String(t.Date).startsWith(isoToday().slice(0, 7)));
+    const end = new Date(now.getFullYear(), now.getMonth() + l.left - (paidThis ? 0 : 1), 1);
+    return { ...l, end, free: new Date(end.getFullYear(), end.getMonth() + 1, 1) };
+  });
+}
+function viewLoanEnds() {
+  const l = loanEnds(); if (!l.length) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>After your last EMI</h3></div>
+    ${l.map(x => `<div class="kv"><span>${esc(x.name)}<br><span class="small muted">last EMI around ${MONF[x.end.getMonth()]} ${x.end.getFullYear()} (${x.left} left)</span></span><span class="num good">+${inr(x.emi)}<br><span class="small muted">a month from ${MON[x.free.getMonth()]} ${x.free.getFullYear()}</span></span></div>`).join('')}
+    <p class="small muted" style="margin:8px 0 0">When a loan ends, keep paying that amount – to your emergency fund until it’s full, then into a SIP – before it quietly becomes extra spending. You’ll get a notification the month it ends.</p></section>`;
+}
+
+/* ======================================================================
+   Emergency fund plan: monthly amount, when you reach 3 and 6 months, progress
+   ====================================================================== */
+function efLiquid() { return invHoldings().filter(h => h.units > 0 && /liquid|overnight|money market/i.test((h.type || '') + ' ' + h.name)).reduce((a, h) => a + (Number(h.value) || 0), 0); }
+function viewEfPlan(w) {
+  const bank = w.banks.reduce((a, x) => a + x.bal, 0), liquid = efLiquid(), _x = invHoldings().filter(h => h.units > 0 && /liquid|overnight|money market/i.test((h.type || '') + ' ' + h.name)).reduce((a, h) => a + (Number(h.value) || 0), 0);
+  const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), avg = rows.length ? rows.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / rows.length : 0;
+  const P = LS.get('efPlan', {}), base = num(P.base) || Math.round(avg / 1000) * 1000, monthly = num(P.monthly) || 0, target = LS.get('efTarget', 6), have = bank + liquid;
+  const ends = loanEnds(), addLoan = P.addLoan !== false;
+  const months = goal => { if (have >= goal) return 0; let h = have, m = 0; const now = new Date();
+    while (h < goal && m < 600) { m++; const d = new Date(now.getFullYear(), now.getMonth() + m, 1); h += monthly + (addLoan ? ends.filter(x => d >= x.free).reduce((a, x) => a + x.emi, 0) : 0); }
+    return m >= 600 ? null : m; };
+  const when = m => { if (m === 0) return 'reached ✓'; if (m == null) return 'set a monthly amount'; const d = new Date(); d.setMonth(d.getMonth() + m); return `${MON[d.getMonth()]} ${d.getFullYear()} · ${m < 12 ? m + ' months' : (m / 12).toFixed(1) + ' years'}`; };
+  const start = P.start || null;
+  return `<section class="sec box"><div class="sec-h"><h3>Emergency fund plan</h3></div>
+    <div class="row2"><div><label class="f" for="ef-base">Monthly expenses to cover (₹)</label><input class="inp num" id="ef-base" inputmode="numeric" value="${esc(base)}"></div>
+      <div><label class="f" for="ef-month">Put aside each month (₹)</label><input class="inp num" id="ef-month" inputmode="numeric" value="${esc(P.monthly || '')}" placeholder="e.g. 5000"></div></div>
+    <p class="small muted" style="margin:6px 0 8px">Your last 6 months averaged ${inr(avg)} of spending, including card bills and EMIs. Lower it to just the essentials (rent, food, EMIs, insurance) if you’d cut back in an emergency.</p>
+    ${ends.length ? `<label class="small" style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="checkbox" id="ef-loan" ${addLoan ? 'checked' : ''}> Add the ${ends.map(x => esc(x.name) + ' ' + inr(x.emi)).join(' and ')} EMI once it ends</label>` : ''}
+    <div class="kv"><span>You have now<br><span class="small muted">banks ${inr(bank)}${liquid ? ' + liquid funds ' + inr(liquid) : ''}</span></span><b class="num">${inr(have)}</b></div>
+    <div class="kv"><span>3 months (${inr(3 * base)})</span><span>${when(months(3 * base))}</span></div>
+    <div class="kv"><span>${target} months (${inr(target * base)})</span><span>${when(months(target * base))}</span></div>
+    ${start ? `<div class="kv"><span>Progress since ${esc(fDay(pDate(start.date)))}</span><span class="num ${have - start.have >= 0 ? 'good' : 'bad'}">${have - start.have >= 0 ? '+' : '−'}${inr(Math.abs(have - start.have))}</span></div>` : ''}
+    <p class="small muted" style="margin:8px 0 0">Keep it in a separate savings account or a liquid fund (Invest › Buy / sell – it’s then counted here), not in the account you spend from.</p></section>`;
+}
+function bindEfPlan() {
+  const $ = id => document.getElementById(id), save = () => { const P = LS.get('efPlan', {}); P.base = $('ef-base').value; P.monthly = $('ef-month').value; if ($('ef-loan')) P.addLoan = $('ef-loan').checked;
+    if (num(P.monthly) > 0 && !P.start) { const w = worthNow(); P.start = { date: isoToday(), have: w.banks.reduce((a, x) => a + x.bal, 0) + efLiquid() }; } LS.set('efPlan', P); render(); };
+  ['ef-base', 'ef-month', 'ef-loan'].forEach(id => { const e = $(id); if (e) e.onchange = save; });
 }
 
 /* ======================================================================
@@ -4171,10 +4295,10 @@ function viewGlance() {
 /* all tools on one screen */
 function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
-  return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
+  return g('Spending', [['subs', '🔁', 'Repeating'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?'], ['newpay', '🆕', 'New payees'], ['subcheck', '📺', 'Subscriptions']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', '80C'], ['import', '📥', 'Import']])
     + g('Tax', [['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Old vs new'], ['regime', '📅', 'Advance tax'], ['regime', '🔎', 'AIS check']])
-    + g('Life', [['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
+    + g('Life', [['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency'], ['documents', '📁', 'Documents'], ['goals', '🎓', 'Education'], ['cover', '🛡', 'Insurance'], ['family', '👪', 'Family']])
     + g('App', [['routine', '✅', 'Monthly routine'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'Glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
