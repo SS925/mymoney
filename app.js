@@ -325,8 +325,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -353,7 +353,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -366,6 +366,9 @@ function render() {
   if (state.tab === 'trade') bindTrade();
   if (state.tab === 'pfedit') bindPfEdit();
   if (state.tab === 'sips' && !state.docEdit) bindSipPlan();
+  if (state.tab === 'moneyin') bindMoneyIn();
+  if (state.tab === 'loans') bindLoanPayoff();
+  document.querySelectorAll('[data-mi-done]').forEach(b => b.onclick = () => markIncomeDone([b.dataset.miDone], true));
   if (['sips', 'bills', 'goals', 'cards', 'others', 'documents', 'alerts', 'subplan'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) { bindGoals(); bindEduCalc(); } }
   if (state.tab === 'subs' || state.tab === 'subcheck') { bindSubs(); bindSubsCheck(); }
   if (state.tab === 'nospend') bindNoSpend();
@@ -438,7 +441,7 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['review', 'Review'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
+  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['moneyin', 'Money in'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['review', 'Review'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS / SGB'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', 'Tax & 80C'], ['regime', 'Tax regime'], ['rent', 'Rent'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency info'], ['documents', 'Documents']],
 };
@@ -627,8 +630,8 @@ function viewHome() {
   </section>`; })()}`,
     worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
     salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
-    budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
-    remind1: () => `  ${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
+    budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}${left > 0 ? (() => { const t = new Date(), dl = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate() - t.getDate() + 1; return ` <span class="small muted" style="font-weight:500">· ${inr(left / dl)} a day for ${dl} day${dl === 1 ? '' : 's'}</span>`; })() : ''}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
+    remind1: () => `  ${homeMoneyInCard()}${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
     remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
     quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
@@ -2715,6 +2718,7 @@ function viewEmergencyMeter(w) {
 function bindWorth() {
   bindEfPlan();
   document.querySelectorAll('[data-sr]').forEach(b => b.onclick = () => { LS.set('srTarget', Math.max(0, Math.min(80, LS.get('srTarget', 20) + Number(b.dataset.sr)))); render(); });
+  { const c = document.getElementById('sr-lic'); if (c) c.onchange = () => { LS.set('srLic', c.checked); render(); }; }
   document.querySelectorAll('[data-ef]').forEach(b => b.onclick = async () => {
     const m = Math.max(1, Math.min(24, efMonths() + Number(b.dataset.ef))); LS.set('efTarget', m);
     const old = state.docs.efplan; state.docs.efplan = Object.assign({}, efPlanGet(), { months: m }); render();
@@ -2965,7 +2969,7 @@ async function saveLoans(list, msg, extraSeen) {
   state.loansSaved = saved; LS.set('loansSaved', saved);
 }
 function loanMonths(bal, emi, r) { if (bal <= 0) return 0; if (!r) return Math.ceil(bal / emi); const x = 1 - r * bal / emi; return x <= 0 ? Infinity : Math.ceil(-Math.log(x) / Math.log(1 + r)); }
-function viewLoans() { return viewLoansBody() + (state.loanEdit ? "" : viewLoanEnds()); }
+function viewLoans() { return viewLoansBody() + (state.loanEdit ? "" : viewLoanPayoff() + viewLoanEnds()); }
 function viewLoansBody() {
   const all = allLoans(), act = all.filter(l => !l.cleared && l.owed > 0), done = all.filter(l => !(!l.cleared && l.owed > 0)), rates = LS.get('loanRates', {}), pre = state.prepay || {}, ed = state.loanEdit;
   const form = (l, i) => `<div class="loan-form">
@@ -3352,16 +3356,23 @@ function viewMilestones(w) {
     <p class="small muted" style="margin:8px 0 0">Pace = average of investments plus money left over, last ${rows.length} months, plus PF; market growth would make it sooner.</p></section>`;
 }
 function viewSavingsRate() {
-  const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym && Number(r.Income) > 0).slice(-12);
-  if (rows.length < 2) return '';
-  const target = LS.get('srTarget', 20), pts = rows.map(r => ({ k: String(r.Month).slice(0, 7), v: (Number(r.Income) - Number(r.Spending)) / Number(r.Income) * 100 }));
+  // saved from your in-hand salary: money moved to investments (SIPs, PPF, stocks) ÷ the salary that paid for that month; LIC optional
+  const ym = isoToday().slice(0, 7), lic = LS.get('srLic', true), by = {};
+  for (const t of allTx()) { const k = String(t.Date).slice(0, 7); if (k >= ym) continue; const a = Math.abs(n(t.Amount) || 0);
+    if (t.Type === 'Savings' && /Investments/i.test(t.Category || '')) by[k] = (by[k] || 0) + a;
+    else if (lic && t.Type === 'Expenses' && /Insurance/i.test(t.Category || '') && /LIC OF INDIA|NACH\/LIC/i.test(t.Details || '')) by[k] = (by[k] || 0) + a; }
+  const months = []; for (let i = 12; i >= 1; i--) { const d = new Date(); months.push(ymKey(new Date(d.getFullYear(), d.getMonth() - i, 1))); }
+  const pts = months.map(k => ({ k, net: netPay(k), s: by[k] || 0 })).filter(p => isFinite(p.net) && p.net > 0).map(p => ({ ...p, v: p.s / p.net * 100 }));
+  if (pts.length < 2) return '';
+  const target = LS.get('srTarget', 20);
   const max = Math.max(target + 10, ...pts.map(p => p.v)), min = Math.min(0, ...pts.map(p => p.v)), span = max - min, avg = pts.reduce((a, p) => a + p.v, 0) / pts.length;
   const y = v => ((max - v) / span * 100).toFixed(1);
   return `<section class="sec box"><div class="sec-h"><h3>Savings rate</h3><span class="small muted">target ${target}%</span></div>
-    <p style="margin:0 0 8px">You kept <b class="${avg >= target ? 'good' : avg >= 0 ? 'warn' : 'bad'}">${Math.round(avg)}%</b> of your income on average over ${pts.length} months.</p>
+    <p style="margin:0 0 8px">You saved <b class="${avg >= target ? 'good' : avg >= 0 ? 'warn' : 'bad'}">${Math.round(avg)}%</b> of your in-hand salary on average over ${pts.length} months.</p>
     <div class="sr-chart"><i class="sr-t" style="top:${y(target)}%"></i><i class="sr-z" style="top:${y(0)}%"></i>${pts.map(p => `<div class="sr-c" title="${ymLabel(p.k)}: ${Math.round(p.v)}%"><b class="${p.v >= target ? 'ok' : p.v >= 0 ? 'mid' : 'neg'}" style="top:${p.v >= 0 ? y(p.v) : y(0)}%;height:${(Math.abs(p.v) / span * 100).toFixed(1)}%"></b><span>${MON[pDate(p.k + '-01').getMonth()].slice(0, 1)}</span></div>`).join('')}</div>
     <div class="row2" style="margin-top:8px"><button class="secondary" data-sr="-5" style="margin:0">Target −5%</button><button class="secondary" data-sr="5" style="margin:0">Target +5%</button></div>
-    <p class="small muted" style="margin:8px 0 0">Savings rate = (income − spending) ÷ income each month. Card bills and EMIs count as spending.</p></section>`;
+    <label class="small" style="display:flex;gap:8px;align-items:center;margin:8px 0 0"><input type="checkbox" id="sr-lic" ${lic ? 'checked' : ''}> Count the LIC premium as saving</label>
+    <p class="small muted" style="margin:8px 0 0">Savings rate = what went into SIPs, PPF and stocks${lic ? ' (plus LIC)' : ''} ÷ your in-hand salary for that month. EPF, part-time income and family money aren’t counted.</p></section>`;
 }
 
 /* ======================================================================
@@ -3676,10 +3687,9 @@ function viewEfPlan(w) {
     <p class="small muted" style="margin:6px 0 8px">Your last 6 months averaged ${inr(avg)} of spending, including card bills and EMIs. Lower it to just the essentials (rent, food, EMIs, insurance) if you’d cut back in an emergency.</p>
     ${ends.length ? `<label class="small" style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="checkbox" id="ef-loan" ${addLoan ? 'checked' : ''}> Add the ${ends.map(x => esc(x.name) + ' ' + inr(x.emi)).join(' and ')} EMI once it ends</label>` : ''}
     <div class="kv"><span>You have now<br><span class="small muted">banks ${inr(bank)}${liquid ? ' + liquid funds ' + inr(liquid) : ''}</span></span><b class="num">${inr(have)}</b></div>
-    <div class="kv"><span>3 months (${inr(3 * base)})</span><span>${when(months(3 * base))}</span></div>
-    <div class="kv"><span>${target} months (${inr(target * base)})</span><span>${when(months(target * base))}</span></div>
+    ${[...new Set([3, 6, target].filter(m => m <= target))].map(m => `<div class="kv"><span>${m} months (${inr(m * base)})</span><span>${when(months(m * base))}</span></div>`).join('')}
     ${start ? `<div class="kv"><span>Progress since ${esc(fDay(pDate(start.date)))}</span><span class="num ${have - start.have >= 0 ? 'good' : 'bad'}">${have - start.have >= 0 ? '+' : '−'}${inr(Math.abs(have - start.have))}</span></div>` : ''}
-    <p class="small muted" style="margin:8px 0 0">Keep it in a separate savings account or a liquid fund (Invest › Buy / sell – it’s then counted here), not in the account you spend from.</p></section>`;
+    <p class="small muted" style="margin:8px 0 0">Keep it in a separate savings account or a liquid fund (Invest › Buy / sell – it’s then counted here), not in the account you spend from.</p></section>${viewEfLayers(base, target)}`;
 }
 function efMonths() { return Number(efPlanGet().months) || LS.get('efTarget', 6); }   // target months, saved with the plan so every phone agrees
 function efPlanGet() { const d = state.docs && state.docs.efplan; return d && !Array.isArray(d) && Object.keys(d).length ? d : LS.get('efPlan', {}); }
@@ -4511,7 +4521,7 @@ function viewGlance() {
 /* all tools on one screen */
 function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
-  return g('Spending', [['mplan', '🧭', 'Money plan'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
+  return g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
     + g('Tax', [['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
@@ -4663,6 +4673,130 @@ function cardFixed(c) {
   const key = String(c.name || '').toUpperCase(), subs = (state.docs.subplan || []).filter(s => key && String(s.card || '').toUpperCase() === key).reduce((a, s) => a + subPlanYear(s) / 12, 0);
   if (subs) out.push({ name: 'Subscriptions', amt: Math.round(subs) });
   return out;
+}
+
+
+/* ======================================================================
+   Money in: part-time / professional payments – how much to keep for tax, how much to save
+   Rules live in app/profile.json → incomeRules: [{name, keyword, tds, save}] ; incomeTax: 'full' | 'half'
+   ====================================================================== */
+const TAX_RATE = 0.208;                                   // your slab (20%) + 4% cess on extra income
+const INCOME_RULES_DEFAULT = [
+  { name: 'Remitly (classes)', keyword: 'REMITLY', tds: 0, save: 50 },
+  { name: 'Venna L', keyword: 'VENNA L', tds: 0, save: 50 },
+  { name: 'Mukku Su', keyword: 'MUKKU SU', tds: 0, save: 50 },
+  { name: 'Company – professional fees', keyword: '', tds: 10, save: 87 }];
+function incomeRules() { const p = state.docs.profile; return p && Array.isArray(p.incomeRules) && p.incomeRules.length ? p.incomeRules : INCOME_RULES_DEFAULT; }
+function incomeTaxMode() { const p = state.docs.profile; return (p && p.incomeTax) || 'full'; }
+/* share of the money that lands in the bank to keep for tax: (gross × taxed share × rate − TDS already cut) ÷ what you got */
+function taxKeepPct(rule) { const t = (Number(rule.tds) || 0) / 100, share = incomeTaxMode() === 'half' ? 0.5 : 1; return Math.max(0, (share * TAX_RATE - t) / (1 - t)); }
+function fyStart(d) { d = d || new Date(); return new Date(d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1, 3, 1); }
+function incomeCredits(since) {
+  const rules = incomeRules().filter(r => String(r.keyword || '').trim().length >= 3), out = [], from = since || fyStart();
+  for (const t of allTx()) {
+    if (t.Type !== 'Income') continue; const d = pDate(t.Date); if (!d || d < from) continue;
+    const det = String(t.Details || '').toUpperCase(), r = rules.find(x => det.includes(x.keyword.trim().toUpperCase())); if (!r) continue;
+    const amt = Math.abs(n(t.Amount) || 0), keep = Math.round(amt * taxKeepPct(r)), save = Math.round((amt - keep) * (Number(r.save) || 0) / 100);
+    out.push({ t, d, r, amt, keep, save, key: `${String(t.Date).slice(0, 10)}|${amt}|${String(t.Details).slice(0, 30)}` });
+  }
+  return out.sort((a, b) => b.d - a.d);
+}
+function incomeDone() { const p = state.docs.profile; return new Set((p && p.incomeDone) || []); }
+async function markIncomeDone(keys, done) {
+  const old = state.docs.profile, s = incomeDone(); keys.forEach(k => done ? s.add(k) : s.delete(k));
+  state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { incomeDone: [...s].slice(-200) }); render();
+  try { await saveDoc('profile', 'Money in: moved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); }
+}
+function homeMoneyInCard() {
+  const done = incomeDone(), wk = new Date(Date.now() - 10 * DAY), fresh = incomeCredits(wk).filter(c => !done.has(c.key)); if (!fresh.length) return '';
+  const c = fresh[0];
+  return `<section class="sec box"><div class="sec-h"><h3>💸 ${inr(c.amt)} from ${esc(c.r.name)}</h3><span class="small muted">${esc(fDay(c.d))}</span></div>
+    <div class="kv"><span>Keep for tax<br><span class="small muted">${c.r.tds ? `TDS ${c.r.tds}% already cut` : 'no TDS on this'}</span></span><b class="num">${inr(c.keep)}</b></div>
+    <div class="kv"><span>Save / invest (${c.r.save}% of the rest)<br><span class="small muted">${loanEnds().length ? 'loan payoff first, then emergency fund' : 'emergency fund, then SIPs'}</span></span><b class="num good">${inr(c.save)}</b></div>
+    <div class="kv"><span>Free to spend</span><span class="num">${inr(c.amt - c.keep - c.save)}</span></div>
+    <button class="primary" data-mi-done="${esc(c.key)}" style="margin:8px 0 0">I’ve moved it</button>${fresh.length > 1 ? ` <button class="linkbtn" data-gotab="moneyin" style="display:block;margin-top:6px">${fresh.length - 1} more to sort</button>` : ''}</section>`;
+}
+function viewMoneyIn() {
+  const ed = state.miEdit; const rules = incomeRules(), mode = incomeTaxMode();
+  if (ed) return `<section class="card"><h2 style="margin-top:0">Income rules</h2>
+      <p class="small muted" style="margin:0 0 8px">Each payment is found by a word in your bank text (the payer’s name, REMITLY…). TDS = tax the payer already cut.</p>
+      ${[0, 1, 2, 3, 4].map(i => { const r = ed[i] || {}; return `<div class="sj"><div class="row2"><div><label class="f" for="mi-n${i}">Name</label><input class="inp" id="mi-n${i}" value="${esc(r.name || '')}"></div>
+        <div><label class="f" for="mi-k${i}">Bank word</label><input class="inp" id="mi-k${i}" value="${esc(r.keyword || '')}" autocapitalize="characters"></div></div>
+        <div class="row2"><div><label class="f" for="mi-t${i}">TDS already cut (%)</label><input class="inp num" id="mi-t${i}" inputmode="numeric" value="${esc(r.tds ?? '')}"></div>
+        <div><label class="f" for="mi-s${i}">Save (% after tax)</label><input class="inp num" id="mi-s${i}" inputmode="numeric" value="${esc(r.save ?? 50)}"></div></div></div>`; }).join('')}
+      <button class="primary" id="mi-save">Save</button><button class="secondary" id="mi-cancel">Cancel</button></section>`;
+  const all = incomeCredits(), done = incomeDone(), keep = all.reduce((a, c) => a + c.keep, 0), moved = all.filter(c => done.has(c.key)).reduce((a, c) => a + c.keep, 0);
+  const got = all.reduce((a, c) => a + c.amt, 0), fy = fyStart(), due = new Date(fy.getFullYear() + 1, 2, 15);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Extra income this FY</p><h2 class="hero-v num">${inr(got)}</h2>
+      <p class="hero-s" style="margin:0">Keep about <b>${inr(keep)}</b> for tax · pay by ${esc(fDay(due))}${mode === 'half' ? '' : ' (75% by 15 Dec if your CA says it’s taxed in full)'}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>How it’s taxed</h3></div>
+      <div class="seg" id="mi-mode">${[['full', 'All of it (safe)'], ['half', '50% (professional scheme)']].map(([v, l]) => `<button data-v="${v}" class="${mode === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">Ask your CA which applies. “50%” is the presumptive scheme for professional work: half of what you receive is taxed, and it’s paid in one go by 15 March.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Rules</h3><button class="edit-btn" id="mi-edit">Edit</button></div>
+      ${rules.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${r.keyword ? 'bank word ' + esc(r.keyword) : '<span class="warn">add the bank word</span>'}${r.tds ? ` · TDS ${r.tds}% cut` : ''}</span></span><span class="num small">keep ${Math.round(taxKeepPct(r) * 100)}% for tax<br>save ${r.save}% of the rest</span></div>`).join('')}</section>
+    <section class="sec box"><div class="sec-h"><h3>Payments this FY</h3><span class="small num">${inr(moved)} of ${inr(keep)} moved</span></div>
+      ${all.map(c => `<div class="kv"><span>${esc(c.r.name)} · ${esc(fDay(c.d))}<br><span class="small muted">tax ${inr(c.keep)} · save ${inr(c.save)}</span></span><span class="num">${inr(c.amt)}<br><label class="small"><input type="checkbox" data-mi-tick="${esc(c.key)}" ${done.has(c.key) ? 'checked' : ''}> moved</label></span></div>`).join('') || '<p class="small muted" style="margin:0">Nothing yet this FY.</p>'}</section>
+    <p class="note">Tax estimate uses 20% + 4% cess (your slab). Keep the tax share in a separate savings account and pay it as advance tax on incometax.gov.in → e-Pay Tax.</p>`;
+}
+function bindMoneyIn() {
+  const $ = id => document.getElementById(id), save = async (patch, msg) => { const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, patch); render();
+    try { await saveDoc('profile', msg); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } };
+  document.querySelectorAll('#mi-mode button').forEach(b => b.onclick = () => save({ incomeTax: b.dataset.v }, 'Money in: tax treatment'));
+  if ($('mi-edit')) $('mi-edit').onclick = () => { state.miEdit = incomeRules().map(r => ({ ...r })); render(); };
+  if ($('mi-cancel')) $('mi-cancel').onclick = () => { state.miEdit = null; render(); };
+  if ($('mi-save')) $('mi-save').onclick = () => {
+    const rules = [0, 1, 2, 3, 4].map(i => ({ name: $('mi-n' + i).value.trim(), keyword: $('mi-k' + i).value.trim().toUpperCase(), tds: Number($('mi-t' + i).value) || 0, save: Math.min(100, Math.max(0, Number($('mi-s' + i).value) || 0)) })).filter(r => r.name || r.keyword);
+    if (rules.some(r => r.keyword && r.keyword.length < 3)) { toast('Bank word needs at least 3 letters'); return; }
+    state.miEdit = null; save({ incomeRules: rules }, 'Money in: rules');
+  };
+  document.querySelectorAll('[data-mi-tick]').forEach(b => b.onchange = () => markIncomeDone([b.dataset.miTick], b.checked));
+}
+
+/* ======================================================================
+   Loan payoff planner: interest saved by closing early
+   ====================================================================== */
+function loanPayoff(l, rate, fee) {
+  const i = (Number(rate) || 0) / 1200, nLeft = Number(l.left) || 0, emi = Number(l.emi) || 0; if (!i || !nLeft || !emi) return null;
+  const principal = emi * (1 - Math.pow(1 + i, -nLeft)) / i, interest = emi * nLeft - principal, feeAmt = principal * (Number(fee) || 0) / 100 * 1.18;
+  return { principal, interest, feeAmt, saved: interest - feeAmt };
+}
+function viewLoanPayoff() {
+  const ls = allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0); if (!ls.length) return '';
+  const p = state.docs.profile || {}, rates = p.loanRates || {};
+  return `<section class="sec box"><div class="sec-h"><h3>Close a loan early?</h3></div>
+    ${ls.map((l, k) => { const r = rates[l.name] || {}, x = loanPayoff(l, r.rate, r.fee);
+      return `<div class="sortrow"><b>${esc(l.name)}</b> <span class="small muted">${inr(l.emi)} × ${l.left} left</span>
+        <div class="row2" style="margin-top:6px"><div><label class="f" for="lp-r${k}">Interest rate (% a year)</label><input class="inp num" id="lp-r${k}" data-lp="${esc(l.name)}" inputmode="decimal" value="${esc(r.rate || '')}" placeholder="from the loan app"></div>
+        <div><label class="f" for="lp-f${k}">Foreclosure fee (%)</label><input class="inp num" id="lp-f${k}" inputmode="decimal" value="${esc(r.fee ?? '')}" placeholder="0 if none"></div></div>
+        ${x ? `<div class="kv"><span>Pay now to close<br><span class="small muted">loan left today${x.feeAmt ? ` + fee ${inr(x.feeAmt)} incl. GST` : ''}</span></span><b class="num">${inr(x.principal + x.feeAmt)}</b></div>
+          <div class="kv"><span>Interest you’d still pay</span><span class="num">${inr(x.interest)}</span></div>
+          <div class="kv"><span><b>Saved by closing now</b></span><b class="num ${x.saved > 0 ? 'good' : 'bad'}">${inr(x.saved)}</b></div>
+          <p class="small muted" style="margin:4px 0 0">Closing early is like earning ${esc(r.rate)}% guaranteed – better than most investments. Then the ${inr(l.emi)} EMI goes into your plan.</p>` : '<p class="small muted" style="margin:6px 0 0">Add the rate to see what closing early saves.</p>'}</div>`; }).join('')}
+    <button class="secondary" id="lp-save">Save rates</button></section>`;
+}
+function bindLoanPayoff() {
+  const b = document.getElementById('lp-save'); if (!b) return;
+  b.onclick = async () => {
+    const old = state.docs.profile, rates = Object.assign({}, (old && old.loanRates) || {});
+    document.querySelectorAll('[data-lp]').forEach(inp => { const f = document.getElementById(inp.id.replace('lp-r', 'lp-f')); rates[inp.dataset.lp] = { rate: Number(inp.value) || 0, fee: Number(f && f.value) || 0 }; });
+    state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { loanRates: rates }); render();
+    try { await saveDoc('profile', 'Loan rates'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); }
+  };
+}
+
+/* ======================================================================
+   Emergency fund layers: where the money sits (instant / FD-RD / liquid funds)
+   ====================================================================== */
+function viewEfLayers(base, target) {
+  const oth = (state.docs && state.docs.others) || [], sav = oth.filter(o => o.type === 'Savings account').reduce((a, o) => a + (Number(o.value) || 0), 0);
+  const fdrd = oth.filter(o => /^(FD|RD)$/.test(o.type)).reduce((a, o) => a + (Number(o.value || o.invested) || 0), 0), liq = efLiquid();
+  const tot = sav + fdrd + liq; if (!tot) return '';
+  const row = (l, v, want, hint) => `<div class="brow"><div class="row"><span>${l}<br><span class="small muted">${hint}</span></span><span class="num small"><b>${inr(v)}</b> · aim ${inr(want)}</span></div><div class="meter thin ${v >= want ? 'inc' : ''}"><i style="width:${want ? Math.min(100, v / want * 100).toFixed(1) : 0}%"></i></div></div>`;
+  return `<section class="sec box"><div class="sec-h"><h3>Where the emergency money sits</h3><span class="small num">${inr(tot)}</span></div>
+    ${row('Instant – savings account', sav, 2 * base, 'with auto-sweep if your bank has it')}
+    ${row('FDs / RDs', fdrd, Math.max(0, (target / 2 - 2) * base), 'small finance banks ~7.5–8%, under ₹5 lakh per bank')}
+    ${row('Liquid / money-market funds', liq, Math.max(0, target / 2 * base), 'out in 1 day, ~6.5–7%')}
+    <p class="small muted" style="margin:8px 0 0">Add FDs and RDs under FD / NPS / SGB (with the maturity date – you get a reminder). Liquid funds bought under Buy / sell count automatically.</p></section>`;
 }
 
 /* undo: a toast with an Undo button */
