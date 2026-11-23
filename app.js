@@ -3087,12 +3087,21 @@ function viewForecast() {
 /* ======================================================================
    Insurance cover check (app/profile.json)
    ====================================================================== */
+/* Cover already typed in Excel's LIC sheet (LIC sum assured, HDFC Life term cover, HDFC ERGO sum insured) */
+function excelCover() {
+  const sh = sheetList().find(x => x.name === 'LIC'); if (!sh) return null;
+  const val = re => { for (const r of sh.rows || []) { const c = r.c || []; if (re.test(String(c[0] || ''))) { const v = Number(String(c[1] || '').replace(/[^0-9.]/g, '')); if (v) return v; } } return 0; };
+  const lic = val(/^LIC sum assured/i), term = val(/term cover/i), total = val(/^Total life cover/i), health = val(/^Health sum insured/i) || val(/^Sum insured/i);
+  const life = total || lic + term;
+  return life || health ? { life, health, lic, term } : null;
+}
 function viewCover() {
-  const p = state.docs.profile || {}, k = kpis(), net = netPay(), yearly = isFinite(net) ? net * 12 : 0, loans = n(k.loans_owed) || 0;
-  const needLife = Math.round((yearly * 10 + loans) / 100000) * 100000, life = Number(p.lifeCover) || 0, health = Number(p.healthCover) || 0, people = Number(p.people) || 1;
+  const p = state.docs.profile || {}, k = kpis(), net = netPay(), yearly = isFinite(net) ? net * 12 : 0, loans = n(k.loans_owed) || 0, xc = excelCover();
+  const needLife = Math.round((yearly * 10 + loans) / 100000) * 100000, life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0, people = Number(p.people) || 1;
   const needHealth = people > 2 ? 1000000 : 500000;
   const row = (l, have, need, why) => `<div class="kv"><span>${l}<br><span class="small muted">${why}</span></span><span class="num" style="text-align:right">${inr(have)}<br><span class="small ${have >= need ? 'good' : 'bad'}">${have >= need ? 'enough' : `short by ${inr(need - have)}`}</span></span></div>`;
   return `<section class="card"><h2 style="margin-top:0">Your cover</h2>
+      ${xc ? `<p class="small muted" style="margin:0 0 8px">From your Excel LIC sheet: LIC ${inr(xc.lic)} + HDFC Life term ${inr(xc.term)} = ${inr(xc.life)} life cover; HDFC ERGO health ${inr(xc.health)}. Type below only to override.</p>` : ''}
       <label class="f" for="cv-life">Life cover – all term / LIC policies (₹)</label><input class="inp num" id="cv-life" inputmode="numeric" value="${esc(p.lifeCover ?? '')}" placeholder="Sum assured">
       <label class="f" for="cv-health">Health cover – company + personal (₹)</label><input class="inp num" id="cv-health" inputmode="numeric" value="${esc(p.healthCover ?? '')}">
       <label class="f" for="cv-people">People covered by your health policy</label><input class="inp num" id="cv-people" inputmode="numeric" value="${esc(p.people ?? 1)}">
