@@ -286,8 +286,13 @@ async function sync(opts = {}) {
     try { await autoEmi(); } catch (e) { /* optional */ }
     if (opts.toast) toast('Up to date');
   } catch (e) {
+    console.error('sync failed', e);
+    if (!(e instanceof AppError) && !opts.retried && navigator.onLine !== false) {     // one quiet retry – a dropped connection usually works the second time
+      state.syncing = false; document.getElementById('btn-sync').classList.remove('spin'); await new Promise(r => setTimeout(r, 2500)); return sync({ ...opts, retried: true });
+    }
+    const why = e && (e.name === 'TypeError' && /fetch|network|load/i.test(e.message || '') ? 'no connection to GitHub' : `${e.name || 'Error'}: ${String(e.message || e).slice(0, 120)}`);
     state.lastError = (e instanceof AppError) ? e.message
-      : (navigator.onLine === false ? 'You’re offline – showing the last data loaded.' : 'Couldn’t reach GitHub – showing the last data loaded.');
+      : (navigator.onLine === false ? 'You’re offline – showing the last data loaded.' : `Couldn’t refresh – showing the last data loaded. (${why}) Tap ⟳ to try again.`);
   } finally {
     state.syncing = false; document.getElementById('btn-sync').classList.remove('spin');
     render();
