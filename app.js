@@ -325,8 +325,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -353,7 +353,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -369,6 +369,7 @@ function render() {
   if (state.tab === 'moneyin') bindMoneyIn();
   if (state.tab === 'credit') bindCredit();
   if (state.tab === 'yearend') bindYearEnd();
+  if (state.tab === 'famtx') bindFamTx();
   if (state.tab === 'moneyin' || state.tab === 'home' || state.tab === 'mplan') bindSplit();
   bindStepUp();
   if (state.tab === 'loans') bindLoanPayoff();
@@ -652,7 +653,7 @@ function viewHome() {
     worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
     salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
     budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}${left > 0 ? (() => { const t = new Date(), dl = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate() - t.getDate() + 1; return ` <span class="small muted" style="font-weight:500">· ${inr(left / dl)} a day for ${dl} day${dl === 1 ? '' : 's'}</span>`; })() : ''}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
-    remind1: () => `  ${[0, 1].includes(new Date().getDay()) ? viewWeek() : ''}${viewCushion(true)}${homeMoneyInCard()}${viewStepUp()}${homeLastMonthCard()}${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
+    remind1: () => `  ${homeHealthStrip()}${famOver() ? viewFamCard() : ''}${[0, 1].includes(new Date().getDay()) ? viewWeek() : ''}${viewCushion(true)}${homeMoneyInCard()}${viewStepUp()}${homeLastMonthCard()}${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
     remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
     quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
@@ -4559,7 +4560,7 @@ function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
   return g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
-    + g('Salary', [['earned', '📊', 'Salary to date'], ['salary', '💼', 'Payslips']])
+    + g('Salary', [['earned', '📊', 'Salary to date'], ['salary', '💼', 'Payslips'], ['health', '🩺', 'Health score'], ['famtx', '👨‍👩‍👧', 'Family money']])
     + g('Tax', [['yearend', '📆', 'Year-end checklist'], ['moneyin', '💸', 'Money in'], ['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['credit', '📈', 'Credit score'], ['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
     + g('App', [['inputs', '🎛', 'Excel inputs'], ['routine', '✅', 'Monthly routine'], ['tidy', '🧹', 'Tidy rules'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'At a glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
@@ -4591,7 +4592,7 @@ function mpSpentBy(ym) {
   for (const r of tradeLog()) if (String(r.date).startsWith(ym) && r.side === 'Buy' && !r.empty && !r.deleting && !isFundName(r.name)) stocks += Number(r.amount) || 0;
   return { by, other, saved, stocks };
 }
-function viewMoneyPlan() { return viewCushion(false) + viewWeek() + viewMoneyPlan0(); }
+function viewMoneyPlan() { return viewCushion(false) + viewWeek() + viewFamCard() + viewMoneyPlan0(); }
 function viewMoneyPlan0() {
   const ym = mpMonth(), [y, m] = ym.split('-').map(Number), net = netPay(ym), plan = activePlan(), lim = plan.limits || {}, sv = Number(plan.savings) || 0;
   const s = mpSpentBy(ym), rows = MP_BUCKETS.map(([c, l, i]) => ({ c, l, i, plan: Number(lim[c]) || 0, done: s.by[c] || 0 })).filter(r => r.plan || r.done);
@@ -5595,7 +5596,7 @@ function weekCheck() {
   const wk = allTx().filter(t => t.Type === 'Expenses' && (() => { const d = pDate(t.Date); return d && d >= dayOnly(from) && d <= last; })());
   const flex = wk.filter(t => !FIX.test(t.Category || '')), fixed = wk.filter(t => FIX.test(t.Category || ''));
   const sum = l => l.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), by = {};
-  flex.forEach(t => { const k = payeeOf(t.Details) || t.Category; by[k] = (by[k] || 0) + Math.abs(n(t.Amount) || 0); });
+  flex.forEach(t => { const k = payeeOf(t) || t.Category; by[k] = (by[k] || 0) + Math.abs(n(t.Amount) || 0); });
   const net = netPay(), p = activePlan(), limit = isFinite(net) ? net - (Number(p.savings) || 0) : null, spent = budgetSpent(), mp = monthProgress();
   const weeksLeft = Math.max(1, (mp.left || 0) / 7), perWeek = limit != null ? Math.max(0, limit - spent) / weeksLeft : null;
   return { from, last, flex: sum(flex), fixed: sum(fixed), top: Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3), limit, spent, perWeek, daysLeft: mp.left || 0, n: flex.length };
@@ -5608,4 +5609,85 @@ function viewWeek() {
     ${w.fixed ? `<div class="kv"><span>Bills, cards, rent, family<br><span class="small muted">planned payments</span></span><span class="num">${inr(w.fixed)}</span></div>` : ''}
     ${w.limit != null ? `<div class="kv"><span>${w.spent > w.limit ? 'Over this month’s limit' : `Left for each week (${w.daysLeft} days to go)`}</span><b class="num ${w.spent > w.limit ? 'bad' : 'good'}">${w.spent > w.limit ? inr(w.spent - w.limit) : inr(w.perWeek)}</b></div>` : ''}
     <p class="small muted" style="margin:8px 0 0">Card swipes show up only when the card bill is paid, so check your card apps too. You get this every Sunday at 7 pm.</p></section>`;
+}
+
+/* ======================================================================
+   Money health score (0–100) for a finished month: savings, spending vs plan, emergency fund, cards, loans
+   ====================================================================== */
+function healthFor(ym) {
+  const net = netPay(ym), p = activePlan(), lim = p.limits || {}, tx = allTx().filter(t => String(t.Date).startsWith(ym)), a = t => Math.abs(n(t.Amount) || 0);
+  const saved = tx.filter(t => (t.Type === 'Savings' && /Investments/i.test(t.Category || '')) || (t.Type === 'Expenses' && /Insurance/i.test(t.Category || '') && /LIC OF INDIA|NACH\/LIC/i.test(t.Details || ''))).reduce((x, t) => x + a(t), 0);
+  const spent = budgetSpent(ym), limit = isFinite(net) ? net - (Number(p.savings) || 0) : NaN;
+  const cards = tx.filter(t => t.Type === 'Expenses' && /Credit Card/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0), cardCap = Number(lim['Credit Card Bills']) || 0;
+  const emi = tx.filter(t => t.Type === 'Expenses' && /Loans/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0);
+  const P = efPlanGet(), base = num(P.base) || 60000, bank = worthNow().banks.reduce((x, b) => x + b.bal, 0) + efLiquid(), efm = bank / base;
+  const sr = isFinite(net) && net > 0 ? saved / net : 0, over = isFinite(limit) && limit > 0 ? spent / limit : 1, er = isFinite(net) && net > 0 ? emi / net : 0;
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const parts = [
+    { k: 'save', l: 'Savings rate', max: 25, got: Math.round(25 * clamp(sr / 0.3)), v: `${Math.round(sr * 100)}% of salary saved`, fix: 'Aim for 30%: SIPs + PPF + LIC + emergency fund on the 2nd, before spending.' },
+    { k: 'plan', l: 'Spending vs plan', max: 25, got: Math.round(25 * clamp(over <= 1 ? 1 : (1.5 - over) / 0.5)), v: isFinite(limit) ? `${inr(spent)} of ${inr(limit)}` : '–', fix: 'Stay inside the monthly limit – check “This week” on Sundays.' },
+    { k: 'ef', l: 'Emergency fund', max: 20, got: Math.round(20 * clamp(efm / 6)), v: `${efm.toFixed(1)} months of expenses`, fix: 'Keep the ₹10,000 transfer to the joint account going; add bonus money until 6 months.' },
+    { k: 'card', l: 'Card bills', max: 15, got: cardCap ? Math.round(15 * clamp(cards <= cardCap ? 1 : (cardCap * 2 - cards) / cardCap)) : 15, v: cardCap ? `${inr(cards)} of ${inr(cardCap)}` : inr(cards), fix: `Keep all cards to ${inr(cardCap)} a month together.` },
+    { k: 'debt', l: 'Loan EMIs', max: 15, got: Math.round(15 * clamp(er <= 0 ? 1 : er <= 0.1 ? 0.7 : er <= 0.3 ? 0.35 : 0)), v: emi ? `${inr(emi)} · ${Math.round(er * 100)}% of salary` : 'none', fix: 'No new loans; finish the last EMIs and move that money to savings.' }];
+  return { ym, score: parts.reduce((x, q) => x + q.got, 0), parts };
+}
+function healthMonths() { const d = new Date(); return [1, 2, 3, 4, 5, 6].map(k => ymKey(new Date(d.getFullYear(), d.getMonth() - k, 1))).reverse(); }
+function healthBand(s) { return s >= 80 ? ['Strong', 'good'] : s >= 60 ? ['Okay', 'warn'] : s >= 40 ? ['Needs work', 'warn'] : ['Weak', 'bad']; }
+function homeHealthStrip() {
+  if (!state.data) return ''; const h = healthFor(healthMonths().pop()), b = healthBand(h.score);
+  return `<button class="strip" data-gotab="health"><span class="strip-i ${b[1]}">🩺</span><span class="strip-t"><span>Money health, ${esc(MON[Number(h.ym.slice(5)) - 1])}</span><b class="num">${h.score}/100 · ${esc(b[0])}</b></span><span class="chev">›</span></button>`;
+}
+function viewHealth() {
+  if (!state.data) return '<div class="empty">Sync Excel first.</div>';
+  const ms = healthMonths(), hs = ms.map(healthFor), h = hs[hs.length - 1], prev = hs[hs.length - 2], b = healthBand(h.score);
+  const worst = h.parts.slice().sort((x, y) => (x.got / x.max) - (y.got / y.max)).filter(q => q.got < q.max).slice(0, 2);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Money health · ${esc(MONF[Number(h.ym.slice(5)) - 1])}</p><h2 class="hero-v num">${h.score}<small style="font-size:.45em">/100</small></h2>
+      <p class="hero-s" style="margin:0">${esc(b[0])}${prev ? ` · ${h.score - prev.score >= 0 ? '+' : ''}${h.score - prev.score} vs ${esc(MON[Number(prev.ym.slice(5)) - 1])}` : ''}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>What makes the score</h3></div>
+      ${h.parts.map(q => `<div class="brow"><div class="row"><span>${esc(q.l)}<br><span class="small muted">${esc(q.v)}</span></span><b class="num ${q.got >= q.max * .8 ? 'good' : q.got >= q.max * .4 ? 'warn' : 'bad'}">${q.got}/${q.max}</b></div>
+        <div class="meter thin"><i style="width:${(q.got / q.max * 100).toFixed(0)}%"></i></div></div>`).join('')}</section>
+    ${worst.length ? `<section class="sec box"><div class="sec-h"><h3>Fix first</h3></div>${worst.map(q => `<p class="small" style="margin:0 0 6px">• <b>${esc(q.l)}</b> – ${esc(q.fix)}</p>`).join('')}</section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>Last 6 months</h3></div>
+      ${hs.map(x => `<div class="kv"><span>${esc(MONF[Number(x.ym.slice(5)) - 1])} ${esc(x.ym.slice(0, 4))}</span><b class="num ${healthBand(x.score)[1]}">${x.score}</b></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">Savings rate: investments + LIC ÷ salary. Spending: against your plan limit (family money is counted separately). Emergency fund uses today’s bank money for every month.</p></section>`;
+}
+
+/* ======================================================================
+   Family money: monthly cap (plan "Family & Transfers"), who received how much
+   ====================================================================== */
+function famData(ym) {
+  ym = ym || budgetYm(); const cap = Number(((activePlan().limits) || {})['Family & Transfers']) || 0, a = t => Math.abs(n(t.Amount) || 0);
+  const out = allTx().filter(t => t.Type === 'Expenses' && ASIDE_OUT.test(t.Category || '')), inn = allTx().filter(t => t.Type === 'Income' && /Family Support/i.test(t.Category || ''));
+  const mo = out.filter(t => String(t.Date).startsWith(ym)), by = {};
+  mo.forEach(t => { const k = payeeOf(t) || 'Other'; by[k] = (by[k] || 0) + a(t); });
+  const d = new Date(), last6 = [1, 2, 3, 4, 5, 6].map(k => ymKey(new Date(d.getFullYear(), d.getMonth() - k, 1))), avg = out.filter(t => last6.includes(String(t.Date).slice(0, 7))).reduce((x, t) => x + a(t), 0) / 6;
+  const per6 = {}; out.filter(t => last6.includes(String(t.Date).slice(0, 7))).forEach(t => { const k = payeeOf(t) || 'Other'; per6[k] = (per6[k] || 0) + a(t) / 6; });
+  return { ym, cap, sent: mo.reduce((x, t) => x + a(t), 0), got: inn.filter(t => String(t.Date).startsWith(ym)).reduce((x, t) => x + a(t), 0), by: Object.entries(by).sort((p, q) => q[1] - p[1]), avg, per6: Object.entries(per6).sort((p, q) => q[1] - p[1]).slice(0, 6) };
+}
+function famOver() { if (!state.data) return false; const f = famData(); return f.cap > 0 && f.sent > f.cap; }
+function viewFamCard() {
+  if (!state.data) return ''; const f = famData(); if (!f.cap && !f.sent) return '';
+  const pct = f.cap ? Math.min(100, f.sent / f.cap * 100) : 100, over = f.cap && f.sent > f.cap;
+  return `<section class="sec box"><div class="sec-h"><h3>👨‍👩‍👧 Family money, ${esc(MON[Number(f.ym.slice(5)) - 1])}</h3><span class="small ${over ? 'bad' : 'muted'}">${inr(f.sent)} of ${inr(f.cap)}</span></div>
+    <div class="meter thin ${over ? 'over' : ''}"><i style="width:${pct.toFixed(1)}%"></i></div>
+    ${f.by.slice(0, 3).map(([k, v]) => `<div class="kv"><span class="small">${esc(k)}</span><span class="num small">${inr(v)}</span></div>`).join('')}
+    <p class="small muted" style="margin:6px 0 0">${over ? `${inr(f.sent - f.cap)} over the family limit – it comes out of savings unless bonus or class money covers it.` : `${inr(Math.max(0, f.cap - f.sent))} left this month.`} <button class="linkbtn" data-gotab="famtx">Details ›</button></p></section>`;
+}
+function viewFamTx() {
+  if (!state.data) return '<div class="empty">Sync Excel first.</div>';
+  const f = famData(), p = activePlan();
+  return `${viewFamCard()}
+    <section class="sec box"><div class="sec-h"><h3>Monthly family limit</h3></div>
+      <div class="row2"><div><label class="f" for="fm-cap">Limit a month (₹)</label><input class="inp num" id="fm-cap" inputmode="numeric" value="${esc(f.cap || '')}"></div><div><label class="f">&nbsp;</label><button class="primary" id="fm-save" style="margin:0">Save</button></div></div>
+      <p class="small muted" style="margin:6px 0 0">Saved in your plan as “Family & Transfers”. Last 6 months you sent about <b>${inr(f.avg)}</b> a month. A limit you can keep is better than a low one you break – bigger help can come from bonus money.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Who received it (6-month average)</h3></div>
+      ${f.per6.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><span class="num">${inr(v)} / month</span></div>`).join('') || '<p class="small muted" style="margin:0">Nothing in the last 6 months.</p>'}
+      ${f.got ? `<p class="small muted" style="margin:8px 0 0">Received from family this month: ${inr(f.got)}.</p>` : ''}</section>`;
+}
+function bindFamTx() {
+  const b = document.getElementById('fm-save'); if (!b) return;
+  b.onclick = async () => { const v = Math.max(0, Math.round(Number(document.getElementById('fm-cap').value.replace(/[,₹\s]/g, '')) || 0));
+    const cur = activePlan(), plan = { savings: cur.savings, limits: Object.assign({}, cur.limits, { 'Family & Transfers': v }), netPay: netPay(), updatedAt: new Date().toISOString() };
+    const old = state.plan; state.plan = plan; LS.set('plan', plan);
+    try { await GH.putJson('plan.json', plan, 'Family limit'); toast('Saved'); } catch (e) { state.plan = old; LS.set('plan', old); toast(e.message || 'Couldn’t reach GitHub'); } render(); };
 }
