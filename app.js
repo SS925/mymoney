@@ -442,6 +442,7 @@ function render() {
       document.getElementById('rqv-retire').textContent = t.x.retire + ' years';
       document.getElementById('rqv-invest').textContent = inr(t.x.invest);
       document.getElementById('rt-card').innerHTML = retireCard(t.x, t.b);
+      { const rp = document.getElementById('rt-path'); if (rp) rp.innerHTML = retirePathChart(t.x, t.b); }
       const base = { ...retireInputs().x, ...(retirePending() && state.retireSaved ? state.retireSaved.values : {}) };
       document.getElementById('rq-save').hidden = t.x.retire === base.retire;
     });
@@ -1013,6 +1014,7 @@ function viewRetireEdit() {
       ${f.hint ? `<p class="small muted" style="margin:2px 0 0">${f.hint}</p>` : ''}</div>`).join('')}
   </section>
   <section class="card" id="rp-res">${retireResults(e.x, e.b)}</section>
+  <div id="rp-path">${retirePathChart(e.x, e.b)}</div>
   <button class="primary" id="rp-save">Save to Excel</button>
   <button class="secondary" id="rp-reset">Reset to Excel’s values</button>
   <button class="secondary" id="rp-cancel">Cancel</button>
@@ -1038,6 +1040,7 @@ function bindRetireEdit() {
     if (e.x.until <= e.x.retire) { e.x.until = e.x.retire + 1; document.getElementById('rf-until').value = e.x.until; document.getElementById('rv-until').textContent = e.x.until; }
     if (e.x.retire <= e.x.age) { e.x.retire = e.x.age + 1; document.getElementById('rf-retire').value = e.x.retire; document.getElementById('rv-retire').textContent = e.x.retire; }
     document.getElementById('rp-res').innerHTML = retireResults(e.x, e.b);
+    { const rp = document.getElementById('rp-path'); if (rp) rp.innerHTML = retirePathChart(e.x, e.b); }
   });
   document.getElementById('rp-cancel').onclick = () => { state.retireEdit = null; render(); window.scrollTo(0, 0); };
   document.getElementById('rp-reset').onclick = () => { const s = retireInputs(); state.retireEdit = { x: s.x, b: s.b }; render(); };
@@ -1064,6 +1067,7 @@ function viewFuture0() {
   const ep = sheetRowRaw('Savings Schemes', 'EPF'), pp = sheetRowRaw('Savings Schemes', 'PPF'), fd = sheetRowRaw('Savings Schemes', 'Fixed deposits');
   const today = [ep && ['Employees’ Provident Fund (EPF)', num(ep[2])], pp && ['Public Provident Fund (PPF)', num(pp[2])], fd && num(fd[2]) > 0 && ['Fixed deposits', num(fd[2])]].filter(Boolean);
   return `<section class="hero" id="rt-card">${retireCard(tx.x, tx.b)}</section>
+  <div id="rt-path">${retirePathChart(tx.x, tx.b)}</div>
   ${retirePending() ? `<p class="banner" style="margin:14px 0 0">Your new plan is saved. Excel applies it next time the workbook opens; the Excel figures below update after that.</p>` : ''}
   <section class="sec box"><div class="sec-h"><h3>Adjust your plan</h3><button id="rp-edit">More settings</button></div>
     <div class="rf"><div class="row"><label for="rq-retire">Retirement age</label><b class="num" id="rqv-retire">${tx.x.retire} years</b></div>
@@ -1089,7 +1093,7 @@ function viewFuture0() {
   <section class="sec"><div class="sec-h"><h3>Path to ${ageR}</h3></div>${projChart(rows)}
     <table class="proj" style="margin-top:10px"><tr><th>Year</th><th>Age</th><th>Net worth</th><th>Today’s ₹</th></tr>
     ${pick.map(r => `<tr><td>${r.Year}</td><td>${r.Age}</td><td class="num">${cr(r.NetWorth)}</td><td class="num">${cr(r.NetWorthToday)}</td></tr>`).join('')}</table>
-    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included).</p></section>
+    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included) – this one changes only after you save and Excel recalculates.</p></section>
   <section class="sec"><div class="group"><button class="navrow" data-gotab="goals"><span class="nt">Goals<br><span class="small muted">${(state.docs.goals || []).length ? `${state.docs.goals.length} goal${state.docs.goals.length === 1 ? '' : 's'} · what-if` : 'Emergency fund, car, trip – with what-if'}</span></span><span class="chev">›</span></button><button class="navrow" data-gotab="cover"><span class="nt">Insurance cover check</span><span class="chev">›</span></button></div></section>`;
 }
 
@@ -6694,3 +6698,17 @@ function liveType(id, apply, wait = 450) {
     const n2 = document.getElementById(id); if (n2) { n2.focus(); try { n2.setSelectionRange(pos, pos); } catch (e) {} } }, wait); };
 }
 const numOf = v => Number(String(v).replace(/[,₹\s]/g, '')) || 0;
+
+/* Retirement path drawn from the slider values (redrawn live): money growing until retirement, then spent until the last year */
+function retirePathChart(x, b) {
+  const r = retirePlan(x, b), w = worthNow(), hv = k => (w.have.find(q => q.k === k) || {}).v || 0;
+  let pot = hv('mf') + hv('st'), epf = b.epfToday || 0; const ages = [], have = [], need = [];
+  for (let a = x.age, y = 0; a <= x.until; a++, y++) {
+    ages.push(String(a)); have.push(Math.max(0, pot + epf));
+    if (a < x.retire) { pot = pot * (1 + x.rb) + (x.invest || 0) * 12 * Math.pow(1 + x.step, y); epf = epf * (1 + b.epfRate) + (b.epfMonthly || 0) * 12; need.push(null); }
+    else { const spend = r.costR * 12 * Math.pow(1 + x.inf, a - x.retire); pot = (pot + epf) * (1 + x.ra) - spend; epf = 0; need.push(null); }
+  }
+  const atR = have[Math.max(0, x.retire - x.age)], ok = atR >= r.corpus, lastsTo = (() => { const i = have.findIndex((v, k) => k > x.retire - x.age && v <= 0); return i < 0 ? x.until : x.age + i; })();
+  const line = cLine([['Your money', have, ok ? 'var(--good)' : 'var(--warn)'], ['Needed at ' + x.retire, ages.map((a, i) => i <= x.retire - x.age ? r.corpus : null), '#9aa7b8', true]], ages);
+  return cbox('Your path with these settings', line, `At ${x.retire}: ${cr(atR)} against ${cr(r.corpus)} needed – ${ok ? `<span class="good">enough</span>` : `<span class="bad">short by ${cr(r.corpus - atR)}</span>`}. ${lastsTo < x.until ? `<span class="bad">Money runs out around age ${lastsTo}.</span>` : `Lasts until ${x.until}.`} Moves as you slide.`);
+}
