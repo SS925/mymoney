@@ -5606,7 +5606,7 @@ function forecastRun(o) {
   let mf = hv('mf') + hv('st'), ppf = hv('ppf'), epf = hv('epf'), bank = w.banks.reduce((a, x) => a + x.bal, 0) + hv('fd') + hv('oth'), sipNow = sip;
   const r = { mf: o.ret / 1200, ppf: 7.1 / 1200, epf: 8.25 / 1200, bank: 3 / 1200 }, pts = [{ m: 0, v: w.net }], start = new Date();
   for (let m = 1; m <= 60; m++) {
-    if (o.step && m > 1 && (m - 1) % 12 === 0) sipNow = Math.round(sipNow * 1.1);
+    { const sp = o.stepPct != null ? Number(o.stepPct) : (o.step ? 10 : 0); if (sp > 0 && m > 1 && (m - 1) % 12 === 0) sipNow = Math.round(sipNow * (1 + sp / 100)); }   // SIPs go up by your % every year
     let freed = 0; loans.forEach(l => { if (l.left > 0) { l.left--; l.owed = Math.max(0, l.owed - l.emi); } else freed += l.emi; });
     mf = mf * (1 + r.mf) + sipNow; ppf = ppf * (1 + r.ppf) + ppfM; epf = epf * (1 + r.epf) + pf;
     let toEf = efM + freed + extra;                                            // emergency fund first; once full, the rest is invested
@@ -5619,7 +5619,7 @@ function forecastRun(o) {
 }
 function viewForecast() {
   if (!state.data) return '';
-  const o = Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {})), f = forecastRun(o), at = y => f.pts[y * 12];
+  const o = Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {})); if (o.stepPct == null) o.stepPct = o.step ? 10 : 0; const f = forecastRun(o), at = y => f.pts[y * 12];
   const now = f.pts[0].v, max = Math.max(...f.pts.map(p => p.v)), min = Math.min(0, ...f.pts.map(p => p.v));
   const X = i => (i / 60 * 290 + 5).toFixed(1), Y = v => (85 - (v - min) / (max - min || 1) * 78).toFixed(1);
   const lakh = v => v >= 1e7 ? (v / 1e7).toFixed(2) + ' Cr' : (v / 1e5).toFixed(1) + 'L';
@@ -5631,13 +5631,13 @@ function viewForecast() {
     ${[[0, 'Today'], [1, '1 year · ' + yr(1)], [3, '3 years · ' + yr(3)], [5, '5 years · ' + yr(5)]].map(([y, l]) => `<div class="kv"><span>${l}</span><b class="num">${inr(y ? at(y).v : now)}</b></div>`).join('')}
     <p class="small" style="margin:8px 0 0">${[1e6, 2.5e6, 5e6].map(g => { const h = hit(g); return h && now < g ? `₹${lakh(g)} around <b>${h}</b>` : ''; }).filter(Boolean).join(' · ') || ''}</p>
     <div class="row2" style="margin-top:8px"><div><label class="f" for="fc-ret">Fund return (a year)</label><select class="inp" id="fc-ret">${[8, 10, 11, 12, 14].map(v => `<option ${v === o.ret ? 'selected' : ''} value="${v}">${v}%</option>`).join('')}</select></div>
-      <div><label class="f">&nbsp;</label><label class="tick"><input type="checkbox" id="fc-step" ${o.step ? 'checked' : ''}> SIPs +10% each year</label><label class="tick"><input type="checkbox" id="fc-extra" ${o.extra ? 'checked' : ''}> Save bonus &amp; class money</label></div></div>
-    <p class="small muted" style="margin:8px 0 0">Each month: SIPs ${inr(f.sip)}, PPF ${inr(f.ppfM)} (7.1%), EPF ${inr(f.pf)} (8.25%), emergency fund ${inr(f.efM)} (3%)${f.extra ? `, plus ${inr(f.extra)} saved from bonus and class money (your last 6 months)` : ''}. Loan EMIs go to the emergency fund once a loan ends; when it reaches ${inr(f.efGoal)}, that money is invested. LIC isn’t counted until it matures. Returns are assumptions, not promises.</p></section>`;
+      <div><label class="f">&nbsp;</label><label class="f" for="fc-stepPct" style="margin-top:0">SIP increase each year (%)</label><input class="inp num" id="fc-stepPct" inputmode="decimal" value="${o.stepPct}" style="margin-bottom:6px"><label class="tick"><input type="checkbox" id="fc-extra" ${o.extra ? 'checked' : ''}> Save bonus &amp; class money</label></div></div>
+    <p class="small muted" style="margin:8px 0 0">Each month: SIPs ${inr(f.sip)}${o.stepPct > 0 ? ` (+${o.stepPct}% a year)` : ' (no increase)'}, PPF ${inr(f.ppfM)} (7.1%), EPF ${inr(f.pf)} (8.25%), emergency fund ${inr(f.efM)} (3%)${f.extra ? `, plus ${inr(f.extra)} saved from bonus and class money (your last 6 months)` : ''}. Loan EMIs go to the emergency fund once a loan ends; when it reaches ${inr(f.efGoal)}, that money is invested. LIC isn’t counted until it matures. Returns are assumptions, not promises.</p></section>`;
 }
 function bindForecast() {
   const $ = id => document.getElementById(id), set = patch => { LS.set('fcOpt', Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {}), patch)); render(); };
   if ($('fc-ret')) $('fc-ret').onchange = () => set({ ret: Number($('fc-ret').value) });
-  if ($('fc-step')) $('fc-step').onchange = () => set({ step: $('fc-step').checked });
+  liveType('fc-stepPct', v => { const x = Math.max(0, Math.min(50, Number(String(v).replace(/[%\s]/g, '')) || 0)); LS.set('fcOpt', Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {}), { stepPct: x, step: x > 0 })); });
   if ($('fc-extra')) $('fc-extra').onchange = () => set({ extra: $('fc-extra').checked });
 }
 
