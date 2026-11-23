@@ -652,7 +652,7 @@ function viewHome() {
     worth: () => `  <button class="strip" data-gotab="worth"><span class="strip-i">₹</span><span class="strip-t"><span>Net worth</span><b class="num">${inr(worthNow().net)}</b></span><span class="strip-a">See all ›</span></button>`,
     salary: () => `  ${ps ? `<button class="strip" data-gotab="salary"><span class="strip-i">${IC.salary}</span><span class="strip-t"><span>Salary credited, ${esc(ps.row.Month)}</span><b class="num">${inr(num(ps.row['Net Pay']))}</b></span><span class="strip-a">Payslip ›</span></button>` : ''}`,
     budget: () => `  ${isFinite(net) ? `<button class="strip" data-gotab="money"><span class="strip-i ${left < 0 ? 'bad' : 'good'}">${IC.limit}</span><span class="strip-t"><span>${left < 0 ? 'Over your net-pay limit' : 'Left from net pay'}</span><b class="num ${left < 0 ? 'bad' : 'good'}">${inr(Math.abs(left))}${left > 0 ? (() => { const t = new Date(), dl = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate() - t.getDate() + 1; return ` <span class="small muted" style="font-weight:500">· ${inr(left / dl)} a day for ${dl} day${dl === 1 ? '' : 's'}</span>`; })() : ''}</b></span><span class="strip-a">Money ›</span></button>` : ''}`,
-    remind1: () => `  ${viewCushion(true)}${homeMoneyInCard()}${viewStepUp()}${homeLastMonthCard()}${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
+    remind1: () => `  ${[0, 1].includes(new Date().getDay()) ? viewWeek() : ''}${viewCushion(true)}${homeMoneyInCard()}${viewStepUp()}${homeLastMonthCard()}${homeRoutineCard() || homeMissingCard()}${homeForecastCard()}`,
     remind2: () => `  ${(() => { const n = cardPayments().length; return n ? `<button class="strip" data-gotab="ccards"><span class="strip-i">💳</span><span class="strip-t"><span>Card bill paid</span><b>${n} payment${n === 1 ? '' : 's'} to match to a card</b></span><span class="strip-a">Match ›</span></button>` : ''; })()}`,
     quick: () => `  <div class="qas">
     ${qa('data-gotab="add"', IC.add, 'Add expense')}
@@ -2388,6 +2388,7 @@ function viewWorth() {
     ${viewMilestones(w)}
     ${viewNetWorthChart()}
     ${viewSavingsRate()}
+    ${viewForecast()}
     <p class="small muted" style="margin:0 4px 16px">Banks are the last statement balances; funds and stocks use today’s prices; EPF and PPF are your passbook figures. The EPS pension part of EPF is paid as a monthly pension, not as cash.</p>`;
 }
 /* ======================================================================
@@ -2741,7 +2742,7 @@ function viewEmergencyMeter(w) {
     <p class="small muted" style="margin:8px 0 0">3–6 months of spending kept in a savings account or liquid fund is the usual advice; more if your income is irregular.</p></section>`;
 }
 function bindWorth() {
-  bindEfPlan();
+  bindEfPlan(); bindForecast();
   document.querySelectorAll('[data-sr]').forEach(b => b.onclick = () => { LS.set('srTarget', Math.max(0, Math.min(80, LS.get('srTarget', 20) + Number(b.dataset.sr)))); render(); });
   { const c = document.getElementById('sr-lic'); if (c) c.onchange = () => { LS.set('srLic', c.checked); render(); }; }
   document.querySelectorAll('[data-ef]').forEach(b => b.onclick = async () => {
@@ -4590,7 +4591,7 @@ function mpSpentBy(ym) {
   for (const r of tradeLog()) if (String(r.date).startsWith(ym) && r.side === 'Buy' && !r.empty && !r.deleting && !isFundName(r.name)) stocks += Number(r.amount) || 0;
   return { by, other, saved, stocks };
 }
-function viewMoneyPlan() { return viewCushion(false) + viewMoneyPlan0(); }
+function viewMoneyPlan() { return viewCushion(false) + viewWeek() + viewMoneyPlan0(); }
 function viewMoneyPlan0() {
   const ym = mpMonth(), [y, m] = ym.split('-').map(Number), net = netPay(ym), plan = activePlan(), lim = plan.limits || {}, sv = Number(plan.savings) || 0;
   const s = mpSpentBy(ym), rows = MP_BUCKETS.map(([c, l, i]) => ({ c, l, i, plan: Number(lim[c]) || 0, done: s.by[c] || 0 })).filter(r => r.plan || r.done);
@@ -5533,4 +5534,78 @@ function viewEarned() {
     <section class="sec box"><div class="sec-h"><h3>Average spend, last 6 months</h3><span class="small num">${inr(spT)} / month</span></div>
       ${sp.rows.slice(0, 10).map(([c, v]) => `<div class="kv"><span>${esc(c)}</span><span class="num">${inr(v)}</span></div>`).join('')}
       <p class="small muted" style="margin:8px 0 0">${esc(MON[Number(sp.months[5].slice(5)) - 1])}–${esc(MON[Number(sp.months[0].slice(5)) - 1])}. Card bills are what you paid to the cards; family transfers and EMIs are included.</p></section>`;
+}
+
+/* ======================================================================
+   Net worth forecast: 1, 3 and 5 years with today's plan (SIPs, PPF, EPF, emergency fund, extra money, loans ending)
+   ====================================================================== */
+function forecastRun(o) {
+  const w = worthNow(), hv = k => (w.have.find(r => r.k === k) || {}).v || 0;
+  const sip = Object.values(sipPlanGet()).reduce((a, v) => a + (Number(v) || 0), 0), ppfM = (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const psh = sheetList().find(x => x.name === 'Payslips'), last = psh && psh.rows.length > 1 ? psh.rows[psh.rows.length - 1] : null, hd = psh ? psh.rows[0].c : [];
+  const pf = last ? (num(last.c[hd.indexOf('PF (Employee)')]) || 0) + (num(last.c[hd.indexOf('PF (Employer)')]) || 0) : 0;
+  const P = efPlanGet(), efM = num(P.monthly) || 0, efGoal = efMonths() * (num(P.base) || 0);
+  const since = new Date(); since.setMonth(since.getMonth() - 6);
+  const extra = o.extra ? incomeCredits(since).reduce((a, c) => a + c.save, 0) / 6 : 0;          // bonus + class money saved, monthly average
+  const loans = allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0).map(l => ({ owed: Number(l.owed) || l.emi * l.left, emi: l.emi, left: l.left }));
+  let mf = hv('mf') + hv('st'), ppf = hv('ppf'), epf = hv('epf'), bank = w.banks.reduce((a, x) => a + x.bal, 0) + hv('fd') + hv('oth'), sipNow = sip;
+  const r = { mf: o.ret / 1200, ppf: 7.1 / 1200, epf: 8.25 / 1200, bank: 3 / 1200 }, pts = [{ m: 0, v: w.net }], start = new Date();
+  for (let m = 1; m <= 60; m++) {
+    if (o.step && m > 1 && (m - 1) % 12 === 0) sipNow = Math.round(sipNow * 1.1);
+    let freed = 0; loans.forEach(l => { if (l.left > 0) { l.left--; l.owed = Math.max(0, l.owed - l.emi); } else freed += l.emi; });
+    mf = mf * (1 + r.mf) + sipNow; ppf = ppf * (1 + r.ppf) + ppfM; epf = epf * (1 + r.epf) + pf;
+    let toEf = efM + freed + extra;                                            // emergency fund first; once full, the rest is invested
+    bank = bank * (1 + r.bank);
+    if (efGoal && bank >= efGoal) { mf += toEf; toEf = 0; } else bank += toEf;
+    const owed = loans.reduce((a, l) => a + l.owed, 0);
+    pts.push({ m, v: mf + ppf + epf + bank - owed - (w.cards || 0), mf, ppf, epf, bank });
+  }
+  return { pts, sip, ppfM, pf, efM, extra, efGoal, start };
+}
+function viewForecast() {
+  if (!state.data) return '';
+  const o = Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {})), f = forecastRun(o), at = y => f.pts[y * 12];
+  const now = f.pts[0].v, max = Math.max(...f.pts.map(p => p.v)), min = Math.min(0, ...f.pts.map(p => p.v));
+  const X = i => (i / 60 * 290 + 5).toFixed(1), Y = v => (85 - (v - min) / (max - min || 1) * 78).toFixed(1);
+  const lakh = v => v >= 1e7 ? (v / 1e7).toFixed(2) + ' Cr' : (v / 1e5).toFixed(1) + 'L';
+  const hit = goal => { const p = f.pts.find(x => x.v >= goal); if (!p) return null; const d = new Date(f.start.getFullYear(), f.start.getMonth() + p.m, 1); return `${MON[d.getMonth()]} ${d.getFullYear()}`; };
+  const yr = y => { const d = new Date(f.start.getFullYear() + y, f.start.getMonth(), 1); return `${MON[d.getMonth()]} ${d.getFullYear()}`; };
+  return `<section class="sec box"><div class="sec-h"><h3>Net worth in 5 years</h3><span class="small muted">a projection</span></div>
+    <svg viewBox="0 0 300 92" width="100%" aria-label="Projected net worth over 5 years"><polyline fill="none" stroke="var(--blue1)" stroke-width="2.2" points="${f.pts.map((p, i) => `${X(i)},${Y(p.v)}`).join(' ')}"/>
+      ${[1, 3, 5].map(y => `<circle cx="${X(y * 12)}" cy="${Y(at(y).v)}" r="3" fill="var(--blue1)"/>`).join('')}</svg>
+    ${[[0, 'Today'], [1, '1 year · ' + yr(1)], [3, '3 years · ' + yr(3)], [5, '5 years · ' + yr(5)]].map(([y, l]) => `<div class="kv"><span>${l}</span><b class="num">${inr(y ? at(y).v : now)}</b></div>`).join('')}
+    <p class="small" style="margin:8px 0 0">${[1e6, 2.5e6, 5e6].map(g => { const h = hit(g); return h && now < g ? `₹${lakh(g)} around <b>${h}</b>` : ''; }).filter(Boolean).join(' · ') || ''}</p>
+    <div class="row2" style="margin-top:8px"><div><label class="f" for="fc-ret">Fund return (a year)</label><select class="inp" id="fc-ret">${[8, 10, 11, 12, 14].map(v => `<option ${v === o.ret ? 'selected' : ''} value="${v}">${v}%</option>`).join('')}</select></div>
+      <div><label class="f">&nbsp;</label><label class="tick"><input type="checkbox" id="fc-step" ${o.step ? 'checked' : ''}> SIPs +10% each year</label><label class="tick"><input type="checkbox" id="fc-extra" ${o.extra ? 'checked' : ''}> Save bonus &amp; class money</label></div></div>
+    <p class="small muted" style="margin:8px 0 0">Each month: SIPs ${inr(f.sip)}, PPF ${inr(f.ppfM)} (7.1%), EPF ${inr(f.pf)} (8.25%), emergency fund ${inr(f.efM)} (3%)${f.extra ? `, plus ${inr(f.extra)} saved from bonus and class money (your last 6 months)` : ''}. Loan EMIs go to the emergency fund once a loan ends; when it reaches ${inr(f.efGoal)}, that money is invested. LIC isn’t counted until it matures. Returns are assumptions, not promises.</p></section>`;
+}
+function bindForecast() {
+  const $ = id => document.getElementById(id), set = patch => { LS.set('fcOpt', Object.assign({ ret: 11, step: true, extra: true }, LS.get('fcOpt', {}), patch)); render(); };
+  if ($('fc-ret')) $('fc-ret').onchange = () => set({ ret: Number($('fc-ret').value) });
+  if ($('fc-step')) $('fc-step').onchange = () => set({ step: $('fc-step').checked });
+  if ($('fc-extra')) $('fc-extra').onchange = () => set({ extra: $('fc-extra').checked });
+}
+
+/* ======================================================================
+   Weekly spend check: last 7 days of bank spending, and what's left per week for the rest of the month
+   ====================================================================== */
+function weekCheck() {
+  const last = allTx().reduce((a, t) => { const d = pDate(t.Date); return d && d > a ? d : a; }, new Date(0)), from = new Date(last.getTime() - 6 * DAY);
+  const FIX = /^(Housing|Credit Card Bills|Loans\/EMI|Insurance|Family & Transfers|Donation)$/;
+  const wk = allTx().filter(t => t.Type === 'Expenses' && (() => { const d = pDate(t.Date); return d && d >= dayOnly(from) && d <= last; })());
+  const flex = wk.filter(t => !FIX.test(t.Category || '')), fixed = wk.filter(t => FIX.test(t.Category || ''));
+  const sum = l => l.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), by = {};
+  flex.forEach(t => { const k = payeeOf(t.Details) || t.Category; by[k] = (by[k] || 0) + Math.abs(n(t.Amount) || 0); });
+  const net = netPay(), p = activePlan(), limit = isFinite(net) ? net - (Number(p.savings) || 0) : null, spent = budgetSpent(), mp = monthProgress();
+  const weeksLeft = Math.max(1, (mp.left || 0) / 7), perWeek = limit != null ? Math.max(0, limit - spent) / weeksLeft : null;
+  return { from, last, flex: sum(flex), fixed: sum(fixed), top: Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3), limit, spent, perWeek, daysLeft: mp.left || 0, n: flex.length };
+}
+function viewWeek() {
+  if (!state.data) return ''; const w = weekCheck(); if (!w.last.getTime()) return '';
+  return `<section class="sec box"><div class="sec-h"><h3>📅 This week</h3><span class="small muted">${esc(fDay(w.from))} – ${esc(fDay(w.last))}</span></div>
+    <div class="kv"><span>Day-to-day spending<br><span class="small muted">${w.n} payments – UPI, food, shopping…</span></span><b class="num">${inr(w.flex)}</b></div>
+    ${w.top.map(([k, v]) => `<div class="kv"><span class="small">· ${esc(k)}</span><span class="num small">${inr(v)}</span></div>`).join('')}
+    ${w.fixed ? `<div class="kv"><span>Bills, cards, rent, family<br><span class="small muted">planned payments</span></span><span class="num">${inr(w.fixed)}</span></div>` : ''}
+    ${w.limit != null ? `<div class="kv"><span>${w.spent > w.limit ? 'Over this month’s limit' : `Left for each week (${w.daysLeft} days to go)`}</span><b class="num ${w.spent > w.limit ? 'bad' : 'good'}">${w.spent > w.limit ? inr(w.spent - w.limit) : inr(w.perWeek)}</b></div>` : ''}
+    <p class="small muted" style="margin:8px 0 0">Card swipes show up only when the card bill is paid, so check your card apps too. You get this every Sunday at 7 pm.</p></section>`;
 }
