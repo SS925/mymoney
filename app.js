@@ -523,14 +523,27 @@ const SUGGEST = { 'Housing': 30000, 'Loans/EMI': 15000, 'Credit Card Bills': 240
 const FIXED = new Set(['Housing', 'Loans/EMI', 'Insurance']);
 /* Monthly budget = the salary credited at the end of the PREVIOUS month. Part-time income and family transfers are kept aside. */
 function budgetYm() { const m = pDate(kpis().month); return m ? ymKey(m) : isoToday().slice(0, 7); }
-function payslipNet(label) {
-  const sh = sheetList().find(x => x.name === 'Payslips'); if (!sh || sh.rows.length < 2) return NaN;
-  const head = sh.rows[0].c, iM = head.indexOf('Month'), iN = head.indexOf('Net Pay'); if (iM < 0 || iN < 0) return NaN;
-  const r = sh.rows.slice(1).find(x => String(x.c[iM]).trim() === label); return r ? num(r.c[iN]) || NaN : NaN;
+/* Payslip row for 'Mon YYYY' → net pay, plus the project bonus / incentive part (and the extra TDS cut on it) */
+function payslipRow(label) {
+  const sh = sheetList().find(x => x.name === 'Payslips'); if (!sh || sh.rows.length < 2) return null;
+  const head = sh.rows[0].c, col = h => head.indexOf(h), iM = col('Month'); if (iM < 0 || col('Net Pay') < 0) return null;
+  const rows = sh.rows.slice(1), i = rows.findIndex(x => String(x.c[iM]).trim() === label); if (i < 0) return null;
+  const get = (r, h) => col(h) < 0 ? 0 : num(r.c[col(h)]) || 0, r = rows[i];
+  const bonus = get(r, 'Performance Incentive'), net = get(r, 'Net Pay');
+  let extraTax = 0;
+  if (bonus > 0) {                                            // tax on a normal month before this one; the rest is TDS on the bonus
+    const prev = rows.slice(0, i).reverse().find(x => !(get(x, 'Performance Incentive') > 0));
+    extraTax = Math.max(0, get(r, 'Income Tax') - (prev ? get(prev, 'Income Tax') : 0));
+  }
+  return { net, bonus, bonusNet: Math.max(0, bonus - extraTax) };
 }
+function payslipNet(label) { const r = payslipRow(label); return r && r.net ? r.net - r.bonusNet : NaN; }
+function payLabelFor(ym) { const [y, m] = String(ym || budgetYm()).split('-').map(Number), prev = new Date(y, m - 2, 1); return `${MON[prev.getMonth()]} ${prev.getFullYear()}`; }
+/* project bonus that came with this budget month's salary – kept out of regular income */
+function bonusIn(ym) { const r = payslipRow(payLabelFor(ym)); return r ? r.bonusNet : 0; }
+/* regular take-home: payslip net pay without the project bonus */
 function netPay(ym) {
-  const [y, m] = String(ym || budgetYm()).split('-').map(Number), prev = new Date(y, m - 2, 1);
-  const v = payslipNet(`${MON[prev.getMonth()]} ${prev.getFullYear()}`); if (isFinite(v)) return v;
+  const v = payslipNet(payLabelFor(ym)); if (isFinite(v)) return v;
   const mm = String(kpis().salary_line || '').match(/\/\s*₹\s*([\d,]+)/);         // fallback: latest payslip
   return mm ? Number(mm[1].replace(/,/g, '')) : NaN;
 }
@@ -552,8 +565,8 @@ function budgetAside(ym) {
   return { familyOut, familyIn, partTime };
 }
 function asideNote(ym) {
-  const a = budgetAside(ym); if (!a.familyOut && !a.familyIn && !a.partTime) return '';
-  return `<p class="small muted" style="margin:8px 0 0">Kept aside, not in this budget: ${[a.partTime ? `part-time income ${inr(a.partTime)}` : '', a.familyIn ? `from family ${inr(a.familyIn)}` : '', a.familyOut ? `family transfers ${inr(a.familyOut)}` : ''].filter(Boolean).join(' · ')}.</p>`;
+  const a = budgetAside(ym), b = bonusIn(ym); if (!a.familyOut && !a.familyIn && !a.partTime && !b) return '';
+  return `<p class="small muted" style="margin:8px 0 0">Kept aside, not in this budget: ${[b ? `project bonus ${inr(b)} (after TDS) – not regular pay, move it to savings` : '', a.partTime ? `part-time income ${inr(a.partTime)}` : '', a.familyIn ? `from family ${inr(a.familyIn)}` : '', a.familyOut ? `family transfers ${inr(a.familyOut)}` : ''].filter(Boolean).join(' · ')}.</p>`;
 }
 function budgetCats() { return tbl('AppBudget').map(r => r.Category).filter(Boolean); }
 function suggestedPlan() {
