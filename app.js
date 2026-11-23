@@ -2784,6 +2784,9 @@ function bankAccounts() {
     if (hdr && /total/i.test(r.c[0])) break;
     if (hdr && r.c[0] && /Bank|Cash/.test(r.c[1] || '')) { const used = r.c[hdr.indexOf('Balance used')]; out.push({ name: r.c[0], type: r.c[1], bal: num(used) || 0, asOf: r.c[hdr.indexOf('As of')] || '' }); }
   }
+  // savings accounts typed in the app (FD / NPS / SGB → type "Savings account"), e.g. an account whose statement isn't in Drive yet
+  for (const o of (state.docs && state.docs.others) || []) if (o.type === 'Savings account' && !out.some(a => a.name.toLowerCase() === String(o.name).toLowerCase()))
+    out.push({ name: o.name, type: 'Bank', bal: Number(o.value || o.invested) || 0, asOf: o.start ? fDay(pDate(o.start)) : 'your figure', manual: true });
   return out;
 }
 /* Upcoming unpaid SIPs and bills (next 7 days) grouped by the account they're paid from */
@@ -4064,13 +4067,13 @@ function pctTxt(x, digits = 1) { return `${x >= 0 ? '+' : '−'}${Math.abs(x * 1
 /* ---- generic lists kept in app/*.json ---- */
 Object.assign(DOCS, { subplan: 'app/subplan.json', ccards: 'app/creditcards.json', cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
 Object.assign(DOC_NAME, { subplan: 'subscription', cards: 'card offer', others: 'investment', documents: 'document', alerts: 'price alert' });
-const OTHER_TYPES = ['FD', 'NPS', 'Sovereign Gold Bond', 'Bond', 'RD', 'Gold', 'Other'];
+const OTHER_TYPES = ['Savings account', 'FD', 'NPS', 'Sovereign Gold Bond', 'Bond', 'RD', 'Gold', 'Other'];
 Object.assign(DOC_FIELDS, {
   subplan: [['name', 'Service', 'text', 'e.g. Netflix, JioHotstar'], ['plan', 'Plan', 'text', 'e.g. Basic, Premium (no ads)'], ['cost', 'Cost each time (₹)', 'num'], ['every', 'How often', 'sel', ['Monthly', 'Yearly']],
     ['renew', 'Next renewal date', 'date', 'optional – reminder 7 days before (yearly)'], ['card', 'Paid with (card name)', 'text', 'e.g. ICICI AMAZON']],
   cards: [['name', 'Card', 'text', 'e.g. HDFC Millennia'], ['cat', 'Best for (category)', 'text', 'e.g. Food Online, Shopping, Fuel'], ['offer', 'Offer', 'text', 'e.g. 5% cashback on Swiggy'], ['cap', 'Monthly cap (₹)', 'num', 'optional']],
   others: [['name', 'Name', 'text', 'e.g. SBI FD 2027, NPS Tier 1, SGB 2023-24 Series III'], ['type', 'Type', 'sel', OTHER_TYPES], ['invested', 'Invested (₹)', 'num'], ['value', 'Value now (₹)', 'num', 'from the statement'],
-    ['start', 'Start date', 'date'], ['maturity', 'Maturity date', 'date', 'optional'], ['rate', 'Interest / return (% a year)', 'num', 'optional'], ['note', 'Note', 'text', 'e.g. interest paid every 6 months']],
+    ['start', 'Start date (for a savings account: date of the balance)', 'date'], ['maturity', 'Maturity date', 'date', 'optional'], ['rate', 'Interest / return (% a year)', 'num', 'optional'], ['note', 'Note', 'text', 'e.g. interest paid every 6 months']],
   documents: [['name', 'Document', 'text', 'e.g. Passport, Car insurance, PAN card'], ['where', 'Kept where', 'text', 'e.g. Blue file, DigiLocker, bank locker'], ['number', 'Number (last 4 only)', 'text', 'optional'], ['expiry', 'Expires / renews on', 'date', 'optional – you get a reminder 30 days before']],
   alerts: [['name', 'Stock or fund', 'text'], ['code', 'Price code', 'text', 'e.g. ITC or BSE:500325'], ['above', 'Tell me when it goes above (₹)', 'num', 'optional'], ['below', 'Tell me when it goes below (₹)', 'num', 'optional']],
 });
