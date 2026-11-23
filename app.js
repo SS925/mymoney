@@ -539,8 +539,12 @@ function payslipRow(label) {
 }
 function payslipNet(label) { const r = payslipRow(label); return r && r.net ? r.net - r.bonusNet : NaN; }
 function payLabelFor(ym) { const [y, m] = String(ym || budgetYm()).split('-').map(Number), prev = new Date(y, m - 2, 1); return `${MON[prev.getMonth()]} ${prev.getFullYear()}`; }
-/* project bonus that came with this budget month's salary – kept out of regular income */
-function bonusIn(ym) { const r = payslipRow(payLabelFor(ym)); return r ? r.bonusNet : 0; }
+/* project bonus this budget month – bank credits in 'Project Bonus' + any incentive on the payslip – kept out of regular income */
+function bonusIn(ym) {
+  ym = ym || budgetYm(); const r = payslipRow(payLabelFor(ym));
+  const bank = allTx().filter(t => t.Type === 'Income' && /^Project Bonus$/i.test(t.Category || '') && String(t.Date).startsWith(ym)).reduce((s, t) => s + Math.abs(n(t.Amount) || 0), 0);
+  return (r ? r.bonusNet : 0) + bank;
+}
 /* regular take-home: payslip net pay without the project bonus */
 function netPay(ym) {
   const v = payslipNet(payLabelFor(ym)); if (isFinite(v)) return v;
