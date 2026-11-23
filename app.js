@@ -327,8 +327,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { sinking: 'Sinking funds', moneydate: 'Monthly money date', nosalary: 'If salary stops', creep: 'Spending creep', wrapped: 'Money Wrapped', extrapat: 'Bonus & class pattern', rentplan: 'Rent planner', warranty: 'Warranty vault', paycal: 'Bill-pay calendar', dips: 'Price-drop watch', jars: 'Money jars', homeloan: 'Home loan readiness', car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { sinking: 'future', moneydate: 'home', nosalary: 'future', creep: 'money', wrapped: 'home', extrapat: 'money', rentplan: 'money', warranty: 'future', paycal: 'money', dips: 'invest', jars: 'future', homeloan: 'future', car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { alertset: 'Phone alerts', sinking: 'Sinking funds', moneydate: 'Monthly money date', nosalary: 'If salary stops', creep: 'Spending creep', wrapped: 'Money Wrapped', extrapat: 'Bonus & class pattern', rentplan: 'Rent planner', warranty: 'Warranty vault', paycal: 'Bill-pay calendar', dips: 'Price-drop watch', jars: 'Money jars', homeloan: 'Home loan readiness', car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { alertset: 'home', sinking: 'future', moneydate: 'home', nosalary: 'future', creep: 'money', wrapped: 'home', extrapat: 'money', rentplan: 'money', warranty: 'future', paycal: 'money', dips: 'invest', jars: 'future', homeloan: 'future', car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -355,9 +355,10 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { sinking: viewSinking, moneydate: viewMoneyDate, nosalary: viewNoSalary, creep: viewCreep, wrapped: viewWrapped, extrapat: viewExtraPat, rentplan: viewRentPlan, warranty: viewWarranty, paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { alertset: viewAlertSet, sinking: viewSinking, moneydate: viewMoneyDate, nosalary: viewNoSalary, creep: viewCreep, wrapped: viewWrapped, extrapat: viewExtraPat, rentplan: viewRentPlan, warranty: viewWarranty, paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
-  v.innerHTML = subnav() + views[state.tab]();
+  v.innerHTML = helpPanel() + (state.tab === 'home' ? staleBanner() : '') + subnav() + views[state.tab]();
+  { const hb = document.getElementById('btn-help'); if (hb) { hb.hidden = !HELP[state.tab]; hb.classList.toggle('on', !!state.helpOpen); } }
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
   if (state.tab === 'add') bindAdd();
@@ -372,6 +373,7 @@ function render() {
   if (state.tab === 'credit') bindCredit();
   if (state.tab === 'yearend') bindYearEnd();
   if (state.tab === 'famtx') bindFamTx();
+  if (state.tab === 'alertset') bindAlertSet();
   if (state.tab === 'car') bindCar();
   if (state.tab === 'paycal') bindPayCal();
   if (state.tab === 'tools') bindToolsSearch();
@@ -462,7 +464,7 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['moneyin', 'Money in'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['review', 'Review'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
+  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['moneyin', 'Money in'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS / SGB'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', 'Tax & 80C'], ['regime', 'Tax regime'], ['rent', 'Rent'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['credit', 'Credit score'], ['emergency', 'Emergency info'], ['documents', 'Documents']],
 };
@@ -475,7 +477,7 @@ function subnav() {
 }
 const SHORTCUTS = [['mplan', '🧭', 'Money plan'], ['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax & 80C'], ['pfedit', '🏛', 'PF / PPF'],
-  ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
+  ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['report', '📄', 'Report'],
   ['ccards', '💳', 'Credit cards'], ['coaching', '🎓', 'Coaching'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
 function viewShortcuts() {
   return `<section class="sec"><div class="sec-h"><h3>Shortcuts</h3></div><div class="shortcuts">
@@ -603,6 +605,8 @@ function suggestedPlan() {
   return { savings, limits, suggested: true };
 }
 function activePlan() { return state.plan || suggestedPlan(); }
+/* monthly spending limit: your plan's category limits (family money has its own limit), else take-home minus savings */
+function spendLimit(net, p) { p = p || activePlan(); const t = planTotal(p); if (state.plan && t > 0) return t - (Number((p.limits || {})['Family & Transfers']) || 0); return isFinite(net) ? net - (Number(p.savings) || 0) : NaN; }
 function planTotal(p) { return Object.values(p.limits || {}).reduce((s, v) => s + (Number(v) || 0), 0); }
 function monthProgress() {                                   // how far through the data month we are
   const k = kpis(), m = pDate(k.month), asOf = pDate(k.as_of);
@@ -614,7 +618,7 @@ function monthProgress() {                                   // how far through 
 }
 function netPayCard(compact) {
   const k = kpis(), net = netPay(); if (!isFinite(net)) return '';
-  const p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent();
+  const p = activePlan(), limit = spendLimit(net, p), spent = budgetSpent();
   const used = limit > 0 ? spent / limit : 0, left = limit - spent, mp = monthProgress(), m = pDate(k.month);
   const pace = !mp.complete && mp.done > 0 ? spent / mp.done : spent;
   const head = left < 0 ? `${inr(-left)}` : `${inr(left)}`;
@@ -651,7 +655,7 @@ function viewHome() {
   const k = kpis(), m = pDate(k.month);
   const alerts = tbl('AppAlerts').map(x => String(x.Alert || '')).filter(x => /^[⚠ℹ]/.test(x)).filter(x => !(/over budget/i.test(x) && homeForecastCard()));
   const recent = allTx().slice(0, 3), ps = latestPayslip();
-  const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent(), left = limit - spent;
+  const net = netPay(), p = activePlan(), limit = spendLimit(net, p), spent = budgetSpent(), left = limit - spent;
   const qa = (attrs, icon, label) => `<${attrs.startsWith('href') ? 'a' : 'button'} class="qa" ${attrs}><span class="qa-i">${icon}</span><span>${label}</span></${attrs.startsWith('href') ? 'a' : 'button'}>`;
   const S = {
     banks: () => `  ${(() => { const banks = bankAccounts().filter(a => a.type === 'Bank' || a.bal), tot = banks.reduce((x, a) => x + a.bal, 0);
@@ -869,7 +873,7 @@ function viewBudget() {
   if (state.budgetMode === 'excel') return seg + viewBudgetExcel();
   if (state.planEdit) return seg + viewPlanEdit();
   const k = kpis(), net = netPay(), p = activePlan(), rows = tbl('AppBudget').filter(r => r.Category);
-  const limit = net - (Number(p.savings) || 0);
+  const limit = spendLimit(net, p);
   const spentBy = Object.fromEntries(rows.map(r => [r.Category, n(r.Spent) || 0]));
   const cats = Object.keys(p.limits || {}).filter(c => p.limits[c] > 0 || spentBy[c] > 0);
   rows.forEach(r => { if (!cats.includes(r.Category) && spentBy[r.Category] > 0) cats.push(r.Category); });
@@ -1163,7 +1167,7 @@ function viewMoney() {
         <h2 class="hero-v num">${inr(tot)}</h2><p class="hero-s" style="margin:0">${rows.length} credits, by the date they reached your bank</p></section>
       <section class="sec box"><div class="sec-h"><h3>Where it came from</h3></div>${list.length ? bars(list, 'inc') : '<p class="small muted">No income this month yet.</p>'}</section>`;
   } else {
-    const net = netPay(), p = activePlan(), limit = net - (Number(p.savings) || 0), spent = budgetSpent(), used = limit > 0 ? spent / limit : 0;
+    const net = netPay(), p = activePlan(), limit = spendLimit(net, p), spent = budgetSpent(), used = limit > 0 ? spent / limit : 0;
     const list = tbl('AppBudget').filter(r => r.Category && n(r.Spent) > 0 && !ASIDE_OUT.test(r.Category)).map(r => ({ name: r.Category, v: n(r.Spent) })).sort((x, y) => y.v - x.v);
     body = `<section class="hero"><div class="row"><p class="hero-k" style="margin:0">Total spent${m ? ' in ' + MONF[m.getMonth()] : ''}</p>
           ${isFinite(net) ? `<p class="hero-k" style="margin:0;text-align:right">Limit ${inr(limit)}</p>` : ''}</div>
@@ -2006,7 +2010,7 @@ function viewReport() {
   const k = kpis(), d = pDate(mk + '-01'), hs = invHoldings();
   if (state.rpPdfs == null && !state.rpPdfsBusy) { state.rpPdfsBusy = true; ghList('reports').then(l => { state.rpPdfs = l.filter(f => /\.pdf$/i.test(f.name)).map(f => f.name).sort().reverse(); state.rpPdfsBusy = false; if (state.tab === 'report') render(); }).catch(() => { state.rpPdfs = []; state.rpPdfsBusy = false; }); }
   const pdfs = (state.rpPdfs || []).slice(0, 6), pdfBox = pdfs.length ? `<section class="sec box noprint"><div class="sec-h"><h3>Emailed monthly reports</h3></div>${pdfs.map(f => `<button class="linkbtn" data-rp-pdf="${esc(f)}" style="display:block;margin:4px 0">📄 ${esc(f.replace(/\.pdf$/i, ''))}</button>`).join('')}</section>` : '';
-  return pdfBox + `<div class="noprint"><div class="row2">
+  return pdfBox + `<div class="row2 noprint" style="margin-bottom:10px"><button class="secondary" data-gotab="review" style="margin:0">📝 Monthly review</button><button class="secondary" data-gotab="year" style="margin:0">🏆 Year in review</button></div><div class="noprint"><div class="row2">
         <div><label class="f" for="rp-y">Year</label><select class="inp" id="rp-y">${years.map(y => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
         <div><label class="f" for="rp-m">Month</label><select class="inp" id="rp-m">${inYear.map(m => `<option value="${m}" ${m === mk ? 'selected' : ''}>${MONF[Number(m.slice(5)) - 1]}</option>`).join('')}</select></div></div>
       <button class="primary" id="rp-print" style="margin-top:12px">Save as PDF / print</button></div>
@@ -3108,7 +3112,7 @@ function spendForecast() {
     const mt = tx.filter(t => String(t.Date).startsWith(k)); if (!mt.length) continue;
     rest.push(mt.filter(t => Number(String(t.Date).slice(8, 10)) > day).reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0)); }
   if (!rest.length) return null;
-  const more = rest.reduce((a, x) => a + x, 0) / rest.length, total = spent + more, net = netPay(), p = activePlan(), limit = isFinite(net) ? net - (Number(p.savings) || 0) : null;
+  const more = rest.reduce((a, x) => a + x, 0) / rest.length, total = spent + more, net = netPay(), p = activePlan(), limit = spendLimit(net, p);
   return { asOf, spent, more, total, limit, over: limit != null && total > limit, months: rest.length };
 }
 function homeForecastCard() {
@@ -3233,7 +3237,7 @@ function tokenDays() {
    ====================================================================== */
 function monthReview() {
   const k = kpis(), ym = String(k.month || '').slice(0, 7), mrow = tbl('AppMonthly').find(r => String(r.Month).startsWith(ym)) || {};
-  const plan = activePlan(), net = netPay(), limit = isFinite(net) ? net - (Number(plan.savings) || 0) : null;
+  const plan = activePlan(), net = netPay(), limit = spendLimit(net, plan);
   const rows = tbl('AppBudget').filter(r => r.Category).map(r => {
     const lim = plan.limits && plan.limits[r.Category] != null ? Number(plan.limits[r.Category]) : n(r.Target);
     return { cat: r.Category, spent: n(r.Spent) || 0, lim: lim || 0 };
@@ -3375,7 +3379,7 @@ function viewAfford() {
   const price = num(A.price) || 0, emiNow = allLoans().filter(l => !l.cleared && l.owed > 0).reduce((a, l) => a + (l.emi || 0), 0);
   const r = (Number(A.rate) || 0) / 1200, nM = Math.max(1, Number(A.months) || 1), emi = A.mode === 'emi' && price ? (r ? price * r / (1 - Math.pow(1 + r, -nM)) : price / nM) : 0;
   const interest = emi ? emi * nM - price : 0, bankAfter = A.mode === 'cash' ? bank - price : bank, efBefore = spendAvg ? bank / spendAvg : 0, efAfter = spendAvg ? bankAfter / spendAvg : 0;
-  const emiShare = isFinite(net) && net > 0 ? (emiNow + emi) / net : null, limit = isFinite(net) ? net - (Number(p.savings) || 0) : null;
+  const emiShare = isFinite(net) && net > 0 ? (emiNow + emi) / net : null, limit = spendLimit(net, p);
   const checks = price ? [
     A.mode === 'cash' ? [bankAfter >= 0, bankAfter >= 0 ? `Banks after paying: ${inr(bankAfter)}` : `You’re ${inr(-bankAfter)} short in your banks`] : null,
     spendAvg ? [efAfter >= 3, `Emergency fund: ${efBefore.toFixed(1)} → ${efAfter.toFixed(1)} months of spending${efAfter < 3 ? ' (below 3 months)' : ''}`] : null,
@@ -4577,7 +4581,7 @@ function bindEduCalc() {
 /* glance: one small screen with the essentials */
 function viewGlance() {
   const k = kpis(), bal = bankAccounts().reduce((s, a) => s + a.bal, 0), next = statuses('bills').concat(statuses('sips')).filter(x => x.st.s === 'due').sort((a, b) => a.st.due - b.st.due)[0];
-  const today = portfolioToday(), net = netPay(), plan = activePlan(), lim = isFinite(net) ? net - (Number(plan.savings) || 0) : null, spent = budgetSpent();
+  const today = portfolioToday(), net = netPay(), plan = activePlan(), lim = spendLimit(net, plan), spent = budgetSpent();
   return `<div class="glance">
     <div><span>In your banks</span><b class="num">${inr(bal)}</b></div>
     <div><span>Spent this month</span><b class="num">${inr(spent)}</b>${lim ? `<i class="${spent > lim ? 'bad' : 'good'}">${spent > lim ? 'over by ' + inr(spent - lim) : inr(lim - spent) + ' left'}</i>` : ''}</div>
@@ -4589,7 +4593,7 @@ function viewGlance() {
 /* all tools on one screen */
 function viewTools() {
   const g = (title, items) => `<section class="sec tl-sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}" data-q="${esc((l + ' ' + (TITLES[t] || '') + ' ' + t + ' ' + title).toLowerCase())}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
-  return `<input class="inp" id="tl-q" type="search" placeholder="Search tools – rent, car, fund, tax…" autocomplete="off" style="margin:0 0 12px"><p class="small muted" id="tl-none" style="display:none;margin:0 4px 12px">No tool matches.</p>` + g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
+  return `<input class="inp" id="tl-q" type="search" placeholder="Search tools – rent, car, fund, tax…" autocomplete="off" style="margin:0 0 12px"><p class="small muted" id="tl-none" style="display:none;margin:0 4px 12px">No tool matches.</p>` + g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
     + g('Look back', [['wrapped', '🎁', 'Money Wrapped'], ['creep', '📈', 'Spending creep'], ['extrapat', '💰', 'Bonus & class pattern']])
     + g('Safety', [['nosalary', '⛑', 'If salary stops'], ['rentplan', '🏠', 'Rent planner'], ['warranty', '🧾', 'Warranty vault']])
@@ -4597,7 +4601,7 @@ function viewTools() {
     + g('Salary', [['earned', '📊', 'Salary to date'], ['salary', '💼', 'Payslips'], ['health', '🩺', 'Health score'], ['famtx', '👨‍👩‍👧', 'Family money']])
     + g('Tax', [['yearend', '📆', 'Year-end checklist'], ['moneyin', '💸', 'Money in'], ['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['credit', '📈', 'Credit score'], ['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
-    + g('App', [['inputs', '🎛', 'Excel inputs'], ['routine', '✅', 'Monthly routine'], ['tidy', '🧹', 'Tidy rules'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'At a glance'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
+    + g('App', [['alertset', '🔔', 'Phone alerts'], ['inputs', '🎛', 'Excel inputs'], ['tidy', '🧹', 'Tidy rules'], ['restore', '🗄', 'Backups'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['glance', '👀', 'At a glance'], ['report', '📄', 'Report'], ['telegram', '✈️', 'Telegram']]);
 }
 function viewTelegram() {
   return `<section class="card"><h2 style="margin-top:0">Get summaries in Telegram</h2>
@@ -4646,7 +4650,7 @@ function viewMoneyPlan0() {
     <section class="sec box"><div class="sec-h"><h3>Savings</h3><button data-gotab="sips">SIPs</button></div>
       ${line('🔁', 'Mutual fund SIPs', sipTot, mfDone, 'from your buys this month', true)}
       ${ppf ? line('🏛', 'PPF (deposit by the 5th)', ppf, ppfSt.some(x => x.st.s === 'paid') ? ppf : 0, ppfSt[0] ? esc(ppfSt[0].st.txt) : '', true) : ''}
-      ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">move to savings each month</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
+      ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">wife ₹15,000 + your ₹10,000 from bonus / class money</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
       <div class="kv"><span>All savings from your banks this month</span><b class="num ${s.saved >= sv ? 'good' : ''}">${inr(s.saved)} <span class="small muted">of ${inr(sv)}</span></b></div>
       ${s.stocks ? `<p class="small muted" style="margin:6px 0 0">Includes ${inr(s.stocks)} of single stocks – not part of the SIP plan.</p>` : ''}</section>
     ${asideNote(ym)}
@@ -4809,6 +4813,7 @@ function viewMoneyIn() {
       <div class="seg" id="mi-mode">${[['full', 'All of it (safe)'], ['half', '50% (professional scheme)']].map(([v, l]) => `<button data-v="${v}" class="${mode === v ? 'on' : ''}">${l}</button>`).join('')}</div>
       <p class="small muted" style="margin:8px 0 0">Ask your CA which applies. “50%” is the presumptive scheme for professional work: half of what you receive is taxed, and it’s paid in one go by 15 March.</p></section>
     ${viewSplitSetting()}
+    ${(() => { const old = incomeCredits().filter(c => !incomeDone().has(c.key) && c.d < new Date(new Date().getFullYear(), new Date().getMonth(), 1)); return old.length ? `<section class="sec box"><p class="small" style="margin:0 0 6px">${old.length} older payment${old.length === 1 ? '' : 's'} (before this month) not ticked – already spent or moved?</p><button class="secondary" id="mi-oldall" style="margin:0">Mark all ${old.length} older as handled</button></section>` : ''; })()}
     <section class="sec box"><div class="sec-h"><h3>Rules</h3><button class="edit-btn" id="mi-edit">Edit</button></div>
       ${rules.map(r => `<div class="kv"><span>${esc(r.name)}<br><span class="small muted">${r.keyword ? 'bank word ' + esc(r.keyword) : '<span class="warn">add the bank word</span>'}${r.tds ? ` · TDS ${r.tds}% cut` : ''}</span></span><span class="num small">keep ${Math.round(taxKeepPct(r) * 100)}% for tax<br>save ${r.save}% of the rest</span></div>`).join('')}</section>
     <section class="sec box"><div class="sec-h"><h3>Payments this FY</h3><span class="small num">${inr(moved)} of ${inr(keep)} moved</span></div>
@@ -4827,6 +4832,7 @@ function bindMoneyIn() {
     state.miEdit = null; save({ incomeRules: rules }, 'Money in: rules');
   };
   document.querySelectorAll('[data-mi-tick]').forEach(b => b.onchange = () => markIncomeDone([b.dataset.miTick], b.checked));
+  if ($('mi-oldall')) $('mi-oldall').onclick = () => markIncomeDone(incomeCredits().filter(c => c.d < new Date(new Date().getFullYear(), new Date().getMonth(), 1)).map(c => c.key), true);
 }
 
 /* ======================================================================
@@ -5438,6 +5444,7 @@ let toastTimer;
 function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 3200); }
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; window.scrollTo(0, 0); render(); });
 document.getElementById('btn-sync').onclick = () => sync({ toast: true });
+{ const hb = document.getElementById('btn-help'); if (hb) hb.onclick = () => { state.helpOpen = !state.helpOpen; window.scrollTo(0, 0); render(); }; }
 document.getElementById('btn-back').onclick = goBack;
 document.getElementById('btn-settings').onclick = () => { state.tab = 'more'; window.scrollTo(0, 0); render(); };
 window.addEventListener('online', () => sync());
@@ -5632,7 +5639,7 @@ function weekCheck() {
   const flex = wk.filter(t => !FIX.test(t.Category || '')), fixed = wk.filter(t => FIX.test(t.Category || ''));
   const sum = l => l.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), by = {};
   flex.forEach(t => { const k = payeeOf(t) || t.Category; by[k] = (by[k] || 0) + Math.abs(n(t.Amount) || 0); });
-  const net = netPay(), p = activePlan(), limit = isFinite(net) ? net - (Number(p.savings) || 0) : null, spent = budgetSpent(), mp = monthProgress();
+  const net = netPay(), p = activePlan(), limit = spendLimit(net, p), spent = budgetSpent(), mp = monthProgress();
   const weeksLeft = Math.max(1, (mp.left || 0) / 7), perWeek = limit != null ? Math.max(0, limit - spent) / weeksLeft : null;
   return { from, last, flex: sum(flex), fixed: sum(fixed), top: Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3), limit, spent, perWeek, daysLeft: mp.left || 0, n: flex.length };
 }
@@ -5652,7 +5659,7 @@ function viewWeek() {
 function healthFor(ym) {
   const net = netPay(ym), p = activePlan(), lim = p.limits || {}, tx = allTx().filter(t => String(t.Date).startsWith(ym)), a = t => Math.abs(n(t.Amount) || 0);
   const saved = tx.filter(t => (t.Type === 'Savings' && /Investments/i.test(t.Category || '')) || (t.Type === 'Expenses' && /Insurance/i.test(t.Category || '') && /LIC OF INDIA|NACH\/LIC/i.test(t.Details || ''))).reduce((x, t) => x + a(t), 0);
-  const spent = budgetSpent(ym), limit = isFinite(net) ? net - (Number(p.savings) || 0) : NaN;
+  const spent = budgetSpent(ym), limit = spendLimit(net, p);
   const cards = tx.filter(t => t.Type === 'Expenses' && /Credit Card/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0), cardCap = Number(lim['Credit Card Bills']) || 0;
   const emi = tx.filter(t => t.Type === 'Expenses' && /Loans/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0);
   const P = efPlanGet(), base = num(P.base) || 60000, bank = worthNow().banks.reduce((x, b) => x + b.bal, 0) + efLiquid(), efm = bank / base;
@@ -5824,7 +5831,15 @@ function bindWhatIf() {
    Fund review: 1/3/5-year returns of each fund vs a matching index fund (mfapi.in), keep / watch / switch
    ====================================================================== */
 const BENCH_Q = { Large: ['120716', 'UTI Nifty 50 Index'], Multi: [null, 'Nifty 500 Index Fund Direct Growth'], Mid: [null, 'Nifty Midcap 150 Index Fund Direct Growth'], Small: [null, 'Nifty Smallcap 250 Index Fund Direct Growth'], NN50: [null, 'UTI Nifty Next 50 Index Fund Direct Growth'] };
+async function fundHistDoc() {                    // fundhist.json: price history saved daily by the cloud job (no phone download needed)
+  if (state.fundhist !== undefined) return state.fundhist;
+  try { const r = await GH.call('GET', 'fundhist.json', { raw: true }); state.fundhist = r.ok ? await r.json() : null; } catch (e) { state.fundhist = null; }
+  return state.fundhist;
+}
 async function navHist(code) {
+  const fh = await fundHistDoc(), f = fh && fh.funds && fh.funds[code];
+  if (f && (f.daily || []).length) { const m = new Map(); [...(f.weekly || []), ...(f.daily || [])].forEach(([d, v]) => m.set(d, Number(v)));
+    return { name: f.name, pts: [...m.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([d, v]) => { const [y, mo, dd] = d.split('-').map(Number); return { t: new Date(y, mo - 1, dd).getTime(), v }; }) }; }
   const j = await (await fetch(`https://api.mfapi.in/mf/${code}`)).json(); if (!j || !Array.isArray(j.data)) return null;
   return { name: j.meta && j.meta.scheme_name, pts: j.data.map(x => { const [d, m, y] = String(x.date).split('-').map(Number); return { t: new Date(y, m - 1, d).getTime(), v: Number(x.nav) }; }).filter(x => x.v > 0) };
 }
@@ -5834,6 +5849,7 @@ function cagr(h, yrs) {
 }
 async function benchCode(cap) {
   const q = BENCH_Q[cap] || BENCH_Q.Large; if (q[0]) return q[0];
+  { const fh = await fundHistDoc(); if (fh && fh.bench && fh.bench[cap]) return fh.bench[cap]; }
   const cache = LS.get('benchCodes', {}); if (cache[cap]) return cache[cap];
   const arr = await (await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q[1]))).json();
   const hit = (arr || []).find(x => /direct/i.test(x.schemeName) && /growth/i.test(x.schemeName) && !/idcw|dividend/i.test(x.schemeName)); if (!hit) return null;
@@ -5875,7 +5891,7 @@ function viewFundRev() {
       <p class="small ${v[1]}" style="margin:6px 0 0"><b>${esc(v[0])}</b></p></section>`; }).join('') : ''}
     <p class="note">Switching costs tax on gains and exit load if within a year – only switch a fund that has lagged its index for 3 years. Past returns don’t promise future ones.</p>`;
 }
-function bindFundRev() { const b = document.getElementById('fr-run'); if (b) b.onclick = () => runFundRev(); }
+function bindFundRev() { const b = document.getElementById('fr-run'); if (b) b.onclick = () => runFundRev(); if (!LS.get('fundRev', null) && !state.frAuto) { state.frAuto = true; runFundRev(); } }
 
 /* ======================================================================
    Bill-pay calendar: every due date of the month on one grid
@@ -5949,6 +5965,7 @@ function viewDips() {
 }
 function bindDips() { const $ = id => document.getElementById(id);
   if ($('dp-run')) $('dp-run').onclick = () => runDips();
+  { const d = LS.get('dips', null); if ((!d || d.at !== isoToday()) && !state.dipAuto) { state.dipAuto = true; runDips(); } }
   if ($('dp-save')) $('dp-save').onclick = async () => { const w = Math.max(1, Number($('dp-w').value) || 7), b = Math.max(w + 1, Number($('dp-b').value) || 10);
     const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { dipWatch: w, dipBuy: b }); render();
     try { await saveDoc('profile', 'Price-drop lines'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
@@ -6412,3 +6429,35 @@ function bindHomeSearch() {
   q.oninput = show;
   q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const h = searchScreens(q.value); if (h.length) go(h[0].t); } };
 }
+
+const HELP = {"home": ["Money in your banks, this month's budget and spending, your money health score, and a short “Today” list of only the 2–3 things that need you now (money to move, next month’s cushion, routine). Everything else folds under “more for today”.", "Open the app each morning. Tap any card to jump to its screen. Pull down or tap ⟳ to fetch the latest data from Excel/GitHub."], "worth": ["Everything you own minus what you owe: banks, EPF, PPF, funds, stocks, FDs, loans and card dues. Also the emergency-fund meter and plan, milestones, net-worth chart, savings rate and the 5-year forecast.", "Check once a week. Use the forecast switches (fund return, SIP step-up, bonus saving) to see where you could be in 1, 3 and 5 years."], "salary": ["Each payslip month by month: gross, deductions, net take-home, and every earning and deduction line.", "Pick the year and month at the top. Share a payslip summary with the share button."], "earned": ["All take-home pay since your first payslip, by financial year, how much of it you kept (funds, PPF, LIC, banks) and your 6-month average spend by category.", "A once-in-a-while reality check of earned vs kept."], "health": ["One score out of 100 for each finished month: savings rate, spending vs plan, emergency fund, card bills and loan EMIs – with the two things to fix first and a 6-month trend.", "Aim for 80+. Fix the lowest bar first."], "glance": ["A one-screen summary for a quick look or to show family: banks, spent this month, next payment, net worth.", "Good for the family view."], "tools": ["Every screen in the app grouped (Spending, Investments, Salary, Look back, Safety, Plan ahead, Tax, Life, App) with a search box.", "Type “rent”, “car”, “fund”… to jump straight to a tool."], "homeedit": ["Choose which blocks appear on Home and their order.", "Tick, untick and move blocks up/down."], "money": ["This month’s income and expenses by category with bars, against your plan.", "Switch Income / Expenses at the top; tap a category to see its payments."], "mplan": ["Next-month cushion (is next month already paid for?), this week’s spending, family money, then every bucket of the month: rent, insurance, EMI, cards, other spending, SIPs, PPF, emergency fund – planned vs done.", "Your main monthly page. Salary of month M pays for month M+1."], "budget": ["Your monthly limits per category and savings target, worked out from take-home pay.", "Tap Change to edit limits; the app and Excel both use them."], "moneyin": ["Project bonus and class payments: how much to keep for tax, how much goes to the emergency fund, how much to invest, and what’s free – with a “moved” tick per payment.", "When a payment arrives you also get a phone alert with the split. Tick “I’ve moved it” after moving the money."], "tx": ["Every bank, card and phone entry with search and filters by type, year, month and category.", "Tap a row to change its category."], "add": ["Add a cash or card spend on the phone: type it, paste a bank SMS, or say it.", "Phone entries go to Excel the next time it opens."], "spends": ["Who you paid the most in a month.", "Pick a month; tap a payee to see each payment."], "review": ["The month in review: spent, over/under the net-pay limit, biggest categories and changes.", "Read it on the 1st (part of the Money date)."], "bills": ["Monthly and yearly bills with paid / due status, matched automatically against the bank.", "Add a bill with its day and bank keyword; it ticks itself when paid."], "subcheck": ["Your ad-free subscription plan (Netflix, Prime, Hotstar, Crunchyroll…) and subscriptions found in the bank.", "Edit the plan in Subscription plan; you get a reminder 7 days before yearly renewals."], "subplan": ["Each service, plan, cost, renewal date and the card it’s paid on.", "Keep it up to date to get renewal reminders."], "nospend": ["A calendar of days with no day-to-day spending and your current streak.", "Try to beat last month’s count."], "habits": ["Your day-to-day spending over 3 months and what it would grow to if invested instead.", "Pick one habit to trim."], "shared": ["Who owes you and whom you owe.", "Add an item when you pay for others; settle it when paid back."], "sort": ["UPI payments still in “UPI – Other”: pick categories for all of them and save once. Small UPI (≤ ₹3,000) goes to Utilities automatically.", "Payments over ₹3,000 send a phone alert to choose a category."], "recat": ["Move any transaction to another category; the change is sent to Excel.", "Use filters to find the row."], "dupes": ["Pairs with the same amount within 2 days where one is a phone entry.", "Delete the extra one."], "loans": ["Every loan with EMI, EMIs left and amount owed; early-closure calculator.", "Enter the interest rate and foreclosure fee to see if closing early is worth it."], "ccards": ["Each card’s limit, monthly spending limit, fixed bills on it, tips, due date and card use for your credit score (keep under 10% on the statement day).", "Add statement days to get a reminder 2 days before each statement."], "cards": ["Which card gives which offer.", "The app suggests the best card when you add a card spend."], "famtx": ["This month’s family transfers against your limit, and who received how much (6-month average).", "Set a limit you can keep; you get one alert a month if you go over."], "afford": ["Pay now vs EMI for a planned purchase, and what it does to the month.", "Enter the price and options."], "creep": ["Last 6 months vs the 6 before, compared with take-home growth, and which categories grew most.", "A line appears on Home only if spending grows clearly faster than pay."], "extrapat": ["24 months of project bonus and class income, the usual months it arrives and the monthly average.", "Plan extra investments around these months; never budget on them."], "invest": ["All investments, gain/loss, investing per month, SIP plan, fund mix by company size and your return vs Nifty 50.", "The starting point for investments."], "holdings": ["Each holding: invested (oldest-first / FIFO cost, like Groww), value today and unrealised gain.", "Prices update automatically several times a day."], "sips": ["SIPs and PPF each month with paid / due status matched from the bank.", "Edit an SIP’s amount, day and bank keyword."], "trade": ["Record a fund or stock buy or sell, including bonus/split shares.", "It is added to Excel’s buy/sell log next time Excel opens."], "pfedit": ["EPF + EPS and PPF balances from your passbook.", "Update after checking the EPFO / bank passbook."], "others": ["Anything not in other lists: FDs, NPS, gold bonds, typed savings accounts (e.g. the joint emergency account).", "You get reminders before maturity and a monthly nudge to update typed balances."], "mix": ["Equity funds by company size against a target mix.", "Direct new SIP money to the under-weight part instead of selling."], "alerts": ["Long-term gain watch and your own price alerts.", "Add an alert to get a push when a price crosses it."], "dips": ["How far each fund is below its 3-month high, against your lines (watch −7%, buy extra −10%). (Screenshot uses sample prices.)", "At −10% the app suggests one extra month’s SIP from bonus money; phone alerts after ~3 weeks of price history."], "fundrev": ["Each fund’s 1, 3 and 5-year return vs a matching index fund, with Keep / Watch / Switch candidate. (Screenshot uses sample prices.)", "Run every 6 months (reminder on 5 Jan and 5 Jul). Switch only after 3 years of lagging."], "gains": ["Realised gains per financial year, short and long term, printable.", "Use for ITR."], "overlap": ["Shared stocks between your funds (updated every Monday).", "Too much overlap = you own the same shares twice."], "divs": ["Dividends received by year and company.", ""], "import": ["Bring in a Groww holdings file.", "Download holdings from Groww and pick the file."], "tax": ["80C, 80D, interest and dividends for the year.", ""], "regime": ["Old vs new regime for this year and the advance-tax schedule.", ""], "rent": ["Monthly rent receipts for HRA, printable.", ""], "yearend": ["Advance tax, PPF minimum, tax-free gains, papers to keep – with days left to 31 March.", "A reminder arrives on 1 March."], "future": ["Projection to 60, corpus needed, path chart and the retirement age check (earliest age to stop working, and with ₹5k/₹10k more SIP).", "Change the plan under Adjust your plan."], "goals": ["Each goal (car, emergency fund…) with target, date, monthly amount and whether you’ll make it.", "Use what-if to try a different monthly amount."], "jars": ["Emergency fund, car down payment, next month’s money and tax set aside – each with its own progress bar.", "Keep each jar in its own account so it isn’t spent."], "sinking": ["Small pots for known costs (Diwali, birthdays, trips, phone, vehicle service) with the monthly amount for each.", "Tap an idea to add it; record money as you put it aside."], "whatif": ["Sliders for salary hike, rent, SIPs, family money, card spending and extra money saved – see spare money, savings rate and net worth change.", "A playground: nothing is saved."], "car": ["XUV 3XO: EMI, interest, down-payment goal, affordability rules (20/4/10), running cost and when to buy.", "Edit price, down payment, rate and fuel."], "homeloan": ["How big a home loan banks would give in your buying year, the EMI room after the car, and cash needed for a target price.", "Edit price, year, rate, pay rise and EMI limit."], "nosalary": ["How many months your money lasts on essentials only, and what to cut first.", "Goal: 6 months now, 12 later."], "cover": ["Life and health cover from Excel against what you need today, with a child and with a home loan.", "A yearly reminder to re-check."], "lic": ["Premiums, maturity and the real return of the LIC policy.", "Add the maturity amount from the bond for a full answer."], "credit": ["CIBIL history, next free check, old loans showing Closed, card use per card.", "Add each new score; reminder every 6 months."], "rentplan": ["Rent, agreement renewal, effect of a 5/10/15% hike, and rent paid this financial year.", "Add the renewal date for reminders 30 and 7 days before."], "warranty": ["Items with purchase date, warranty end and a photo of the bill (stored in your private data repo).", "Reminders 30 and 7 days before a warranty ends."], "emergency": ["What your family needs if something happens: banks, policies, investments, contacts (last 4 digits only).", ""], "documents": ["Where each important document is kept and when it expires.", "Reminder 30 days before expiry."], "moneydate": ["A 10-minute guided review in 7 steps on the 1st: report, health score, extra money, jars, cards & family, dates, one change.", "Reminder on the 1st; ticks are saved for every phone."], "routine": ["Upload statements, open Excel, update card dues and other monthly chores – most tick themselves.", ""], "paycal": ["Every due date of the month on one grid: rent, SIPs, PPF, bills, cards, EMI, subscriptions, salary.", "Use ‹ › to see other months."], "report": ["A printable report of any month, plus the PDFs emailed on the 1st.", "Save as PDF or open an emailed report."], "wrapped": ["Your April–March year: earned, spent, saved, savings rate, lightest/heaviest month, top spends and payees.", "Share picture makes an image; full year arrives on 1 April."], "year": ["Calendar-year summary of income, spending and saving.", ""], "coaching": ["Part-time jobs: expected vs received, months paid, this financial year.", "Edit jobs and bank keywords here."], "coverage": ["Which months have every bank statement and payslip.", "Upload anything missing to Drive."], "check": ["Things to fix in the data: missing prices, uncategorised spending, old statements.", ""], "sheets": ["Every Excel sheet as Excel shows it, on the phone.", ""], "inputs": ["Every value Excel marks as an input; change it here and Excel writes it next time it opens.", ""], "restore": ["Back up lists, cards, loans, plans and settings; restore from a dated backup.", "A full backup runs every Sunday; the last 8 are kept."], "family": ["Let your spouse or family see chosen screens read-only, with their own PIN.", ""], "more": ["Coaching receipts and links to the planning screens.", ""]};
+
+Object.assign(HELP, { subs: HELP.subcheck, newpay: HELP.sort, review: ['The month in review: spent, over/under the limit, biggest categories and changes.', 'Also reachable from Monthly report.'], routine: HELP.routine || ['Monthly chores – most tick themselves.', ''], alertset: ['Choose which phone alerts you get, and quiet hours when nothing is sent (alerts wait until the morning).', 'Untick a type to stop it.'] });
+function helpPanel() {
+  const h = state.helpOpen && HELP[state.tab]; if (!h) return '';
+  return `<section class="sec box" style="border:1px solid var(--blue1)"><div class="sec-h"><h3>❓ ${esc(TITLES[state.tab] || '')}</h3><button class="edit-btn" id="help-x">Close</button></div><p class="small" style="margin:0">${esc(h[0])}</p>${h[1] ? `<p class="small muted" style="margin:6px 0 0"><b>How to use:</b> ${esc(h[1])}</p>` : ''}</section>`;
+}
+document.addEventListener('click', e => { if (e.target && e.target.id === 'help-x') { state.helpOpen = false; render(); } });
+/* Home banner when Excel hasn't sent data for 3+ days – don't decide on old numbers */
+function staleBanner() {
+  const k = kpis(), last = pDate((state.data && state.data.pushedAt) || k.as_of); if (!last) return '';
+  const days = Math.floor((Date.now() - last.getTime()) / DAY); if (days < 3) return '';
+  return `<section class="sec box" style="border:1px solid var(--warn);background:rgba(183,121,31,.12)"><p style="margin:0"><b>⚠ Data is ${days} days old</b></p><p class="small" style="margin:4px 0 0">Excel last sent figures on ${esc(fDay(last))}. Open Excel on the PC (or check the daily task) and upload any new statements before deciding anything from these numbers.</p></section>`;
+}
+/* Alert settings: each kind of phone alert on/off, and quiet hours (saved in app/profile.json → alertPrefs; the alert job reads it) */
+const ALERT_KINDS = [['mymoney-moneyin', 'Money in – bonus / class split'], ['mymoney-ask', 'UPI over ₹3,000 needs a category'], ['mymoney-family', 'Family money over the limit'], ['mymoney-dip', 'Price drops'],
+  ['mymoney-week', 'Sunday weekly check'], ['mymoney-dates', 'Coming-up dates (cards, renewals, warranty, money date…)'], ['mymoney-store', 'App Store / Play charges'], ['mymoney-ltg', 'Long-term gain dates'],
+  ['mymoney-loanfree', 'A loan finished'], ['mymoney-subs', 'Yearly subscriptions check'], ['mymoney-budget', 'Budget, unusual spends and over-limit alerts'], ['mymoney-price', 'Your price alerts'], ['mymoney-due', 'Bills and SIPs due'], ['mymoney-low', 'Low balance before a payment'], ['mymoney-month', 'Monthly and yearly summaries']];
+function alertPrefs() { return Object.assign({ off: [], quietFrom: 22, quietTo: 8 }, (state.docs.profile || {}).alertPrefs || {}); }
+function viewAlertSet() {
+  const a = alertPrefs(), hrs = [...Array(24).keys()], lab = h => `${(h % 12) || 12} ${h < 12 ? 'am' : 'pm'}`;
+  return `<section class="card"><h2 style="margin-top:0">Phone alerts</h2><p class="small muted" style="margin:0 0 8px">Untick what you don’t want. Alerts that come in quiet hours wait and arrive together afterwards.</p>
+    ${ALERT_KINDS.map(([k, l]) => `<label class="tick" style="display:flex;gap:10px;align-items:center;padding:6px 0"><input type="checkbox" data-al="${k}" ${a.off.includes(k) ? '' : 'checked'}> ${esc(l)}</label>`).join('')}
+    <div class="row2" style="margin-top:8px"><div><label class="f" for="al-from">Quiet from</label><select class="inp" id="al-from">${hrs.map(h => `<option value="${h}" ${h === a.quietFrom ? 'selected' : ''}>${lab(h)}</option>`).join('')}</select></div>
+      <div><label class="f" for="al-to">until</label><select class="inp" id="al-to">${hrs.map(h => `<option value="${h}" ${h === a.quietTo ? 'selected' : ''}>${lab(h)}</option>`).join('')}</select></div></div>
+    <button class="primary" id="al-save">Save</button></section>`;
+}
+function bindAlertSet() { const $ = id => document.getElementById(id); if (!$('al-save')) return;
+  $('al-save').onclick = async () => { const off = [...document.querySelectorAll('[data-al]')].filter(c => !c.checked).map(c => c.dataset.al);
+    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { alertPrefs: { off, quietFrom: Number($('al-from').value), quietTo: Number($('al-to').value) } }); render();
+    try { await saveDoc('profile', 'Alert settings'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
