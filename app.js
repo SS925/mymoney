@@ -6702,13 +6702,26 @@ const numOf = v => Number(String(v).replace(/[,₹\s]/g, '')) || 0;
 /* Retirement path drawn from the slider values (redrawn live): money growing until retirement, then spent until the last year */
 function retirePathChart(x, b) {
   const r = retirePlan(x, b), w = worthNow(), hv = k => (w.have.find(q => q.k === k) || {}).v || 0;
-  let pot = hv('mf') + hv('st'), epf = b.epfToday || 0; const ages = [], have = [], need = [];
+  let pot = hv('mf') + hv('st'), epf = b.epfToday || 0; const ages = [], have = [], need = [], yr0 = new Date().getFullYear(), useG = state.rtGoals !== false;
+  const goals = useG ? excelGoals() : [], out = {}; state.rtShort = 0; goals.forEach(g => { out[g.year] = (out[g.year] || 0) + g.cost; });
   for (let a = x.age, y = 0; a <= x.until; a++, y++) {
+    if (out[yr0 + y]) { const take = Math.min(out[yr0 + y], Math.max(0, pot)); pot -= take; if (out[yr0 + y] > take) state.rtShort = (state.rtShort || 0) + out[yr0 + y] - take; }   // goals paid from this money (what it can't cover needs a loan / other savings)
     ages.push(String(a)); have.push(Math.max(0, pot + epf));
     if (a < x.retire) { pot = pot * (1 + x.rb) + (x.invest || 0) * 12 * Math.pow(1 + x.step, y); epf = epf * (1 + b.epfRate) + (b.epfMonthly || 0) * 12; need.push(null); }
     else { const spend = r.costR * 12 * Math.pow(1 + x.inf, a - x.retire); pot = (pot + epf) * (1 + x.ra) - spend; epf = 0; need.push(null); }
   }
   const atR = have[Math.max(0, x.retire - x.age)], ok = atR >= r.corpus, lastsTo = (() => { const i = have.findIndex((v, k) => k > x.retire - x.age && v <= 0); return i < 0 ? x.until : x.age + i; })();
   const line = cLine([['Your money', have, ok ? 'var(--good)' : 'var(--warn)'], ['Needed at ' + x.retire, ages.map((a, i) => i <= x.retire - x.age ? r.corpus : null), '#9aa7b8', true]], ages);
-  return cbox('Your path with these settings', line, `At ${x.retire}: ${cr(atR)} against ${cr(r.corpus)} needed – ${ok ? `<span class="good">enough</span>` : `<span class="bad">short by ${cr(r.corpus - atR)}</span>`}. ${lastsTo < x.until ? `<span class="bad">Money runs out around age ${lastsTo}.</span>` : `Lasts until ${x.until}.`} Moves as you slide.`);
+  const gl = goals.length ? `<label class="tick" style="font-size:12px"><input type="checkbox" id="rt-goals" ${useG ? 'checked' : ''}> Pay goals from this money: ${goals.map(g => `${esc(g.short)} ${cr(g.cost)} (${g.year})`).join(' · ')}</label>` : (state.rtGoals === false ? '<label class="tick" style="font-size:12px"><input type="checkbox" id="rt-goals"> Pay goals (car, house, baby, education) from this money</label>' : '');
+  return cbox('Your path with these settings', line + gl, `At ${x.retire}: ${cr(atR)} against ${cr(r.corpus)} needed – ${ok ? `<span class="good">enough</span>` : `<span class="bad">short by ${cr(r.corpus - atR)}</span>`}. ${lastsTo < x.until ? `<span class="bad">Money runs out around age ${lastsTo}.</span>` : `Lasts until ${x.until}.`}${state.rtShort > 0 ? ` <span class="warn">Goals need ${cr(state.rtShort)} more than this money has at the time (a loan or other savings).</span>` : ''} Moves as you slide.`);
 }
+
+/* the goals table in Excel's Goal Planner (car, house, baby, education – not the emergency fund or retirement itself) */
+function excelGoals() {
+  const sh = sheetList().find(q => q.name === 'Goal Planner'); if (!sh) return [];
+  const i = sh.rows.findIndex(r => String(r.c[0]).trim() === 'Goal' && /Target year/i.test(String(r.c[1]))); if (i < 0) return [];
+  const out = []; for (const r of sh.rows.slice(i + 1)) { const nm = String(r.c[0] || '').trim(); if (!nm || /^Total/i.test(nm)) break;
+    if (/emergency|retirement/i.test(nm)) continue; const y = Number(r.c[1]), cost = num(r.c[4]) || 0; if (y && cost > 0) out.push({ name: nm, short: nm.replace(/\s*[(–-].*$/, '').replace(/ down payment/i, '').trim(), year: y, cost }); }
+  return out;
+}
+document.addEventListener('change', e => { if (e.target && e.target.id === 'rt-goals') { state.rtGoals = e.target.checked; const t = state.retireTry, rp = document.getElementById('rt-path'); if (rp && t) rp.innerHTML = retirePathChart(t.x, t.b); const e2 = state.retireEdit, rp2 = document.getElementById('rp-path'); if (rp2 && e2) rp2.innerHTML = retirePathChart(e2.x, e2.b); } });
