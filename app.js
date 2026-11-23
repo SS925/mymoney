@@ -362,7 +362,7 @@ function render() {
   document.body.dataset.tab = state.tab;
   const views = { alertset: viewAlertSet, sinking: viewSinking, moneydate: viewMoneyDate, nosalary: viewNoSalary, creep: viewCreep, wrapped: viewWrapped, extrapat: viewExtraPat, rentplan: viewRentPlan, warranty: viewWarranty, paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
-  v.innerHTML = helpPanel() + (state.tab === 'home' ? staleBanner() : '') + subnav() + views[state.tab]();
+  v.innerHTML = helpPanel() + (state.tab === 'home' ? staleBanner() : '') + subnav() + chartBlock(state.tab) + views[state.tab]();
   { const hb = document.getElementById('btn-help'); if (hb) { hb.hidden = !HELP[state.tab]; hb.classList.toggle('on', !!state.helpOpen); } }
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -704,7 +704,7 @@ function viewHome() {
   };
   const fixed = ['remind1', 'remind2', 'token'].map(k => S[k]()).join('');
   const order = homeLayout().filter(x => x.on && S[x.id]).map(x => x.id);
-  return homeSearchBox() + order.map((id, j) => S[id]() + (j === 0 ? fixed : '')).join('\n') + (order.length ? '' : fixed)
+  return homeSearchBox() + homeSpendRing() + order.map((id, j) => S[id]() + (j === 0 ? fixed : '')).join('\n') + (order.length ? '' : fixed)
     + `<button class="secondary" data-gotab="homeedit" style="margin:4px 0 16px">Customise Home</button>`;
 }
 /* Home layout: which sections show, in what order (kept on this phone) */
@@ -5805,7 +5805,7 @@ function whatIfCalc(v, b) {
   const lic = 10219, rate = net ? (save + lic) / net : 0;
   const P = efPlanGet(), wife = Math.max(0, (num(P.monthly) || 0) - b.efOwn);
   const f = forecastRun({ ret: 11, step: false, extra: true, sipM: v.sip, extraM: v.extra, efM: b.efOwn + wife + Math.max(0, spare) });
-  return { net, out, spare, rate, nw5: f.pts[60].v, nw1: f.pts[12].v, fixedOther };
+  return { net, out, spare, rate, nw5: f.pts[60].v, nw1: f.pts[12].v, fixedOther, pts: f.pts };
 }
 function viewWhatIf() {
   if (!state.data) return '<div class="empty">Sync Excel first.</div>';
@@ -5819,6 +5819,7 @@ function viewWhatIf() {
       <div class="kv"><span>Net worth in 1 year</span><b class="num">${inr(r.nw1)}${d(r.nw1, now.nw1)}</b></div>
       <div class="kv"><span>Net worth in 5 years</span><b class="num">${inr(r.nw5)}${d(r.nw5, now.nw5)}</b></div>
       <p class="small muted" style="margin:6px 0 0">Any spare money is assumed to go to the emergency fund, then investments. Funds at 11% a year.</p></section>
+    ${cbox('Net worth over 5 years', cLine([['Today’s plan', now.pts.filter((_, i) => i % 3 === 0).map(p => p.v), '#9aa7b8', true], ['With your changes', r.pts.filter((_, i) => i % 3 === 0).map(p => p.v), 'var(--blue1)']], now.pts.filter((_, i) => i % 3 === 0).map(p => { const d = new Date(); d.setMonth(d.getMonth() + p.m); return `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; })))}
     <section class="sec box"><div class="sec-h"><h3>Change</h3><button class="edit-btn" id="wi-reset">Reset</button></div>
       ${S('hike', 'Salary hike', 0, 40, 1, v.hike, x => x + '%')}
       ${S('rent', 'Rent', 10000, 50000, 1000, v.rent, inr)}
@@ -5997,8 +5998,7 @@ function viewJars() {
   return `<section class="hero"><p class="hero-k" style="margin-top:0">Money jars</p><h2 class="hero-v num">${inr(jars.reduce((a, j) => a + j.have, 0))}</h2><p class="hero-s" style="margin:0">set aside for ${jars.length} jobs – keep each in its own place so it isn’t spent</p></section>
     ${jars.map(j => { const pc = j.goal ? Math.min(100, j.have / j.goal * 100) : 0; return `<button class="sec box" data-gotab="${j.tab}" style="display:block;width:100%;text-align:left">
       <div class="sec-h"><h3>${j.i} ${esc(j.n)}</h3><span class="small num ${pc >= 100 ? 'good' : ''}">${Math.round(pc)}%</span></div>
-      <div style="height:14px;border-radius:7px;background:var(--line,#e3e8ef);overflow:hidden"><i style="display:block;height:100%;width:${pc.toFixed(1)}%;background:${pc >= 100 ? 'var(--good)' : 'var(--blue1)'}"></i></div>
-      <div class="kv" style="margin-top:6px"><span>${inr(j.have)} of ${inr(j.goal)}<br><span class="small muted">${esc(j.note)}</span></span><span class="small muted" style="text-align:right">${esc(j.where)}</span></div></button>`; }).join('')}
+      <div style="display:flex;gap:12px;align-items:center">${cJar(pc / 100, j.tab)}<div style="flex:1"><div><b class="num">${inr(j.have)}</b> of ${inr(j.goal)}</div><div class="small muted">${esc(j.note)}</div><div class="small muted" style="margin-top:4px">📍 ${esc(j.where)}</div></div></div></button>`; }).join('')}
     <p class="note">Tip: open a second savings account (or use sweep-in FDs) for the tax jar, and an RD for the car jar, so each jar is a real place.</p>`;
 }
 
@@ -6469,6 +6469,176 @@ function bindAlertSet() { const $ = id => document.getElementById(id); if (!$('a
   $('al-save').onclick = async () => { const off = [...document.querySelectorAll('[data-al]')].filter(c => !c.checked).map(c => c.dataset.al);
     const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { alertPrefs: { off, quietFrom: Number($('al-from').value), quietTo: Number($('al-to').value) } }); render();
     try { await saveDoc('profile', 'Alert settings'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
+
+
+/* ======================================================================
+   Charts: small SVG helpers + a chart block for many screens (CHARTS[tab] is drawn above the screen)
+   ====================================================================== */
+const CPAL = ['#4b7fbf', '#3fb68b', '#e0a43a', '#b07ad9', '#e06a6a', '#4fb3c8', '#9aa7b8', '#c98b5a', '#7aa35a', '#d97ab0'];
+const kfmt = v => { const a = Math.abs(v); return (v < 0 ? '−' : '') + (a >= 1e7 ? (a / 1e7).toFixed(1) + 'Cr' : a >= 1e5 ? (a / 1e5).toFixed(1) + 'L' : a >= 1e3 ? Math.round(a / 1e3) + 'k' : Math.round(a)); };
+const cbox = (title, body, note) => `<section class="sec box chart"><div class="sec-h"><h3>${title}</h3></div>${body}${note ? `<p class="small muted" style="margin:6px 0 0;font-size:11px">${note}</p>` : ''}</section>`;
+function cDonut(items, center, sub) {
+  items = items.filter(x => x[1] > 0); const T = items.reduce((a, x) => a + x[1], 0); if (!T) return '';
+  let a0 = -Math.PI / 2; const P = (a, r) => `${(60 + r * Math.cos(a)).toFixed(2)},${(60 + r * Math.sin(a)).toFixed(2)}`;
+  const arcs = items.map((x, k) => { const a1 = a0 + x[1] / T * Math.PI * 2 - 1e-4, big = a1 - a0 > Math.PI ? 1 : 0, d = `M${P(a0, 54)} A54,54 0 ${big} 1 ${P(a1, 54)} L${P(a1, 34)} A34,34 0 ${big} 0 ${P(a0, 34)} Z`; a0 = a1 + 1e-4; return `<path d="${d}" fill="${x[2] || CPAL[k % CPAL.length]}"/>`; }).join('');
+  const leg = items.map((x, k) => `<div style="display:flex;align-items:center;gap:6px;margin:2px 0"><i style="width:9px;height:9px;border-radius:2px;background:${x[2] || CPAL[k % CPAL.length]};flex:none"></i><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(x[0])}</span><b class="num">${kfmt(x[1])}</b><span class="muted" style="width:32px;text-align:right">${Math.round(x[1] / T * 100)}%</span></div>`).join('');
+  return `<div style="display:flex;gap:12px;align-items:center"><svg viewBox="0 0 120 120" width="118" height="118" style="flex:none">${arcs}<text x="60" y="58" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">${esc(center || kfmt(T))}</text><text x="60" y="72" text-anchor="middle" font-size="8.5" fill="currentColor" opacity=".65">${esc(sub || '')}</text></svg><div style="flex:1;font-size:12px;min-width:0">${leg}</div></div>`;
+}
+function cHBars(items, opt = {}) {
+  items = items.filter(x => x[1] > 0); if (!items.length) return ''; const mx = Math.max(...items.map(x => Math.max(x[1], x[3] || 0)));
+  return items.map((x, k) => `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12px;gap:8px"><span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(x[0])}</span><b class="num">${opt.fmt ? opt.fmt(x[1]) : inr(x[1])}${x[3] != null ? `<span class="muted" style="font-weight:400"> / ${opt.fmt ? opt.fmt(x[3]) : inr(x[3])}</span>` : ''}</b></div>
+    <div style="position:relative;height:9px;border-radius:5px;background:var(--hair,#2a2f36);margin-top:3px;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${(x[1] / mx * 100).toFixed(1)}%;background:${x[2] || (x[3] != null && x[1] > x[3] ? 'var(--bad)' : CPAL[k % CPAL.length])}"></i>${x[3] != null ? `<i style="position:absolute;top:-2px;bottom:-2px;width:2px;left:${(x[3] / mx * 100).toFixed(1)}%;background:currentColor;opacity:.7"></i>` : ''}</div></div>`).join('');
+}
+function cStack(items, total) {
+  items = items.filter(x => x[1] > 0); const T = total || items.reduce((a, x) => a + x[1], 0); if (!T) return '';
+  return `<div style="display:flex;height:18px;border-radius:9px;overflow:hidden;margin:4px 0 6px">${items.map((x, k) => `<i title="${esc(x[0])} ${inr(x[1])}" style="width:${(x[1] / T * 100).toFixed(2)}%;background:${x[2] || CPAL[k % CPAL.length]}"></i>`).join('')}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px">${items.map((x, k) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${x[2] || CPAL[k % CPAL.length]}"></i> ${esc(x[0])} <b class="num">${kfmt(x[1])}</b></span>`).join('')}</div>`;
+}
+function cBars(labels, series, opt = {}) {       // vertical bars; series: [[name, values[], colour]], grouped side by side or stacked
+  const n2 = labels.length; if (!n2) return ''; const H = 110, W = 300, gw = (W - 30) / n2;
+  const tot = i => opt.stack ? series.reduce((a, s) => a + Math.max(0, s[1][i] || 0), 0) : Math.max(...series.map(s => s[1][i] || 0));
+  const mx = Math.max(1, ...labels.map((_, i) => tot(i)), opt.line || 0), y = v => H - v / mx * (H - 12);
+  let bars = '';
+  labels.forEach((l, i) => { const x0 = 28 + i * gw; let acc = 0;
+    series.forEach((s, j) => { const v = Math.max(0, s[1][i] || 0); if (!v) return;
+      if (opt.stack) { bars += `<rect x="${(x0 + gw * .15).toFixed(1)}" y="${y(acc + v).toFixed(1)}" width="${(gw * .7).toFixed(1)}" height="${(y(acc) - y(acc + v)).toFixed(1)}" fill="${s[2] || CPAL[j % CPAL.length]}"/>`; acc += v; }
+      else { const bw = gw * .8 / series.length; bars += `<rect x="${(x0 + gw * .1 + j * bw).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${(H - y(v)).toFixed(1)}" rx="1.5" fill="${s[2] || CPAL[j % CPAL.length]}"/>`; } });
+    bars += `<text x="${(x0 + gw / 2).toFixed(1)}" y="${H + 10}" text-anchor="middle" font-size="7.5" fill="currentColor" opacity=".7">${esc(l)}</text>`; });
+  const grid = [0.5, 1].map(f => `<line x1="26" x2="${W}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" stroke="currentColor" opacity=".12"/><text x="0" y="${(y(mx * f) + 3).toFixed(1)}" font-size="7" fill="currentColor" opacity=".6">${kfmt(mx * f)}</text>`).join('');
+  const line = opt.line ? `<line x1="26" x2="${W}" y1="${y(opt.line).toFixed(1)}" y2="${y(opt.line).toFixed(1)}" stroke="var(--warn)" stroke-dasharray="4 3"/><text x="${W}" y="${(y(opt.line) - 2).toFixed(1)}" text-anchor="end" font-size="7" fill="var(--warn)">${esc(opt.lineLabel || 'limit')}</text>` : '';
+  const leg = series.length > 1 ? `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;margin-top:2px">${series.map((s, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${s[2] || CPAL[j % CPAL.length]}"></i> ${esc(s[0])}</span>`).join('')}</div>` : '';
+  return `<svg viewBox="0 0 ${W} ${H + 14}" width="100%">${grid}${bars}${line}</svg>${leg}`;
+}
+function cLine(series, labels, opt = {}) {       // series: [[name, values[], colour, dashed]]
+  const n2 = Math.max(...series.map(s => s[1].length)); if (n2 < 2) return ''; const H = 110, W = 300, all = series.flatMap(s => s[1]).filter(v => v != null && isFinite(v));
+  const mx = Math.max(...all), mn = Math.min(0, ...all), x = i => 28 + i / (n2 - 1) * (W - 32), y = v => H - (v - mn) / (mx - mn || 1) * (H - 12);
+  const paths = series.map((s, j) => `<polyline fill="none" stroke="${s[2] || CPAL[j % CPAL.length]}" stroke-width="2" ${s[3] ? 'stroke-dasharray="5 4"' : ''} points="${s[1].map((v, i) => v == null ? '' : `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`).join('');
+  const grid = [0.5, 1].map(f => { const v = mn + (mx - mn) * f; return `<line x1="26" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="currentColor" opacity=".12"/><text x="0" y="${(y(v) + 3).toFixed(1)}" font-size="7" fill="currentColor" opacity=".6">${kfmt(v)}</text>`; }).join('');
+  const lab = labels ? [0, Math.floor((n2 - 1) / 2), n2 - 1].map(i => `<text x="${x(i).toFixed(1)}" y="${H + 10}" text-anchor="${i === 0 ? 'start' : i === n2 - 1 ? 'end' : 'middle'}" font-size="7.5" fill="currentColor" opacity=".7">${esc(labels[i] || '')}</text>`).join('') : '';
+  const leg = series.length > 1 ? `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;margin-top:2px">${series.map((s, j) => `<span><i style="display:inline-block;width:12px;height:3px;background:${s[2] || CPAL[j % CPAL.length]};vertical-align:middle"></i> ${esc(s[0])}</span>`).join('')}</div>` : '';
+  return `<svg viewBox="0 0 ${W} ${H + 14}" width="100%">${grid}${paths}${lab}</svg>${leg}`;
+}
+function cRing(pct, big, small, col, size = 120) {
+  const p = Math.max(0, Math.min(1, pct)), r = 50, c = 2 * Math.PI * r;
+  return `<svg viewBox="0 0 120 120" width="${size}" height="${size}" style="flex:none"><circle cx="60" cy="60" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".12" stroke-width="12"/><circle cx="60" cy="60" r="${r}" fill="none" stroke="${col || 'var(--blue1)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/><text x="60" y="58" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor">${esc(big)}</text><text x="60" y="74" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${esc(small || '')}</text></svg>`;
+}
+function cGauge(pct, mark, label) {
+  const p = Math.max(0, Math.min(1, pct)), A = a => [60 + 48 * Math.cos(Math.PI * (1 - a)), 62 - 48 * Math.sin(Math.PI * (1 - a))], [x1, y1] = A(p), [mx, my] = A(mark || 0.1);
+  const col = pct > .3 ? 'var(--bad)' : pct > (mark || .1) ? 'var(--warn)' : 'var(--good)';
+  return `<svg viewBox="0 0 120 74" width="112"><path d="M12,62 A48,48 0 0 1 108,62" fill="none" stroke="currentColor" stroke-opacity=".12" stroke-width="10" stroke-linecap="round"/>${p > 0 ? `<path d="M12,62 A48,48 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round"/>` : ''}<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="3" fill="currentColor"/><text x="60" y="58" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">${Math.round(pct * 100)}%</text><text x="60" y="72" text-anchor="middle" font-size="8" fill="currentColor" opacity=".7">${esc(label || '')}</text></svg>`;
+}
+function cRadar(parts) {
+  const n2 = parts.length, R = 46, pt = (i, f) => [60 + R * f * Math.sin(2 * Math.PI * i / n2), 60 - R * f * Math.cos(2 * Math.PI * i / n2)];
+  const grid = [0.33, 0.66, 1].map(f => `<polygon points="${parts.map((_, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-opacity=".15"/>`).join('');
+  const shape = `<polygon points="${parts.map((q, i) => pt(i, Math.max(0.04, q[1])).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="var(--blue1)" fill-opacity=".35" stroke="var(--blue1)" stroke-width="1.5"/>`;
+  const lab = parts.map((q, i) => { const [x, y] = pt(i, 1.28); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="currentColor">${esc(q[0])}</text>`; }).join('');
+  return `<svg viewBox="-12 -6 144 132" width="100%" style="max-width:300px;display:block;margin:auto">${grid}${shape}${lab}</svg>`;
+}
+function cJar(pct, label) {
+  const p = Math.max(0, Math.min(1, pct)), top = 18, bot = 96, h = (bot - top) * p, col = p >= 1 ? 'var(--good)' : 'var(--blue1)';
+  return `<svg viewBox="0 0 70 104" width="64" style="flex:none"><defs><clipPath id="jc${label}"><path d="M14,18 Q12,22 12,30 L12,90 Q12,98 20,98 L50,98 Q58,98 58,90 L58,30 Q58,22 56,18 Z"/></clipPath></defs>
+    <rect x="12" y="${(bot + 2 - h).toFixed(1)}" width="46" height="${(h + 2).toFixed(1)}" fill="${col}" opacity=".85" clip-path="url(#jc${label})"/>
+    <path d="M14,18 Q12,22 12,30 L12,90 Q12,98 20,98 L50,98 Q58,98 58,90 L58,30 Q58,22 56,18 Z" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="2"/><rect x="16" y="8" width="38" height="9" rx="3" fill="currentColor" opacity=".35"/>
+    <text x="35" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">${Math.round(p * 100)}%</text></svg>`;
+}
+function cHeat(days, from, to) {               // days: {yyyy-mm-dd: amount}; one square per day, Monday first
+  const d0 = new Date(from), out = [], vals = Object.values(days).filter(v => v > 0).sort((a, b) => a - b), q = f => vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * f))] : 0;
+  const lv = v => !v ? 0 : v <= q(.25) ? 1 : v <= q(.5) ? 2 : v <= q(.8) ? 3 : 4, cols = ['rgba(127,127,127,.12)', '#2e5a3e', '#3f8f5a', '#e0a43a', '#e06a6a'];
+  const start = new Date(d0); start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); let col = 0, cells = '';
+  for (let d = new Date(start); d <= to; d.setDate(d.getDate() + 1)) { const r = (d.getDay() + 6) % 7; if (r === 0 && d > start) col++; if (d < d0) continue; const k = ymKey(d) + '-' + String(d.getDate()).padStart(2, '0'), v = days[k] || 0;
+    cells += `<rect x="${14 + col * 13}" y="${r * 13}" width="11" height="11" rx="2" fill="${cols[lv(v)]}"><title>${k}: ${inr(v)}</title></rect>`; }
+  return `<svg viewBox="0 0 ${16 + (col + 1) * 13} 92" width="100%">${['M', '', 'W', '', 'F', '', 'S'].map((l, i) => `<text x="0" y="${i * 13 + 9}" font-size="7" fill="currentColor" opacity=".6">${l}</text>`).join('')}${cells}</svg>
+    <div class="small muted" style="font-size:11px">less ${cols.slice(1).map(c => `<i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${c}"></i>`).join(' ')} more · tap a square for the amount</div>`;
+}
+const monthsBack = (k, from) => { const d = from ? pDate(from + '-01') : new Date(); return [...Array(k).keys()].map(i => ymKey(new Date(d.getFullYear(), d.getMonth() - (k - 1 - i), 1))); };
+const mLab = ym => MON[Number(ym.slice(5)) - 1];
+const expBy = (ym, skip) => { const o = {}; allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(ym) || (skip && skip.test(t.Category || ''))) return; o[t.Category || 'Other'] = (o[t.Category || 'Other'] || 0) + Math.abs(n(t.Amount) || 0); }); return o; };
+const topN = (o, k) => { const e = Object.entries(o).sort((a, b) => b[1] - a[1]), top = e.slice(0, k), rest = e.slice(k).reduce((a, x) => a + x[1], 0); return rest > 0 ? top.concat([['Other', rest]]) : top; };
+
+const CHARTS = {
+  salary: () => { const sh = sheetList().find(x => x.name === 'Payslips'); if (!sh || sh.rows.length < 3) return ''; const h = sh.rows[0].c, rows = sh.rows.slice(1).filter(r => r.c[0]), iN = h.indexOf('Net Pay');
+    const ps = latestPayslip(state.payIdx == null ? undefined : state.payIdx), r = ps && ps.row, g = r ? num(r['Gross Earnings']) || 0 : 0, d = r ? num(r['Total Deductions']) || 0 : 0;
+    return cbox('Take-home pay over time', cLine([['Net pay', rows.map(x => num(x.c[iN]) || 0), 'var(--blue1)']], rows.map(x => x.c[0]))) + (r ? cbox(`${esc(r.Month)}: where the gross went`, cStack([['Take-home', g - d, 'var(--good)'], ...['PF (Employee)', 'Professional Tax', 'Income Tax', 'ESI', 'Labour Welfare Fund', 'Meal Recovery'].map((k, i) => [k.replace(' (Employee)', ''), num(r[k]) || 0, ['#4b7fbf', '#9aa7b8', '#e06a6a', '#b07ad9', '#c98b5a', '#4fb3c8'][i]])], g)) : ''); },
+  earned: () => { const ys = payslipYears(); if (!ys.length) return ''; const T = ys.reduce((a, y) => a + y.net, 0), hs = invHoldings().filter(h => h.units > 1e-6), invAmt = hs.reduce((a, h) => a + (Number(h.invested) || 0), 0);
+    const ppf = Number(((inv() || {}).ppf || {}).balance) || 0, licC = sheetRowCells('LIC', 'Paid so far'), lic = licC ? num(licC[1]) || 0 : 0, own = bankAccounts().filter(a => !a.manual).reduce((a, x) => a + x.bal, 0), joint = bankAccounts().filter(a => a.manual).reduce((a, x) => a + x.bal, 0);
+    const kept = invAmt + ppf + lic + own + joint; return cbox('Where your take-home went', cDonut([['Funds & stocks', invAmt], ['PPF', ppf], ['LIC', lic], ['Your banks', own], ['Joint emergency', joint], ['Spent', Math.max(0, T - kept), '#5b6676']], kfmt(T), 'take-home')); },
+  health: () => { if (!state.data) return ''; const hs = healthMonths().map(healthFor), h = hs[hs.length - 1];
+    return cbox('Score parts', cRadar(h.parts.map(q => [q.l.replace('Spending vs plan', 'Plan').replace('Emergency fund', 'Emergency').replace('Savings rate', 'Savings').replace('Card bills', 'Cards').replace('Loan EMIs', 'EMIs'), q.got / q.max])), 'The fuller the shape, the healthier.') + cbox('Score, last 6 months', cBars(hs.map(x => mLab(x.ym)), [['Score', hs.map(x => x.score), 'var(--blue1)']], { line: 80, lineLabel: 'strong 80' })); },
+  money: () => { if (!state.data) return ''; const ym = budgetYm(), SK = /^(Credit Card Bills)$/; const cur = topN(expBy(ym), 6), ms = monthsBack(6, ym), cats = topN(expBy(ym), 5).map(x => x[0]).filter(c => c !== 'Other');
+    const ser = cats.map((c, j) => [c, ms.map(m => expBy(m)[c] || 0), CPAL[j]]).concat([['Other', ms.map(m => { const o = expBy(m); return Object.entries(o).filter(([c]) => !cats.includes(c)).reduce((a, x) => a + x[1], 0); }), '#5b6676']]);
+    return cbox(`Spending by category, ${mLab(ym)}`, cDonut(cur, kfmt(cur.reduce((a, x) => a + x[1], 0)), 'spent')) + cbox('Last 6 months', cBars(ms.map(mLab), ser, { stack: true })); },
+  spends: () => { if (!state.data) return ''; const months = spendMonths(); if (!months.length) return ''; const m = state.spM && months.includes(state.spM) ? state.spM : months[0], SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i, g = {};
+    allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(m) || SKIP.test(t.Category || '')) return; const k = payeeOf(t); g[k] = (g[k] || 0) + Math.abs(n(t.Amount) || 0); });
+    return cbox(`Top 10 payees, ${mLab(m)}`, cHBars(Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 10))); },
+  tx: () => { if (!state.data) return ''; const to = new Date(), from = new Date(to.getFullYear(), to.getMonth() - 3, to.getDate()), days = {};
+    allTx().forEach(t => { if (t.Type !== 'Expenses' || /Credit Card Bills|Housing|Loans|Insurance/i.test(t.Category || '')) return; const k = String(t.Date).slice(0, 10); days[k] = (days[k] || 0) + Math.abs(n(t.Amount) || 0); });
+    return cbox('Day-to-day spending, last 3 months', cHeat(days, from, to), 'Rent, card bills, EMIs and insurance are left out so everyday spending stands out.'); },
+  bills: () => CHARTS.paycal(true), paycal: (small) => { const t = new Date(), off = small === true ? 0 : (state.pcOff || 0), b = new Date(t.getFullYear(), t.getMonth() + off, 1), ev = payEvents(b.getFullYear(), b.getMonth()).filter(e => e.amt > 0 && e.kind !== 'in'), dim = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
+    if (!ev.length) return ''; const mx = Math.max(...ev.map(e => e.amt)), x = d => 10 + (d - 1) / (dim - 1) * 280, col = { fixed: '#4b7fbf', save: '#3fb68b', bill: '#e0a43a', card: '#e06a6a', loan: '#b07ad9', sub: '#9aa7b8' };
+    const dots = ev.map(e => `<circle cx="${x(e.d).toFixed(1)}" cy="40" r="${(3 + Math.sqrt(e.amt / mx) * 13).toFixed(1)}" fill="${col[e.kind] || '#9aa7b8'}" fill-opacity=".75"><title>${e.d} · ${esc(e.name)} ${inr(e.amt)}</title></circle>`).join('');
+    return cbox(`${MONF[b.getMonth()]}: money out by date`, `<svg viewBox="0 0 300 78" width="100%"><line x1="10" x2="290" y1="40" y2="40" stroke="currentColor" opacity=".2"/>${[1, 5, 10, 15, 20, 25, dim].map(d => `<text x="${x(d).toFixed(1)}" y="74" text-anchor="middle" font-size="8" fill="currentColor" opacity=".6">${d}</text>`).join('')}${dots}</svg>`, 'Bigger dot = bigger payment. Blue rent · green SIP/PPF · amber bills · purple EMI · grey subscriptions.'); },
+  subcheck: () => { const l = (state.docs.subplan || []).map(s2 => [s2.name, s2.every === 'Monthly' ? (Number(s2.cost) || 0) * 12 : Number(s2.cost) || 0]); return l.length ? cbox('Subscriptions – cost a year', cDonut(l.sort((a, b) => b[1] - a[1]), kfmt(l.reduce((a, x) => a + x[1], 0)), 'a year')) : ''; },
+  famtx: () => { if (!state.data) return ''; const f = famData(), ms = monthsBack(12), a = t => Math.abs(n(t.Amount) || 0), out = allTx().filter(t => t.Type === 'Expenses' && ASIDE_OUT.test(t.Category || ''));
+    return cbox('Who received it (6-month average)', cHBars(f.per6)) + cbox('Family money, last 12 months', cBars(ms.map(mLab), [['Sent', ms.map(m => out.filter(t => String(t.Date).startsWith(m)).reduce((s2, t) => s2 + a(t), 0)), '#b07ad9']], { line: f.cap, lineLabel: 'limit' })); },
+  moneyin: () => { const c = incomeCredits().slice(0, 8).reverse(); if (!c.length) return '';
+    return cbox('How each payment splits', cBars(c.map(x => `${x.d.getDate()} ${MON[x.d.getMonth()]}`), [['Tax', c.map(x => x.keep), '#e06a6a'], ['Emergency', c.map(x => x.ef), '#4b7fbf'], ['Invest', c.map(x => x.invest), '#3fb68b'], ['Free', c.map(x => x.amt - x.keep - x.save), '#e0a43a']], { stack: true })); },
+  loans: () => { const ls = allLoans().filter(l => (Number(l.borrowed) || 0) > 0); if (!ls.length) return ''; const act = ls.filter(l => !l.cleared && l.left > 0);
+    return cbox('Loans: repaid vs still owed', ls.map(l => { const b = Number(l.borrowed) || 0, o = l.cleared ? 0 : Number(l.owed) || 0; return `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${esc(l.name)}</span><span class="num">${o ? `${inr(o)} left` : '<span class="good">closed ✓</span>'}</span></div>${cStack([['Repaid', Math.max(0, b - o), 'var(--good)'], ['Owed', o, 'var(--bad)']], b).replace(/<div style="display:flex;flex-wrap.*$/s, '')}</div>`; }).join(''))
+      + (act.length ? cbox('Payoff timeline', cBars(monthsBack(Math.max(...act.map(l => l.left)) + 1, ymKey(new Date(new Date().getFullYear(), new Date().getMonth() + Math.max(...act.map(l => l.left)), 1))).map(mLab), act.map((l, j) => [l.name, monthsBack(Math.max(...act.map(x => x.left)) + 1, ymKey(new Date(new Date().getFullYear(), new Date().getMonth() + Math.max(...act.map(x => x.left)), 1))).map((_, i) => Math.max(0, (Number(l.owed) || 0) - l.emi * i)), CPAL[j + 4]]), { stack: true }), 'Still owed at the start of each month if you pay the EMIs.') : ''); },
+  ccards: () => { const cs = (state.docs.ccards || []).filter(c => Number(c.limit) > 0); if (!cs.length) return '';
+    return cbox('Card use (for your credit score)', `<div style="display:flex;flex-wrap:wrap;justify-content:space-around">${cs.map(c => `<div style="text-align:center;font-size:11px">${cGauge((Number(c.outstanding) || Number(c.budget) || 0) / Number(c.limit), 0.1, Number(c.outstanding) ? 'owed now' : 'if limit spent')}<div>${esc(c.name)}</div></div>`).join('')}</div>`, 'Dot = the 10% line. Green under 10%, amber 10–30%, red over 30%.'); },
+  review: () => CHARTS.report(), report: () => { if (!state.data) return ''; const all = reportMonths(), ym = (state.reportMonth && all.includes(state.reportMonth)) ? state.reportMonth : (all[0] || budgetYm()), prev = ymKey(new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)) - 2, 1));
+    const a = expBy(ym), b = expBy(prev), cats = topN(a, 6).map(x => x[0]).filter(c => c !== 'Other');
+    return cbox(`Spending, ${MONF[Number(ym.slice(5)) - 1]}`, cDonut(topN(a, 6), kfmt(Object.values(a).reduce((s2, v) => s2 + v, 0)), 'spent')) + cbox(`${mLab(ym)} vs ${mLab(prev)}`, cBars(cats.map(c => c.split(/[ /]/)[0].slice(0, 8)), [[mLab(prev), cats.map(c => b[c] || 0), '#9aa7b8'], [mLab(ym), cats.map(c => a[c] || 0), 'var(--blue1)']])); },
+  invest: () => { if (!state.data) return ''; const w = worthNow(), hv = k => (w.have.find(r => r.k === k) || {}).v || 0;
+    let nifty = ''; const b = state.benchmark; if (b && b.flows && b.flows.length) { const mine = invHoldings().filter(h => /^\d+$/.test(String(h.code || ''))).reduce((a, h) => a + h.value, 0), put = -b.flows.reduce((a, f) => a + f[1], 0);
+      nifty = cbox('Your funds vs the same money in Nifty 50', cHBars([['Put in', put, '#9aa7b8'], ['Your funds now', mine, 'var(--blue1)'], ['Nifty 50 index now', b.value, '#e0a43a']])); }
+    return cbox('What you have invested', cDonut([['Mutual funds', hv('mf')], ['Stocks', hv('st')], ['EPF', hv('epf')], ['PPF', hv('ppf')], ['FD', hv('fd')], ['Other', hv('oth')]], kfmt(hv('mf') + hv('st') + hv('epf') + hv('ppf') + hv('fd') + hv('oth')), 'invested')) + nifty; },
+  sips: () => { const st = statuses('sips'); if (!st.length) return ''; const T = st.reduce((a, x) => a + (Number(x.it.amount) || 0), 0);
+    return cbox(`SIPs + PPF each month: ${inr(T)}`, cStack(st.map((x, j) => [`${x.st.s === 'paid' ? '✓ ' : '○ '}${x.it.name.replace(/ Fund.*| Direct.*/i, '')}`, Number(x.it.amount) || 0, CPAL[j]]), T), '✓ paid this month · ○ still due'); },
+  pfedit: () => { const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, epf0 = Number(e.value) || 0, ppf0 = Number(p.balance) || 0, epfM = Number(e.epfMonth) || 6000, ppfM = (state.docs.sips || []).filter(s2 => /PPF/i.test(s2.name)).reduce((a, s2) => a + (Number(s2.amount) || 0), 0);
+    if (!epf0 && !ppf0) return ''; const yrs = [...Array(11).keys()], gr = (v0, m, r) => yrs.map(y => { let v = v0; for (let k = 0; k < y * 12; k++) v = v * (1 + r / 12) + m; return Math.round(v); });
+    return cbox('EPF and PPF – next 10 years', cLine([['EPF (8.25%)', gr(epf0, epfM, .0825), 'var(--blue1)'], ['PPF (7.1%)', gr(ppf0, ppfM, .071), 'var(--good)']], yrs.map(y => String(new Date().getFullYear() + y))), `If you keep adding about ${inr(epfM)} to EPF and ${inr(ppfM)} to PPF each month.`); },
+  gains: () => { const rows = realisedGains(), fys = [...new Set(rows.map(r => fyOf(r.sell)).concat([fyOf(isoToday())]))].sort().reverse(), fy = state.gainsFy && fys.includes(state.gainsFy) ? state.gainsFy : fys[0], by = {};
+    rows.filter(r => fyOf(r.sell) === fy).forEach(r => { const k = r.name.replace(/ Fund.*| Direct.*| Limited/i, ''); const o = by[k] || (by[k] = [0, 0]); o[0] += r.stGain || 0; o[1] += r.ltGain || 0; });
+    const ks = Object.keys(by); return ks.length ? cbox(`Gains by holding, FY ${fy}`, cBars(ks.map(k => k.slice(0, 9)), [['Short-term', ks.map(k => by[k][0]), '#e0a43a'], ['Long-term', ks.map(k => by[k][1]), '#3fb68b']]), 'Losses are not drawn (bars start at zero).') : ''; },
+  divs: () => { const by = {}; allTx().filter(t => t.Type === 'Income' && /dividend/i.test(t.Category || '')).forEach(t => { const d = pDate(t.Date); if (!d) return; const fy = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; by[fy] = (by[fy] || 0) + Math.abs(n(t.Amount) || 0); });
+    const ks = Object.keys(by).sort(); return ks.length ? cbox('Dividends by financial year', cBars(ks.map(y => `FY${String(y).slice(2)}`), [['Dividends', ks.map(k => by[k]), '#3fb68b']])) : ''; },
+  tax: () => { const from = fyStart(), to = new Date(from.getFullYear() + 1, 2, 31), inFy = t => { const d = pDate(t.Date || t.date); return d && d >= from && d <= to; }, e = (inv() || {}).epf || {}, now = new Date();
+    const md = Math.max(0, Math.min(12, (now.getFullYear() - from.getFullYear()) * 12 + now.getMonth() - 3)), ppfC = sheetRowRaw('Savings Schemes', 'Deposited this financial year');
+    const ins = tbl('AppRecent').filter(t => t.Type === 'Expenses' && /insurance|lic/i.test(t.Category) && /\blic\b|life/i.test(t.Details) && inFy(t)).reduce((s2, t) => s2 + Math.abs(n(t.Amount)), 0);
+    const x80 = excel80C(), items = x80 ? x80.items.map(i => [i.label, i.v]) : [['EPF (you)', (Number(e.youMonth) || 0) * md], ['PPF', ppfC ? num(ppfC[1]) : 0], ['LIC', ins]], used = items.reduce((a, x) => a + (Number(x[1]) || 0), 0);
+    return cbox(`80C: ${inr(Math.min(used, 150000))} of ₹1,50,000`, cStack(items.map((x, j) => [x[0], Number(x[1]) || 0, CPAL[j]]).concat(used < 150000 ? [['Room left', 150000 - used, 'rgba(127,127,127,.25)']] : []), Math.max(150000, used)), 'Only counts in the old tax regime.'); },
+  goals: () => { const gs = (state.docs.goals || []).filter(g => Number(g.target) > 0); if (!gs.length) return '';
+    return cbox('Goals', `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-around">${gs.map(g => { const c = goalCalc(g); return `<div style="text-align:center;font-size:11px;max-width:140px">${cRing(c.pct, Math.round(c.pct * 100) + '%', kfmt(Number(g.target)), c.atDate >= g.target ? 'var(--good)' : 'var(--warn)', 104)}<div><b>${esc(String(g.name).split(/[(–-]/)[0].trim())}</b></div><div class="muted">by ${esc(monthsLabel(c.months))} · ${c.atDate >= g.target ? 'on track' : 'short'}</div></div>`; }).join('')}</div>`, 'Ring = saved so far against the target.'); },
+  cover: () => { if (!state.data) return ''; const p = state.docs.profile || {}, xc = excelCover(), L = lifeGet(), net = netPay(), yearly = isFinite(net) ? net * 12 : 0, loansNow = n(kpis().loans_owed) || 0;
+    const life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0, needs = [['Today', yearly * 10 + loansNow, 500000], ['With a child', yearly * 10 + loansNow + L.edu * L.kids, 1000000], ['With a home loan', yearly * 10 + L.homeLoan + L.carLoan + L.edu * L.kids, 1000000]];
+    return cbox('Life cover vs need', cHBars([['You have', life, 'var(--good)'], ...needs.map(x => [`Need – ${x[0]}`, x[1], '#9aa7b8'])], { fmt: kfmt })) + cbox('Health cover vs need', cHBars([['You have', health, 'var(--good)'], ...needs.map(x => [`Need – ${x[0]}`, x[2], '#9aa7b8'])], { fmt: kfmt })); },
+  nosalary: () => { if (!state.data) return ''; const o = Object.assign({ food: 12000, family: 5000, sellFunds: false }, LS.get('nsOpt', {})), lim = activePlan().limits || {};
+    const banks = bankAccounts().reduce((a, x) => a + x.bal, 0) + efLiquid(), funds = invHoldings().filter(h => h.units > 1e-6).reduce((a, h) => a + (Number(h.value) || 0), 0) * 0.9, fixedCard = (state.docs.ccards || []).reduce((a, c) => a + cardFixed(c).reduce((x2, f) => x2 + f.amt, 0), 0);
+    const base = (Number(lim.Housing) || 0) + (Number(lim.Insurance) || 0) + fixedCard + o.food + o.family, emi = allLoans().filter(l => !l.cleared && l.left > 0).reduce((a, l) => a + l.emi, 0), m = (banks + (o.sellFunds ? funds : 0)) / (base + emi * 0.5);
+    const W = 280, x = v => 10 + Math.min(v, 12) / 12 * W;
+    return cbox('Runway if salary stops', `<svg viewBox="0 0 300 58" width="100%"><rect x="10" y="14" width="${W}" height="18" rx="9" fill="currentColor" opacity=".1"/><rect x="10" y="14" width="${(x(m) - 10).toFixed(1)}" height="18" rx="9" fill="${m < 6 ? 'var(--bad)' : m < 12 ? 'var(--warn)' : 'var(--good)'}"/>${[6, 12].map(t => `<line x1="${x(t)}" x2="${x(t)}" y1="8" y2="38" stroke="currentColor" stroke-dasharray="3 2"/><text x="${x(t)}" y="50" text-anchor="${t === 12 ? 'end' : 'middle'}" font-size="8" fill="currentColor">${t} months${t === 6 ? ' (now)' : ' (target)'}</text>`).join('')}<text x="${Math.max(30, x(m) - 4)}" y="27" text-anchor="end" font-size="9" font-weight="700" fill="#fff">${m.toFixed(1)} mo</text></svg>`); },
+  car: () => { const c = carGet(), loan = Math.max(0, c.price - c.down), emi = emiOf(loan, c.rate, c.years * 12), interest = emi * c.years * 12 - loan, net = netPay(), run = c.fuel + c.insYear / 12 + c.serviceYear / 12;
+    return cbox('What the car costs', cDonut([['Down payment', c.down, '#4b7fbf'], ['Loan principal', loan, '#e0a43a'], ['Interest', interest, '#e06a6a']], kfmt(c.price + interest), 'total')) + (isFinite(net) ? cbox('Car costs as share of take-home', cStack([['EMI', emi, '#e0a43a'], ['Fuel, insurance, service', run, '#e06a6a'], ['Rest of take-home', Math.max(0, net - emi - run), 'rgba(127,127,127,.25)']], net), `Rule of thumb: under 10–15% (${Math.round((emi + run) / net * 100)}% now).`) : ''); },
+  homeloan: () => { const h = homeGet(), loan = h.price * 0.8, emi = emiOf(loan, h.rate, h.years * 12), interest = emi * h.years * 12 - loan, net0 = netPay(), net = isFinite(net0) ? net0 * Math.pow(1 + h.hike / 100, Math.max(0, h.year - new Date().getFullYear())) : 0;
+    return cbox(`A ${kfmt(h.price)} home over ${h.years} years`, cDonut([['Down payment + costs', h.price * 0.27, '#4b7fbf'], ['Loan principal', loan, '#e0a43a'], ['Interest', interest, '#e06a6a']], kfmt(h.price * 0.27 + loan + interest), 'total paid')) + (net ? cbox(`EMI vs take-home in ${h.year}`, cStack([['Home EMI', emi, '#e0a43a'], ['Rest', Math.max(0, net - emi), 'rgba(127,127,127,.25)']], net), `${Math.round(emi / net * 100)}% of take-home – banks allow up to ${h.foir}% for all EMIs together.`) : ''); },
+  wrapped: () => { const fys = fyList(); if (!fys.length) return ''; const fy = state.wrapFy && fys.includes(state.wrapFy) ? state.wrapFy : fys[0], ms = [...Array(12).keys()].map(i => ymKey(new Date(fy, 3 + i, 1))), a = t => Math.abs(n(t.Amount) || 0);
+    const inc = ms.map(m => allTx().filter(t => t.Type === 'Income' && String(t.Date).startsWith(m) && !/Loan Received|Unrecorded/i.test(t.Category || '')).reduce((s2, t) => s2 + a(t), 0)), sp = ms.map(m => allTx().filter(t => t.Type === 'Expenses' && String(t.Date).startsWith(m)).reduce((s2, t) => s2 + a(t), 0));
+    const cats = {}; allTx().filter(t => t.Type === 'Expenses' && ms.includes(String(t.Date).slice(0, 7))).forEach(t => { cats[t.Category] = (cats[t.Category] || 0) + a(t); });
+    return cbox(`FY ${fy}-${String(fy + 1).slice(2)}: money in vs out`, cBars(ms.map(mLab), [['In', inc, '#3fb68b'], ['Spent', sp, '#e06a6a']])) + cbox('Top spending', cDonut(topN(cats, 5), kfmt(Object.values(cats).reduce((s2, v) => s2 + v, 0)), 'spent')); },
+  year: () => { const y = state.yearPick || String(new Date().getFullYear()), ms = [...Array(12).keys()].map(i => `${y}-${String(i + 1).padStart(2, '0')}`), a = t => Math.abs(n(t.Amount) || 0);
+    return cbox(`${y}: money in vs out`, cBars(ms.map(mLab), [['In', ms.map(m => allTx().filter(t => t.Type === 'Income' && String(t.Date).startsWith(m) && !/Loan Received|Unrecorded/i.test(t.Category || '')).reduce((s2, t) => s2 + a(t), 0)), '#3fb68b'], ['Spent', ms.map(m => allTx().filter(t => t.Type === 'Expenses' && String(t.Date).startsWith(m)).reduce((s2, t) => s2 + a(t), 0)), '#e06a6a']])); },
+  creep: () => { if (!state.data) return ''; const c = creepData(), ds = c.drivers.filter(d => d[2] + d[3] > 1000).sort((a, b) => (b[2] + b[3]) - (a[2] + a[3])).slice(0, 7);
+    return ds.length ? cbox('Before vs after (monthly average)', cBars(ds.map(d => String(d[0]).split(/[ /]/)[0].slice(0, 8)), [['6 months before', ds.map(d => d[3]), '#9aa7b8'], ['Last 6 months', ds.map(d => d[2]), 'var(--blue1)']])) : ''; },
+};
+function chartBlock(tab) { const f = CHARTS[tab]; if (!f || state.docEdit || state.planEdit || state.ccEdit || state.wEdit || state.miEdit) return ''; try { return f() || ''; } catch (e) { console.warn('chart', tab, e); return ''; } }
+function homeSpendRing() {
+  if (!state.data) return ''; const net = netPay(), p = activePlan(), lim = spendLimit(net, p), spent = budgetSpent(); if (!isFinite(lim) || lim <= 0) return '';
+  const ms = monthsBack(6, budgetYm()), used = spent / lim;
+  return `<section class="sec box chart" style="display:flex;gap:12px;align-items:center">${cRing(used, Math.round(used * 100) + '%', 'of limit used', used > 1 ? 'var(--bad)' : used > .85 ? 'var(--warn)' : 'var(--good)', 104)}
+    <div style="flex:1;min-width:0"><div class="small"><b class="num">${inr(spent)}</b> of ${inr(lim)} · ${MON[Number(budgetYm().slice(5)) - 1]}</div>${cBars(ms.map(mLab), [['Spent', ms.map(m => budgetSpent(m)), 'var(--blue1)']], { line: lim, lineLabel: 'limit' })}</div></section>`;
+}
 
 /* ======================================================================
    Start-up – kept at the very END so every screen, list and help text above is defined before the first draw
