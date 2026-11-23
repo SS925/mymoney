@@ -5464,17 +5464,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localh
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSw && !window.__mmReloaded) { window.__mmReloaded = true; location.reload(); } });   // new version: show it at once
 }
-{ const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
-applyTheme();
-handleShared();
-handleSharedImage();
-handleFamilyLink();
-if (location.hash === '#voice' && state.cfg) { history.replaceState(null, '', location.pathname); state.tab = 'add'; setTimeout(() => { if (voiceSupported()) startVoice(); }, 600); }
-if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(v => v || navigator.storage.persist()).then(v => { state.storageSafe = !!v; }).catch(() => {});
-if (window.matchMedia) matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
-render();
-if (lockCfg()) showLock();
-if (state.cfg) sync();
 
 /* ======================================================================
    Next-month cushion: this month's salary (paid at month end) is next month's money
@@ -6466,3 +6455,18 @@ function bindAlertSet() { const $ = id => document.getElementById(id); if (!$('a
   $('al-save').onclick = async () => { const off = [...document.querySelectorAll('[data-al]')].filter(c => !c.checked).map(c => c.dataset.al);
     const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { alertPrefs: { off, quietFrom: Number($('al-from').value), quietTo: Number($('al-to').value) } }); render();
     try { await saveDoc('profile', 'Alert settings'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
+
+/* ======================================================================
+   Start-up – kept at the very END so every screen, list and help text above is defined before the first draw
+   ====================================================================== */
+{ const h = location.hash.slice(1); if (h && h !== 'sheet' && (TITLES[h] || h === 'more') && state.cfg) state.tab = h; }
+applyTheme();
+handleShared();
+handleSharedImage();
+handleFamilyLink();
+if (location.hash === '#voice' && state.cfg) { history.replaceState(null, '', location.pathname); state.tab = 'add'; setTimeout(() => { if (voiceSupported()) startVoice(); }, 600); }
+if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(v => v || navigator.storage.persist()).then(v => { state.storageSafe = !!v; }).catch(() => {});
+if (window.matchMedia) matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
+render();
+if (lockCfg()) showLock();
+if (state.cfg) sync();
