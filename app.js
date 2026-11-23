@@ -210,7 +210,6 @@ function describe(t, raw) {
   if (app) src = 'Phone entry';
   return { title, src, app };
 }
-const TYPE_ICON = { Income: '↓', Expenses: '↑', Savings: '◆', Transfer: '⇄' };
 
 /* ---------------- sync ---------------- */
 async function sync(opts = {}) {
@@ -941,20 +940,6 @@ function bindBudget() {
   };
 }
 
-function projChart(rows) {
-  if (!rows.length) return '';
-  const W = 340, H = 190, pl = 36, pr = 10, pt = 10, pb = 22, iw = W - pl - pr, ih = H - pt - pb;
-  const max = Math.max(1, ...rows.map(r => Math.max(n(r.NetWorth) || 0, n(r.Needed) || 0)));
-  const x = i => pl + (i / (rows.length - 1 || 1)) * iw, y = v => pt + ih - (Math.max(0, n(v) || 0) / max) * ih;
-  const path = key => rows.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join('');
-  let g = '';
-  [0, .5, 1].forEach(f => { const yy = pt + ih - f * ih; g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="#2b373b"/><text x="${pl - 4}" y="${yy + 3}" text-anchor="end" font-size="9.5" fill="var(--muted)">${f ? Math.round(max * f / 1e7) + ' Cr' : '0'}</text>`; });
-  rows.forEach((r, i) => { if (i % 5 === 0 || i === rows.length - 1) g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${r.Year}</text>`; });
-  g += `<path d="${path('Needed')}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 4"/>`;
-  g += `<path d="${path('NetWorth')}" fill="none" stroke="var(--violet)" stroke-width="2.5"/>`;
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected net worth vs amount needed to retire">${g}</svg>
-  <div class="legend"><span><i style="background:var(--violet)"></i>Projected net worth</span><span><i style="background:var(--amber)"></i>Needed to retire</span></div>`;
-}
 /* Same formulas as Goal Planner C16:C28 */
 function retirePlan(x, b) {
   const Y = Math.max(0, x.retire - x.age), N = Math.max(0, x.until - x.retire);
@@ -2902,7 +2887,6 @@ function viewLowBalance() {
    Change a bank transaction's category (becomes a rule at the top of Auto Rules)
    ====================================================================== */
 function txKey(t) { return `${String(t.Date).slice(0, 10)}|${n(t.Amount)}|${String(t.Details || '').slice(0, 60)}`; }
-function recatFor(t) { const k = txKey(t); return state.recats.find(r => r.entry.tx === k) || null; }
 function upiParts(det) {
   const d = String(det || '').replace(/^bank:\s*\{[^}]*\}\s*/i, '');
   const m = d.match(/UPI\/(?:DR|CR)\/(\d{6,})\/([^/]+)/i);
@@ -5053,9 +5037,6 @@ function retireCard(x, b) {
 }
 
 /* ---------------- More: every Excel sheet ---------------- */
-const SHEET_ICON = { Home: '⌂', Insights: '📊', 'Monthly Compare': '📅', Goals: '🎯', Loans: '🏦', LIC: '🛡', 'Stocks & MF': '📈',
-  'Yearly Calendar': '🗓', 'Side Income': '💼', 'Goal Planner': '🧭', 'NW Projection': '🚀', 'Savings Schemes': '🏛', 'Big Expenses': '💸',
-  Trends: '〰', 'Yearly Summary': '📆', 'Budget Planning': '📝', Balances: '💰', Salary: '🧾', Payslips: '📄' };
 function sheetList() { return (state.sheets && state.sheets.sheets) || []; }
 /* Coaching receipts live in receipts.html on the same site, so their saved copy is readable here */
 function receiptsSummary() {
@@ -5101,12 +5082,6 @@ function viewMore() {
     <section class="sec"><div class="group">${row('data-go="sheets"', 'Excel sheets', list.length ? `All ${list.length} sheets as Excel shows them${at ? `, sent ${fDay(at).replace(/ \d{4}$/, '')}` : ''}` : 'None yet – run AppLinkNow in Excel')}</div></section>`;
 }
 
-function sheetHint(s) {
-  if (s.choices && s.choices.length) return esc('Pick ' + s.choices.map(c => c.label.toLowerCase()).join(', ') + ': ' + s.choices[0].options.map(o => o.v).join(', '));
-  const first = (s.rows || []).slice(0, 3).map(r => r.c.find(x => x)).filter(Boolean);
-  const t = first.find((x, i) => i > 0 && x.length > 8) || first[1] || first[0] || '';
-  return esc(t.length > 60 ? t.slice(0, 58) + '…' : t);
-}
 const NUMISH = /^[-−+▲▼(]?\s?₹?\s?-?[\d,]+(\.\d+)?\)?\s?(%|×|Cr|L|mo|yrs)?$/;
 function viewSheet() {
   const sh = sheetList().find(s => s.name === state.sheet);
@@ -5198,7 +5173,6 @@ function parseSheet(rows) {
   return out.filter(s => s.items.length || s.title);
 }
 function barPct(t) { const m = String(t).match(/^[█░]+\s+(-?\d+)%/); return m ? Number(m[1]) : null; }
-function barEl(p) { return `<div class="row small" style="gap:8px;width:100%"><div class="bar ${p > 100 ? 'over' : ''}" style="flex:1"><i style="width:${Math.min(100, Math.max(0, p))}%"></i></div><span class="num">${p}%</span></div>`; }
 function vText(t, names) {
   const m = String(t).match(/^→\s*(.+?)(\s+for details)?$/);
   if (m && names.has(m[1].trim())) return `<button class="xl-link" data-sheet="${esc(m[1].trim())}">→ ${esc(m[1].trim())}</button>`;
@@ -5214,7 +5188,6 @@ function sectionTotal(s) {
   const tot = rows.filter(r => r.bold).pop() || (rows.length === 1 ? rows[0] : null);
   return tot ? tot.prim.v : '';
 }
-const tileHtml = t => `<div class="stat"><div class="l">${esc(t.h)}</div><div class="v num ${tone(t.v)} ${String(t.v).startsWith('-') ? 'bad' : ''}">${esc(t.v)}</div>${t.sub.map(x => `<div class="s">${esc(x)}</div>`).join('')}</div>`;
 
 
 /* Rows inside an opened section: one line per row, tap for the rest */
@@ -6586,9 +6559,6 @@ const CHARTS = {
   money: () => { if (!state.data) return ''; const ym = budgetYm(), SK = /^(Credit Card Bills)$/; const cur = topN(expBy(ym), 6), ms = monthsBack(6, ym), cats = topN(expBy(ym), 5).map(x => x[0]).filter(c => c !== 'Other');
     const ser = cats.map((c, j) => [c, ms.map(m => expBy(m)[c] || 0), CPAL[j]]).concat([['Other', ms.map(m => { const o = expBy(m); return Object.entries(o).filter(([c]) => !cats.includes(c)).reduce((a, x) => a + x[1], 0); }), '#5b6676']]);
     return cbox(`Spending by category, ${mLab(ym)}`, cDonut(cur, kfmt(cur.reduce((a, x) => a + x[1], 0)), 'spent')) + cbox('By category, last 6 months', cBars(ms.map(mLab), ser, { stack: true })); },
-  spends_off: () => { if (!state.data) return ''; const months = spendMonths(); if (!months.length) return ''; const m = state.spM && months.includes(state.spM) ? state.spM : months[0], SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i, g = {};
-    allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(m) || SKIP.test(t.Category || '')) return; const k = payeeOf(t); g[k] = (g[k] || 0) + Math.abs(n(t.Amount) || 0); });
-    return cbox(`Top 10 payees, ${mLab(m)}`, cHBars(Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 10))); },
   tx: () => { if (!state.data) return ''; const f = state.tx || {}, now = new Date(), days = {};
     let from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()), to = now, title = 'Day-to-day spending, last 3 months';
     if (f.year && f.year !== 'All') { const y = Number(f.year); if (f.month && f.month !== 'All') { const mo = Number(f.month) - 1; from = new Date(y, mo, 1); to = new Date(y, mo + 1, 0); title = `Spending each day, ${MONF[mo]} ${y}`; } else { from = new Date(y, 0, 1); to = new Date(y, 11, 31) > now ? now : new Date(y, 11, 31); title = `Spending each day, ${y}`; } }
