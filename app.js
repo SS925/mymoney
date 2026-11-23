@@ -4700,8 +4700,7 @@ const TAX_RATE = 0.208;                                   // your slab (20%) + 4
 const INCOME_RULES_DEFAULT = [
   { name: 'Remitly (classes)', keyword: 'REMITLY', tds: 0, save: 50 },
   { name: 'Venna L', keyword: 'VENNA L', tds: 0, save: 50 },
-  { name: 'Mukku Su', keyword: 'MUKKU SU', tds: 0, save: 50 },
-  { name: 'Company – professional fees', keyword: '', tds: 10, save: 87 }];
+  { name: 'Mukku Su', keyword: 'MUKKU SU', tds: 0, save: 50 }];
 function incomeRules() { const p = state.docs.profile; return p && Array.isArray(p.incomeRules) && p.incomeRules.length ? p.incomeRules : INCOME_RULES_DEFAULT; }
 function incomeTaxMode() { const p = state.docs.profile; return (p && p.incomeTax) || 'full'; }
 /* share of the money that lands in the bank to keep for tax: (gross × taxed share × rate − TDS already cut) ÷ what you got */
