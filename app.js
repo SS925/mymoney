@@ -3480,7 +3480,13 @@ function bindRent() {
 /* ======================================================================
    Monthly money routine: a checklist from the 2nd of each month
    ====================================================================== */
+let _rtMemo = null;
 function routineItems() {
+  const key = [state.data, state.docs && state.docs.ccards, isoToday(), JSON.stringify(LS.get('routine', {})[isoToday().slice(0, 7)] || {}), state.outbox.length, state.pending.length];
+  if (_rtMemo && _rtMemo.key.every((v, i) => v === key[i])) return _rtMemo.items;
+  const items = routineItems0(); _rtMemo = { key, items }; return items;
+}
+function routineItems0() {
   const ym = isoToday().slice(0, 7), done = LS.get('routine', {})[ym] || {}, last = ymKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
   const cov = state.data ? coverage(3).todo.filter(t => t.k === last) : [];
   const cards = (state.docs && state.docs.ccards) || [];
@@ -5618,9 +5624,10 @@ function bindForecast() {
    Weekly spend check: last 7 days of bank spending, and what's left per week for the rest of the month
    ====================================================================== */
 function weekCheck() {
-  const last = allTx().reduce((a, t) => { const d = pDate(t.Date); return d && d > a ? d : a; }, new Date(0)), from = new Date(last.getTime() - 6 * DAY);
+  const all = allTx(); let ls = ''; for (const t of all) { const k = String(t.Date).slice(0, 10); if (k > ls) ls = k; }     // compare dates as text – no date parsing per row
+  const last = ls ? pDate(ls) : new Date(0), from = new Date(last.getTime() - 6 * DAY), fs = ls ? ymKey(from) + '-' + String(from.getDate()).padStart(2, '0') : '';
   const FIX = /^(Housing|Credit Card Bills|Loans\/EMI|Insurance|Family & Transfers|Donation)$/;
-  const wk = allTx().filter(t => t.Type === 'Expenses' && (() => { const d = pDate(t.Date); return d && d >= dayOnly(from) && d <= last; })());
+  const wk = all.filter(t => t.Type === 'Expenses' && (() => { const k = String(t.Date).slice(0, 10); return k >= fs && k <= ls; })());
   const flex = wk.filter(t => !FIX.test(t.Category || '')), fixed = wk.filter(t => FIX.test(t.Category || ''));
   const sum = l => l.reduce((a, t) => a + Math.abs(n(t.Amount) || 0), 0), by = {};
   flex.forEach(t => { const k = payeeOf(t) || t.Category; by[k] = (by[k] || 0) + Math.abs(n(t.Amount) || 0); });
