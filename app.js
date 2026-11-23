@@ -28,7 +28,7 @@ const state = {
   trade: null,
   balSaved: LS.get('balSaved', null), mfh: LS.get('mfh', null), plats: LS.get('plats', null), gainsFy: null, pfEdit: null, loansSaved: LS.get('loansSaved', null), loanEdit: null,
   docs: Object.assign({ sips: [], bills: [], goals: [] }, LS.get('docs', {})), docEdit: null,   // app/*.json in the data repo
-  history: LS.get('history', null),  // history.json: daily value of funds and stocks
+  history: LS.get('history', null), benchmark: LS.get('benchmark', null),  // history.json: daily value of funds and stocks
   locked: false,
   recats: LS.get('recats', []), recat: null,   // category changes waiting for Excel (recat/*.json)   // PF / PPF figures saved on the phone (settings/balances.json)
 };
@@ -40,7 +40,19 @@ const GH = {
     return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${path}` +
       (withRef ? `?ref=${encodeURIComponent(c.branch || 'main')}` : '');
   },
+  _pre: null,           // small files fetched together in one request (see prefetch)
+  async prefetch(paths) {
+    const c = state.cfg, br = c.branch || 'main', q = paths.map((p, i) => `f${i}: object(expression: ${JSON.stringify(br + ':' + p)}) { ... on Blob { text isTruncated } }`).join('\n');
+    try {
+      const r = await fetch('https://api.github.com/graphql', { method: 'POST', cache: 'no-store', headers: { Authorization: 'Bearer ' + c.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `query($o: String!, $n: String!) { repository(owner: $o, name: $n) { ${q} } }`, variables: { o: c.owner, n: c.repo } }) });
+      if (!r.ok) return; const j = await r.json(), repo = j && j.data && j.data.repository; if (!repo) return;
+      const m = new Map(); paths.forEach((p, i) => { const b = repo['f' + i]; if (b === null) m.set(p, null); else if (b && !b.isTruncated && typeof b.text === 'string') m.set(p, b.text); });
+      this._pre = m;
+    } catch (e) { this._pre = null; }       // fall back to one request per file
+  },
   async call(method, path, { body, raw } = {}) {
+    if (method === 'GET' && raw && this._pre && this._pre.has(path)) { const t = this._pre.get(path); return t === null ? new Response('', { status: 404 }) : new Response(t, { status: 200, headers: { 'Content-Type': 'application/json' } }); }
     if (method !== 'GET' && state.cfg && state.cfg.viewOnly) throw new AppError('This phone is view-only – changes are made on the owner’s phone.');
     const res = await fetch(this.url(path, method === 'GET'), {
       method, cache: method === 'GET' ? 'no-cache' : 'no-store',   // GET: the phone asks GitHub "changed?" and reuses its copy when not (no full re-download)
@@ -199,6 +211,9 @@ async function sync(opts = {}) {
     LS.set('data', data); LS.set('fetchedAt', state.fetchedAt);
     const sh = await shP; if (sh) { state.sheets = sh; LS.set('sheets', sh); }
     render();                                   // show the main figures straight away; the rest loads together
+    await GH.prefetch(['plan.json', 'prices.json', 'benchmark.json', 'history.json', 'settings/retirement.json', 'settings/codes.json', 'settings/loans.json', 'settings/balances.json',
+      'settings/inputs.json', 'settings/sideincome.json', 'settings/tidy.json', 'settings/platforms.json', 'rulestidy.json', ...Object.values(DOCS)]);
+    try {
     await Promise.all([
       (async () => {
       try { const r = await GH.call('GET', 'plan.json', { raw: true }); if (r.ok) { state.plan = await r.json(); LS.set('plan', state.plan); } } catch (e) { /* plan is optional */ }
@@ -217,6 +232,9 @@ async function sync(opts = {}) {
       })(),
       (async () => {
       try { const r = await GH.call('GET', 'prices.json', { raw: true }); if (r.ok) { state.prices = await r.json(); LS.set('prices', state.prices); } } catch (e) { /* optional */ }
+      })(),
+      (async () => {
+      try { const r = await GH.call('GET', 'benchmark.json', { raw: true }); if (r.ok) { state.benchmark = await r.json(); LS.set('benchmark', state.benchmark); } } catch (e) { /* optional */ }
       })(),
       (async () => {
       try { await refreshTrades(); } catch (e) { /* optional */ }
@@ -250,6 +268,7 @@ async function sync(opts = {}) {
       try { const r = await GH.call('GET', 'mfholdings.json', { raw: true }); if (r.ok) { state.mfh = await r.json(); LS.set('mfh', state.mfh); } } catch (e) { /* optional */ }
       })()
     ]);
+    } finally { GH._pre = null; }
     await refreshPending();
     try { await autoEmi(); } catch (e) { /* optional */ }
     if (opts.toast) toast('Up to date');
@@ -295,8 +314,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -323,7 +342,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -335,7 +354,8 @@ function render() {
   if (state.tab === 'invest' || state.tab === 'holdings') bindInvest();
   if (state.tab === 'trade') bindTrade();
   if (state.tab === 'pfedit') bindPfEdit();
-  if (['sips', 'bills', 'goals', 'cards', 'others', 'documents', 'alerts'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) { bindGoals(); bindEduCalc(); } }
+  if (state.tab === 'sips' && !state.docEdit) bindSipPlan();
+  if (['sips', 'bills', 'goals', 'cards', 'others', 'documents', 'alerts', 'subplan'].includes(state.tab)) { if (state.docEdit) bindDocForm(state.tab); else bindDocList(state.tab); if (state.tab === 'goals' && !state.docEdit) { bindGoals(); bindEduCalc(); } }
   if (state.tab === 'subs' || state.tab === 'subcheck') { bindSubs(); bindSubsCheck(); }
   if (state.tab === 'nospend') bindNoSpend();
   if (state.tab === 'habits') bindHabits();
@@ -407,7 +427,7 @@ function render() {
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
 const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['review', 'Review'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
+  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['review', 'Review'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
   invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS / SGB'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', 'Tax & 80C'], ['regime', 'Tax regime'], ['rent', 'Rent'], ['import', 'Import']],
   future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['emergency', 'Emergency info'], ['documents', 'Documents']],
 };
@@ -418,7 +438,7 @@ function subnav() {
   const g = groupOf(state.tab), list = SUBNAV[g]; if (!list) return '';
   return `<div class="subnav" role="tablist">${list.filter(([t]) => !isViewer() || viewerMay(t)).map(([t, l]) => `<button class="sn ${state.tab === t ? 'on' : ''}" data-gotab="${t}" role="tab" aria-selected="${state.tab === t}">${l}</button>`).join('')}</div>`;
 }
-const SHORTCUTS = [['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['goals', '🎯', 'Goals'],
+const SHORTCUTS = [['mplan', '🧭', 'Money plan'], ['sips', '🔁', 'SIPs'], ['bills', '🧾', 'Bills'], ['goals', '🎯', 'Goals'],
   ['tx', '📋', 'Transactions'], ['loans', '🏦', 'Loans'], ['tax', '🧮', 'Tax & 80C'], ['pfedit', '🏛', 'PF / PPF'],
   ['review', '🗓', 'Review'], ['shared', '🤝', 'Shared'], ['year', '🏆', 'Year'], ['report', '📄', 'Report'],
   ['ccards', '💳', 'Credit cards'], ['coaching', '🎓', 'Coaching'], ['coverage', '📅', 'Statements'], ['check', '🩺', 'Data check'], ['tools', '🧰', 'All tools']];
@@ -1668,7 +1688,7 @@ function viewSips() {
     <section class="sec box"><div class="sec-h"><h3>Your SIPs</h3><button data-doc-add="sips">＋ Add</button></div>
       ${list.length ? list.map(({ it, st }) => `<button class="kv rowbtn" data-doc-edit="sips:${esc(it.id)}"><span>${esc(it.name)}<br><span class="small ${st.cls}">${esc(st.txt)}</span></span><span class="num">${inr(it.amount)}<br><span class="small muted">on the ${ord(it.day)}</span></span></button>`).join('')
         : '<p class="small muted">Nothing yet. Tap ＋ Add for each SIP – you get a reminder the day before, and a warning if it doesn’t show up in your bank data.</p>'}
-    </section><p class="note">Paid / missed is checked against your bank transactions: same amount, in the month, with the text you gave. Reminders need notifications turned on (More → Notifications).</p>`;
+    </section>${viewSipPlan()}${state.sipPlanEdit ? '' : viewCapMix() + viewVsNifty()}<p class="note">Paid / missed is checked against your bank transactions: same amount, in the month, with the text you gave. Reminders need notifications turned on (More → Notifications).</p>`;
 }
 function ord(d) { d = Number(d) || 0; const s = ['th', 'st', 'nd', 'rd'], v = d % 100; return d + (s[(v - 20) % 10] || s[v] || s[0]); }
 
@@ -2335,6 +2355,8 @@ function viewCards() {
       <div><label class="f" for="cc-out">You owe now (₹)</label><input class="inp num" id="cc-out" inputmode="decimal" value="${esc(c.outstanding ?? '')}"></div></div>
       <div class="row2"><div><label class="f" for="cc-budget">Monthly spend limit (₹)</label><input class="inp num" id="cc-budget" inputmode="decimal" value="${esc(c.budget ?? '')}" placeholder="12000"></div>
       <div><label class="f" for="cc-use">Use this card for</label><input class="inp" id="cc-use" value="${esc(c.useFor || '')}" placeholder="Groceries, food"></div></div>
+      <label class="f" for="cc-fixed">Fixed bills on this card</label><input class="inp" id="cc-fixed" value="${esc(c.fixed || '')}" placeholder="Electricity 1400, Wi-Fi 1000">
+      <label class="f" for="cc-tip">Tip (what to remember)</label><input class="inp" id="cc-tip" value="${esc(c.tip || '')}" placeholder="e.g. No 5% on flights">
       <div class="row2"><div><label class="f" for="cc-min">Minimum due (₹)</label><input class="inp num" id="cc-min" inputmode="decimal" value="${esc(c.minDue ?? '')}"></div>
       <div><label class="f" for="cc-due">Payment due date</label><input class="inp" id="cc-due" type="date" value="${esc(c.dueDate || '')}"></div></div>
       <button class="primary" id="cc-save">Save</button>
@@ -2352,6 +2374,8 @@ function viewCards() {
       return `<section class="sec box"><div class="sec-h"><h3>${esc(c.name || 'Card')}${c.last4 ? ` <span class="small muted">•• ${esc(c.last4)}</span>` : ''}</h3><button class="edit-btn" data-cc-edit="${i}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Update</button></div>
         <div class="kv"><span>You owe</span><b class="num">${inr(o)}</b></div>
         ${c.budget ? `<div class="kv"><span>Monthly limit${c.useFor ? ' · ' + esc(c.useFor) : ''}</span><span class="num ${o > c.budget ? 'bad' : ''}">${inr(c.budget)}${o > c.budget ? ` · ${inr(o - c.budget)} over` : ''}</span></div>` : ''}
+        ${(() => { const fx = cardFixed(c), ft = fx.reduce((a, x) => a + x.amt, 0); return fx.length ? `<div class="kv"><span>Fixed bills on this card<br><span class="small muted">${fx.map(x => `${esc(x.name)} ${inr(x.amt)}`).join(' · ')}</span></span><span class="num">${inr(ft)}${c.budget ? `<br><span class="small ${c.budget - ft > 0 ? 'good' : 'bad'}">${inr(Math.max(0, c.budget - ft))} left for the rest</span>` : ''}</span></div>` : ''; })()}
+        ${c.tip ? `<p class="small muted" style="margin:6px 0 2px">💡 ${esc(c.tip)}</p>` : ''}
         <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
         ${c.dueDate ? `<a class="linkbtn" href="${esc(calLink(c))}" target="_blank" rel="noopener">📅 Add monthly due date to Google Calendar</a>` : ''}
         ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
@@ -2400,7 +2424,7 @@ function bindCards() {
     const e = state.ccEdit, it = e.item, n = id => { const v = $(id).value.replace(/[,₹\s]/g, ''); return v === '' ? null : Number(v); };
     it.name = $('cc-name').value.trim(); it.last4 = $('cc-last4').value.replace(/\D/g, '').slice(0, 4);
     if ($('cc-last4').value.replace(/\D/g, '').length > 4) { toast('Only the last 4 digits, please – never the full card number'); return; }
-    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.budget = n('cc-budget'); it.useFor = $('cc-use').value.trim(); it.dueDate = $('cc-due').value; it.updated = isoToday();
+    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.budget = n('cc-budget'); it.useFor = $('cc-use').value.trim(); it.fixed = $('cc-fixed').value.trim(); it.tip = $('cc-tip').value.trim(); it.dueDate = $('cc-due').value; it.updated = isoToday();
     if (!it.name) { toast('Enter the card name'); return; }
     const old = list.slice(); if (e.isNew) list.push(it); else list[e.i] = it;
     try { await saveDoc('ccards', `${e.isNew ? 'Add' : 'Update'} card ${it.name}`); state.ccEdit = null; toast('Saved'); render(); }
@@ -3556,7 +3580,7 @@ function viewSubsCheck() {
         <div class="row" style="gap:8px;margin-top:6px;justify-content:flex-start">${tick(x, 'keep', 'Still using')}${tick(x, 'cancel', 'Cancel it')}</div></div>`).join('') || '<p class="small muted" style="margin:0">No subscriptions in the last 12 months.</p>'}</section>
     <p class="note">Charges in the Subscriptions category. To stop one: Google Play › Payments & subscriptions, or the service’s own app – and cancel the UPI AutoPay mandate in PhonePe / your bank app. You’ll get a reminder to check these every January.</p>`;
 }
-function viewSubsAll() { return viewSubsCheck() + `<div class="sec-h" style="margin-top:18px"><h3>Every repeating payment in your banks</h3></div>` + viewSubs().replace(/^\s*<section class="hero">[\s\S]*?<\/section>/, ''); }
+function viewSubsAll() { return viewSubPlanSummary() + viewSubsCheck() + `<div class="sec-h" style="margin-top:18px"><h3>Every repeating payment in your banks</h3></div>` + viewSubs().replace(/^\s*<section class="hero">[\s\S]*?<\/section>/, ''); }
 function bindSubsCheck() {
   document.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { const k = LS.get('subKeep', {}); k[b.dataset.sk] = { v: b.dataset.v, at: isoToday() }; LS.set('subKeep', k); render(); });
 }
@@ -3994,10 +4018,12 @@ function portfolioToday() {
 function pctTxt(x, digits = 1) { return `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(digits)}%`; }
 
 /* ---- generic lists kept in app/*.json ---- */
-Object.assign(DOCS, { ccards: 'app/creditcards.json', cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
-Object.assign(DOC_NAME, { cards: 'card offer', others: 'investment', documents: 'document', alerts: 'price alert' });
+Object.assign(DOCS, { subplan: 'app/subplan.json', ccards: 'app/creditcards.json', cards: 'app/cards.json', others: 'app/others.json', documents: 'app/documents.json', alerts: 'app/alerts.json', emergency: 'app/emergency.json', advtax: 'app/advtax.json' });
+Object.assign(DOC_NAME, { subplan: 'subscription', cards: 'card offer', others: 'investment', documents: 'document', alerts: 'price alert' });
 const OTHER_TYPES = ['FD', 'NPS', 'Sovereign Gold Bond', 'Bond', 'RD', 'Gold', 'Other'];
 Object.assign(DOC_FIELDS, {
+  subplan: [['name', 'Service', 'text', 'e.g. Netflix, JioHotstar'], ['plan', 'Plan', 'text', 'e.g. Basic, Premium (no ads)'], ['cost', 'Cost each time (₹)', 'num'], ['every', 'How often', 'sel', ['Monthly', 'Yearly']],
+    ['renew', 'Next renewal date', 'date', 'optional – reminder 7 days before (yearly)'], ['card', 'Paid with (card name)', 'text', 'e.g. ICICI AMAZON']],
   cards: [['name', 'Card', 'text', 'e.g. HDFC Millennia'], ['cat', 'Best for (category)', 'text', 'e.g. Food Online, Shopping, Fuel'], ['offer', 'Offer', 'text', 'e.g. 5% cashback on Swiggy'], ['cap', 'Monthly cap (₹)', 'num', 'optional']],
   others: [['name', 'Name', 'text', 'e.g. SBI FD 2027, NPS Tier 1, SGB 2023-24 Series III'], ['type', 'Type', 'sel', OTHER_TYPES], ['invested', 'Invested (₹)', 'num'], ['value', 'Value now (₹)', 'num', 'from the statement'],
     ['start', 'Start date', 'date'], ['maturity', 'Maturity date', 'date', 'optional'], ['rate', 'Interest / return (% a year)', 'num', 'optional'], ['note', 'Note', 'text', 'e.g. interest paid every 6 months']],
@@ -4008,17 +4034,20 @@ function viewDocKind(kind) {
   if (state.docEdit) return viewDocForm(kind);
   const list = state.docs[kind] || [];
   const rows = {
+    subplan: it => { const nx = nextRenew(it); return [it.name, `${it.plan || ''}${it.card ? ' · ' + it.card : ''}${nx ? ' · renews ' + fDay(nx) : ' · renewal date not set'}`, `${inr(it.cost)}${it.every === 'Monthly' ? '/mo' : '/yr'}`]; },
     cards: it => [it.name, `${it.cat || ''}${it.offer ? ' · ' + it.offer : ''}`, it.cap ? 'cap ' + inr(it.cap) : ''],
     others: it => [it.name, `${it.type || ''}${it.maturity ? ' · matures ' + fDay(pDate(it.maturity)) : ''}${it.rate ? ' · ' + it.rate + '%' : ''}`, inr(it.value || it.invested)],
     documents: it => [it.name, `${it.where || ''}${it.number ? ' · …' + it.number : ''}`, it.expiry ? (() => { const dl = Math.round((pDate(it.expiry) - dayOnly(new Date())) / DAY); return dl < 0 ? 'expired' : dl <= 30 ? `${dl} days left` : fDay(pDate(it.expiry)); })() : ''],
     alerts: it => [it.name, `${it.code}${priceOf(it.code) ? ' · now ₹' + priceOf(it.code).price : ''}`, [it.above ? '↑ ' + inr(it.above) : '', it.below ? '↓ ' + inr(it.below) : ''].filter(Boolean).join(' ')],
   }[kind];
-  const intro = { cards: 'Note which card gives which offer. When you add a card spend, the app suggests the best card for that category.',
+  const intro = { subplan: 'The subscriptions you’ve decided to keep. Buy them on the service’s website (not Apple or Google Play) and pay with the card shown. You get a reminder 7 days before each yearly renewal.',
+    cards: 'Note which card gives which offer. When you add a card spend, the app suggests the best card for that category.',
     others: 'FDs, NPS, gold bonds and anything else not in your other lists. You get a reminder before each maturity date.',
     documents: 'Where each important document is kept, and when it expires. You get a reminder 30 days before.',
     alerts: 'Get a notification when a stock or fund crosses a price. Moves of 5% or more in a day are always alerted.' }[kind];
   return `<p class="small muted" style="margin:0 0 10px">${intro}</p>
     ${kind === 'others' ? viewFdLadder() : ''}
+    ${kind === 'subplan' && list.length ? (() => { const yr = list.reduce((a, s) => a + subPlanYear(s), 0); return `<section class="hero"><p class="hero-k" style="margin-top:0">Subscriptions you keep</p><h2 class="hero-v num">${inr(yr)}<span style="font-size:16px;font-weight:500"> a year</span></h2><p class="hero-s" style="margin:0">about ${inr(yr / 12)} a month · ${list.length} services</p></section>`; })() : ''}
     <section class="sec box"><div class="sec-h"><h3>${list.length} saved</h3><button data-doc-add="${kind}">＋ Add</button></div>
       ${list.map(it => { const [a, b, c] = rows(it); return `<button class="kv rowbtn" data-doc-edit="${kind}:${esc(it.id)}"><span>${esc(a)}<br><span class="small muted">${esc(b)}</span></span><span class="num small">${esc(c)}</span></button>`; }).join('') || '<p class="small muted">Nothing yet.</p>'}</section>`;
 }
@@ -4043,7 +4072,7 @@ function viewMix() {
   const after = m.tot + add, need = { eq: Math.max(0, after * t.eq / 100 - m.eq), safe: Math.max(0, after * t.safe / 100 - m.safe), gold: Math.max(0, after * t.gold / 100 - m.gold) };
   const ns = need.eq + need.safe + need.gold || 1, split = k => Math.round(add * need[k] / ns / 100) * 100;
   const row = (k, l) => `<div class="brow"><div class="row"><span>${l}</span><span class="num small"><b>${m.tot ? Math.round(m[k] / m.tot * 100) : 0}%</b> now · target ${t[k]}%</span></div><div class="meter thin"><i style="width:${m.tot ? (m[k] / m.tot * 100).toFixed(1) : 0}%"></i></div></div>`;
-  return `<section class="sec box"><div class="sec-h"><h3>Your mix now</h3><span class="small num">${inr(m.tot)}</span></div>
+  return `${viewCapMix()}${viewVsNifty()}<section class="sec box"><div class="sec-h"><h3>Your mix now</h3><span class="small num">${inr(m.tot)}</span></div>
       ${row('eq', 'Equity (stocks, equity funds, half of NPS)')}${row('safe', 'Safe (EPF, PPF, FDs, debt funds)')}${row('gold', 'Gold')}</section>
     <section class="sec box"><div class="sec-h"><h3>Where should the next money go?</h3></div>
       <label class="f" for="mx-add">Amount to invest (₹)</label><input class="inp num" id="mx-add" inputmode="numeric" value="${add}">
@@ -4429,7 +4458,7 @@ function viewGlance() {
 /* all tools on one screen */
 function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
-  return g('Spending', [['subcheck', '📺', 'Subscriptions'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
+  return g('Spending', [['mplan', '🧭', 'Money plan'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
     + g('Tax', [['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
@@ -4444,6 +4473,143 @@ function viewTelegram() {
       <li>On GitHub, open your data repo → <b>Settings → Secrets and variables → Actions → New repository secret</b>. Add <code>TELEGRAM_TOKEN</code> (the token) and <code>TELEGRAM_CHAT</code> (your Id).</li>
       <li>Done – the next notification also arrives in Telegram. Remove the secrets to stop.</li>
     </ol><p class="small muted">Never paste the token in this app or in a chat – only in GitHub’s secrets page.</p></section>`;
+}
+
+
+/* ======================================================================
+   Money plan: this month's salary split into buckets, with paid / left
+   ====================================================================== */
+const MP_BUCKETS = [['Housing', 'Rent', '🏠'], ['Insurance', 'Insurance', '🛡'], ['Loans/EMI', 'Loan EMI', '🏦'], ['Credit Card Bills', 'Cards (all spending)', '💳'], ['Donation', 'Donation', '🙏']];
+function mpMonth() { return isoToday().slice(0, 7); }
+function mpSpentBy(ym) {
+  const by = {}; let other = 0, saved = 0, stocks = 0;
+  for (const t of allTx()) {
+    if (!String(t.Date).startsWith(ym)) continue; const a = Math.abs(n(t.Amount) || 0);
+    if (t.Type === 'Savings' && /Investments/i.test(t.Category || '')) saved += a;
+    else if (t.Type === 'Expenses' && !ASIDE_OUT.test(t.Category || '')) { if (MP_BUCKETS.some(([c]) => c === t.Category)) by[t.Category] = (by[t.Category] || 0) + a; else other += a; }
+  }
+  for (const r of tradeLog()) if (String(r.date).startsWith(ym) && r.side === 'Buy' && !r.empty && !r.deleting && !isFundName(r.name)) stocks += Number(r.amount) || 0;
+  return { by, other, saved, stocks };
+}
+function viewMoneyPlan() {
+  const ym = mpMonth(), [y, m] = ym.split('-').map(Number), net = netPay(ym), plan = activePlan(), lim = plan.limits || {}, sv = Number(plan.savings) || 0;
+  const s = mpSpentBy(ym), rows = MP_BUCKETS.map(([c, l, i]) => ({ c, l, i, plan: Number(lim[c]) || 0, done: s.by[c] || 0 })).filter(r => r.plan || r.done);
+  const otherPlan = Object.entries(lim).filter(([c]) => !MP_BUCKETS.some(([b]) => b === c) && !ASIDE_OUT.test(c)).reduce((a, [, v]) => a + (Number(v) || 0), 0);
+  const planned = rows.reduce((a, r) => a + r.plan, 0) + otherPlan + sv, spare = isFinite(net) ? net - planned : NaN;
+  const sipPlan = sipPlanGet(), sipTot = Object.values(sipPlan).reduce((a, v) => a + (Number(v) || 0), 0), ef = Number(efPlanGet().monthly) || 0;
+  const ppf = (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const mfDone = fundBuysIn(ym), ppfSt = statuses('sips').filter(x => /PPF/i.test(x.it.name));
+  const bar = (done, pl) => `<div class="meter thin ${pl && done > pl * 1.02 ? 'over' : done >= pl * 0.98 && pl ? 'inc' : ''}"><i style="width:${pl ? Math.min(100, done / pl * 100).toFixed(1) : 0}%"></i></div>`;
+  const line = (icon, label, pl, done, note, good) => `<div class="brow"><div class="row"><span>${icon} ${esc(label)}${note ? `<br><span class="small muted">${note}</span>` : ''}</span>
+      <span class="num small"><b>${inr(done)}</b> of ${inr(pl)}<br><span class="${good ? (done >= pl ? 'good' : 'muted') : done > pl ? 'bad' : 'muted'}">${good ? (done >= pl ? 'done' : inr(pl - done) + ' to go') : done > pl ? inr(done - pl) + ' over' : inr(pl - done) + ' left'}</span></span></div>${bar(done, pl)}</div>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">${MONF[m - 1]} plan</p><h2 class="hero-v num">${isFinite(net) ? inr(net) : '—'}</h2>
+      <p class="hero-s" style="margin:0">${MONF[(m + 10) % 12]} salary · savings target <b>${inr(sv)}</b>${isFinite(spare) ? ` · ${spare >= 0 ? `${inr(spare)} not planned` : `<span class="bad">planned ${inr(-spare)} more than salary</span>`}` : ''}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Bills and spending</h3><button data-gotab="budget">Change</button></div>
+      ${rows.map(r => line(r.i, r.l, r.plan, r.done, r.c === 'Housing' ? '₹10,000 bank + ₹20,000 cash' : r.c === 'Credit Card Bills' ? 'card bills paid this month' : '', false)).join('')}
+      ${otherPlan || s.other ? line('🧾', 'Other spending (UPI, cash…)', otherPlan, s.other, otherPlan ? '' : 'Planned ₹0 – everything should go on cards', false) : ''}</section>
+    <section class="sec box"><div class="sec-h"><h3>Savings</h3><button data-gotab="sips">SIPs</button></div>
+      ${line('🔁', 'Mutual fund SIPs', sipTot, mfDone, 'from your buys this month', true)}
+      ${ppf ? line('🏛', 'PPF (deposit by the 5th)', ppf, ppfSt.some(x => x.st.s === 'paid') ? ppf : 0, ppfSt[0] ? esc(ppfSt[0].st.txt) : '', true) : ''}
+      ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">move to savings each month</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
+      <div class="kv"><span>All savings from your banks this month</span><b class="num ${s.saved >= sv ? 'good' : ''}">${inr(s.saved)} <span class="small muted">of ${inr(sv)}</span></b></div>
+      ${s.stocks ? `<p class="small muted" style="margin:6px 0 0">Includes ${inr(s.stocks)} of single stocks – not part of the SIP plan.</p>` : ''}</section>
+    ${asideNote(ym)}
+    ${viewLoanEnds()}
+    <p class="note">Salary is last month’s payslip. Rent, insurance, EMI and cards come from your bank data; savings count transactions in the Investments category. Family transfers and part-time income are kept out of this plan.</p>`;
+}
+
+/* ======================================================================
+   SIP plan vs actual, fund mix by company size, funds vs Nifty 50
+   ====================================================================== */
+const SIP_PLAN_DEFAULT = { 'ICICI Prudential Large Cap Fund Direct Growth': 4000, 'Kotak Nifty Next 50 Index Fund Direct Growth': 3000, 'Axis Multicap Fund Direct Growth': 4000, 'Invesco India Mid Cap Fund Direct Growth': 4500, 'Nippon India Small Cap Fund Direct Growth': 4500 };
+function sipPlanGet() { const p = state.docs.profile && state.docs.profile.sipPlan; return p && Object.keys(p).length ? p : SIP_PLAN_DEFAULT; }
+function isFundName(nm) { const h = (inv() && inv().holdings || []).find(x => x.name.toLowerCase() === String(nm).toLowerCase()); return h ? /^\d+$/.test(String(h.code || '')) : /fund|index|direct/i.test(nm); }
+function fundBuysIn(ym, name) { return tradeLog().filter(r => String(r.date).startsWith(ym) && r.side === 'Buy' && !r.empty && !r.deleting && isFundName(r.name) && (!name || r.name.toLowerCase() === name.toLowerCase())).reduce((a, r) => a + (Number(r.amount) || 0), 0); }
+function capOf(h) {
+  const s = h.name.toLowerCase();                // size from the fund's name (the Excel type groups small and mid together)
+  if (!/^\d+$/.test(String(h.code || ''))) return 'Stocks';
+  if (/gilt|debt|liquid|bond|overnight|money market/.test(s + ' ' + (h.type || '').toLowerCase())) return 'Debt';
+  if (/psu|infra|bank|pharma|it fund|technology|consumption|thematic|sector/.test(s)) return 'Theme';
+  if (/small/.test(s)) return 'Small';
+  if (/large and mid|large & mid|multi|flexi/.test(s)) return 'Multi';
+  if (/mid/.test(s)) return 'Mid';
+  return 'Large';
+}
+const CAP_LABEL = { Large: 'Large companies', Multi: 'Multicap / large & mid', Mid: 'Mid-size', Small: 'Small companies', Theme: 'Sector / theme', Debt: 'Debt (safe)', Stocks: 'Single stocks' };
+function capMix() {
+  const m = {}; for (const h of invHoldings()) if (h.value > 0) { const k = capOf(h); m[k] = (m[k] || 0) + h.value; }
+  const funds = ['Large', 'Multi', 'Mid', 'Small', 'Theme'].reduce((a, k) => a + (m[k] || 0), 0);
+  return { m, funds };
+}
+function viewCapMix() {
+  const { m, funds } = capMix(); if (!funds) return '';
+  const small = (m.Small || 0) / funds, steady = ((m.Large || 0) + (m.Multi || 0) * 0.5) / funds;
+  return `<section class="sec box"><div class="sec-h"><h3>Equity funds by company size</h3><span class="small num">${inr(funds)}</span></div>
+    ${['Large', 'Multi', 'Mid', 'Small', 'Theme'].filter(k => m[k]).map(k => `<div class="brow"><div class="row"><span>${CAP_LABEL[k]}</span><span class="num small"><b>${Math.round(m[k] / funds * 100)}%</b> · ${inr(m[k])}</span></div><div class="meter thin ${k === 'Small' && small > 0.3 ? 'over' : ''}"><i style="width:${(m[k] / funds * 100).toFixed(1)}%"></i></div></div>`).join('')}
+    <p class="small ${small > 0.3 ? 'warn' : 'good'}" style="margin:8px 0 0">${small > 0.3 ? `Small caps are ${Math.round(small * 100)}% – above 30%. They can fall 30–40% in a bad year; put more of new SIP money into large and multicap funds until this comes down.` : `Small caps ${Math.round(small * 100)}% – within the 30% guide.`}${steady < 0.35 ? ' The steadier part (large companies) is under 35%.' : ''}</p>
+    ${m.Stocks || m.Debt ? `<p class="small muted" style="margin:6px 0 0">Not counted above: ${[m.Stocks ? `single stocks ${inr(m.Stocks)}` : '', m.Debt ? `debt funds ${inr(m.Debt)}` : ''].filter(Boolean).join(' · ')}.</p>` : ''}</section>`;
+}
+function viewSipPlan() {
+  const p = sipPlanGet(), ym = isoToday().slice(0, 7), names = Object.keys(p), tot = names.reduce((a, k) => a + (Number(p[k]) || 0), 0), ed = state.sipPlanEdit;
+  const avg3 = nm => { let s = 0; const d = new Date(); for (let i = 1; i <= 3; i++) s += fundBuysIn(ymKey(new Date(d.getFullYear(), d.getMonth() - i, 1)), nm); return s / 3; };
+  const short = nm => nm.replace(/ Fund| Direct| Growth|\(.*?\)/gi, '').replace(/\s+/g, ' ').trim();
+  if (ed) return `<section class="card"><h2 style="margin-top:0">SIP plan</h2>
+      ${names.map((nm, i) => `<label class="f" for="sp-${i}">${esc(short(nm))}</label><input class="inp num" id="sp-${i}" inputmode="numeric" value="${esc(p[nm])}">`).join('')}
+      <button class="primary" id="sp-save">Save plan</button><button class="secondary" id="sp-cancel">Cancel</button>
+      <p class="note">Change the amount in Groww too – this only tracks the plan.</p></section>`;
+  const done = names.reduce((a, nm) => a + fundBuysIn(ym, nm), 0);
+  return `<section class="sec box"><div class="sec-h"><h3>SIP plan · ${MON[new Date().getMonth()]}</h3><button id="sp-edit">Change</button></div>
+    ${names.map(nm => { const pl = Number(p[nm]) || 0, d = fundBuysIn(ym, nm), a = avg3(nm);
+      return `<div class="brow"><div class="row"><span>${esc(short(nm))}<br><span class="small muted">last 3 months avg ${inr(a)}</span></span><span class="num small"><b>${inr(d)}</b> of ${inr(pl)}<br><span class="${d >= pl * 0.98 ? 'good' : 'muted'}">${d >= pl * 0.98 ? 'done' : inr(pl - d) + ' to go'}</span></span></div><div class="meter thin ${d >= pl * 0.98 ? 'inc' : ''}"><i style="width:${pl ? Math.min(100, d / pl * 100).toFixed(1) : 0}%"></i></div></div>`; }).join('')}
+    <div class="kv"><span><b>Total</b></span><b class="num">${inr(done)} of ${inr(tot)}</b></div>
+    <p class="small muted" style="margin:6px 0 0">Counted from the buys in your investment log for this month.</p></section>`;
+}
+function bindSipPlan() {
+  const $ = id => document.getElementById(id);
+  if ($('sp-edit')) $('sp-edit').onclick = () => { state.sipPlanEdit = true; render(); };
+  if ($('sp-cancel')) $('sp-cancel').onclick = () => { state.sipPlanEdit = false; render(); };
+  if ($('sp-save')) $('sp-save').onclick = async () => {
+    const p = sipPlanGet(), np = {}; Object.keys(p).forEach((nm, i) => { np[nm] = Number(String($('sp-' + i).value).replace(/[,₹\s]/g, '')) || 0; });
+    const old = state.docs.profile; state.docs.profile = { ...(Array.isArray(old) ? {} : old || {}), sipPlan: np };
+    try { await saveDoc('profile', 'SIP plan'); state.sipPlanEdit = false; toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
+  };
+}
+/* Your funds vs the same money put into a Nifty 50 index fund on the same days (benchmark.json, made by the price job) */
+function viewVsNifty() {
+  const b = state.benchmark; if (!b || !b.flows || !b.flows.length) return '';
+  const fl = b.flows.map(f => ({ d: pDate(f[0]), v: f[1] })).filter(f => f.d);
+  const mine = invHoldings().filter(h => /^\d+$/.test(String(h.code || ''))).reduce((a, h) => a + h.value, 0);
+  const xm = xirr([...fl, { d: new Date(), v: mine }]), xb = xirr([...fl, { d: new Date(), v: b.value }]);
+  if (xm == null || xb == null) return '';
+  const diff = mine - b.value, ahead = diff >= 0;
+  return `<section class="sec box"><div class="sec-h"><h3>Your funds vs Nifty 50</h3></div>
+    <p class="small muted" style="margin:0 0 6px">The same money, on the same days, put into ${esc(b.name || 'a Nifty 50 index fund')} instead.</p>
+    <div class="kv"><span>Your mutual funds</span><span class="num"><b>${inr(mine)}</b><br><span class="small">XIRR ${pctTxt(xm)}</span></span></div>
+    <div class="kv"><span>Nifty 50 index fund</span><span class="num"><b>${inr(b.value)}</b><br><span class="small">XIRR ${pctTxt(xb)}</span></span></div>
+    <p class="small ${ahead ? 'good' : 'warn'}" style="margin:8px 0 0">${ahead ? `You’re ahead of the index by ${inr(diff)}.` : `The index would have ${inr(-diff)} more.`} Judge this over 3+ years – a year or two says little.${b.navDate ? ` Index NAV ${esc(b.navDate)}.` : ''}</p></section>`;
+}
+
+/* ======================================================================
+   Subscription plan (app/subplan.json): what you pay for, the card, when it renews
+   ====================================================================== */
+function subPlanYear(s) { return (Number(s.cost) || 0) * (s.every === 'Monthly' ? 12 : 1); }
+function viewSubPlanSummary() {
+  const l = state.docs.subplan || [], yr = l.reduce((a, s) => a + subPlanYear(s), 0);
+  return `<section class="sec box"><div class="sec-h"><h3>Your subscription plan</h3><button data-gotab="subplan">Open</button></div>
+    ${l.length ? `<div class="kv"><span>${l.length} services, ad-free</span><b class="num">${inr(yr)} a year<br><span class="small muted">${inr(yr / 12)} a month</span></b></div>` : '<p class="small muted" style="margin:0">List what you pay for, the card it’s on and when it renews – you get a reminder 7 days before each yearly renewal.</p>'}</section>`;
+}
+function nextRenew(s) {
+  if (!s.renew) return null; const [, m, d] = String(s.renew).split('-').map(Number), t = dayOnly(new Date());
+  if (s.every === 'Monthly') { let x = new Date(t.getFullYear(), t.getMonth(), d); if (x < t) x = new Date(t.getFullYear(), t.getMonth() + 1, d); return x; }
+  let x = new Date(t.getFullYear(), m - 1, d); if (x < t) x = new Date(t.getFullYear() + 1, m - 1, d); return x;
+}
+
+/* card helpers: fixed bills on a card ("Electricity 1400, Wi-Fi 1000") + subscriptions put on it */
+function cardFixed(c) {
+  const out = String(c.fixed || '').split(',').map(x => x.trim()).filter(Boolean).map(x => { const mm = x.match(/^(.*?)\s*₹?\s*([\d,]+)\s*$/); return mm ? { name: mm[1].trim(), amt: Number(mm[2].replace(/,/g, '')) } : null; }).filter(Boolean);
+  const key = String(c.name || '').toUpperCase(), subs = (state.docs.subplan || []).filter(s => key && String(s.card || '').toUpperCase() === key).reduce((a, s) => a + subPlanYear(s) / 12, 0);
+  if (subs) out.push({ name: 'Subscriptions', amt: Math.round(subs) });
+  return out;
 }
 
 /* undo: a toast with an Undo button */
