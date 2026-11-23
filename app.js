@@ -2703,7 +2703,7 @@ function viewEmergencyMeter(w) {
   const months = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), mine = num(efPlanGet().base);
   const avg = mine || (months.length ? months.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / months.length : 0);
   if (!avg) return '';
-  const target = LS.get('efTarget', 6), cover = bank / avg, need = Math.max(0, target * avg - bank), pct = Math.min(100, cover / target * 100);
+  const target = efMonths(), cover = bank / avg, need = Math.max(0, target * avg - bank), pct = Math.min(100, cover / target * 100);
   return `<section class="sec box"><div class="sec-h"><h3>Emergency fund</h3><span class="small muted">target ${target} months</span></div>
     <p style="margin:0 0 8px">Your banks cover <b class="${cover >= target ? 'good' : cover >= target / 2 ? 'warn' : 'bad'}">${cover.toFixed(1)} months</b> of spending.</p>
     <div class="cc-bar sm"><i style="width:${pct.toFixed(1)}%;background:${cover >= target ? 'var(--good)' : cover >= target / 2 ? 'var(--warn)' : 'var(--bad)'}"></i></div>
@@ -2715,7 +2715,11 @@ function viewEmergencyMeter(w) {
 function bindWorth() {
   bindEfPlan();
   document.querySelectorAll('[data-sr]').forEach(b => b.onclick = () => { LS.set('srTarget', Math.max(0, Math.min(80, LS.get('srTarget', 20) + Number(b.dataset.sr)))); render(); });
-  document.querySelectorAll('[data-ef]').forEach(b => b.onclick = () => { LS.set('efTarget', Math.max(1, Math.min(24, LS.get('efTarget', 6) + Number(b.dataset.ef)))); render(); });
+  document.querySelectorAll('[data-ef]').forEach(b => b.onclick = async () => {
+    const m = Math.max(1, Math.min(24, efMonths() + Number(b.dataset.ef))); LS.set('efTarget', m);
+    const old = state.docs.efplan; state.docs.efplan = Object.assign({}, efPlanGet(), { months: m }); render();
+    try { await saveDoc('efplan', `Emergency fund target ${m} months`); } catch (e) { state.docs.efplan = old; toast(e.message || 'Couldn’t reach GitHub'); render(); }
+  });
 }
 
 /* ======================================================================
@@ -3659,7 +3663,7 @@ function efLiquid() { return invHoldings().filter(h => h.units > 0 && /liquid|ov
 function viewEfPlan(w) {
   const bank = w.banks.reduce((a, x) => a + x.bal, 0), liquid = efLiquid(), _x = invHoldings().filter(h => h.units > 0 && /liquid|overnight|money market/i.test((h.type || '') + ' ' + h.name)).reduce((a, h) => a + (Number(h.value) || 0), 0);
   const ym = isoToday().slice(0, 7), rows = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), avg = rows.length ? rows.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / rows.length : 0;
-  const P = efPlanGet(), base = num(P.base) || Math.round(avg / 1000) * 1000, monthly = num(P.monthly) || 0, target = LS.get('efTarget', 6), have = bank + liquid;
+  const P = efPlanGet(), base = num(P.base) || Math.round(avg / 1000) * 1000, monthly = num(P.monthly) || 0, target = efMonths(), have = bank + liquid;
   const ends = loanEnds(), addLoan = P.addLoan !== false;
   const months = goal => { if (have >= goal) return 0; let h = have, m = 0; const now = new Date();
     while (h < goal && m < 600) { m++; const d = new Date(now.getFullYear(), now.getMonth() + m, 1); h += monthly + (addLoan ? ends.filter(x => d >= x.free).reduce((a, x) => a + x.emi, 0) : 0); }
@@ -3677,6 +3681,7 @@ function viewEfPlan(w) {
     ${start ? `<div class="kv"><span>Progress since ${esc(fDay(pDate(start.date)))}</span><span class="num ${have - start.have >= 0 ? 'good' : 'bad'}">${have - start.have >= 0 ? '+' : '−'}${inr(Math.abs(have - start.have))}</span></div>` : ''}
     <p class="small muted" style="margin:8px 0 0">Keep it in a separate savings account or a liquid fund (Invest › Buy / sell – it’s then counted here), not in the account you spend from.</p></section>`;
 }
+function efMonths() { return Number(efPlanGet().months) || LS.get('efTarget', 6); }   // target months, saved with the plan so every phone agrees
 function efPlanGet() { const d = state.docs && state.docs.efplan; return d && !Array.isArray(d) && Object.keys(d).length ? d : LS.get('efPlan', {}); }
 function bindEfPlan() {
   const $ = id => document.getElementById(id), save = async () => { const P = Object.assign({}, efPlanGet()); P.base = $('ef-base').value; P.monthly = $('ef-month').value; if ($('ef-loan')) P.addLoan = $('ef-loan').checked;
