@@ -378,6 +378,7 @@ function render() {
   if (state.tab === 'credit') bindCredit();
   if (state.tab === 'yearend') bindYearEnd();
   if (state.tab === 'famtx') bindFamTx();
+  if (state.tab === 'ccards' && !state.ccEdit) cardsRollDue();
   if (state.tab === 'alertset') bindAlertSet();
   if (state.tab === 'car') bindCar();
   if (state.tab === 'paycal') bindPayCal();
@@ -2466,7 +2467,8 @@ function viewCards() {
       <label class="f" for="cc-tip">Tip (what to remember)</label><input class="inp" id="cc-tip" value="${esc(c.tip || '')}" placeholder="e.g. No 5% on flights">
       <label class="f" for="cc-stmt">Statement day (1–31)</label><input class="inp num" id="cc-stmt" inputmode="numeric" value="${esc(c.stmt ?? '')}" placeholder="e.g. 18 – printed on your card statement">
       <div class="row2"><div><label class="f" for="cc-min">Minimum due (₹)</label><input class="inp num" id="cc-min" inputmode="decimal" value="${esc(c.minDue ?? '')}"></div>
-      <div><label class="f" for="cc-due">Payment due date</label><input class="inp" id="cc-due" type="date" value="${esc(c.dueDate || '')}"></div></div>
+      <div><label class="f" for="cc-dueday">Due day each month (1–31)</label><input class="inp num" id="cc-dueday" inputmode="numeric" value="${esc(cardDueDay(c) ?? '')}" placeholder="e.g. 5"></div></div>
+      <p class="small muted" style="margin:4px 0 0">Same day every month. When the bill is paid (or the day passes) the app clears what you owed and moves to next month’s date.</p>
       <button class="primary" id="cc-save">Save</button>
       ${ed.isNew ? '' : '<button class="secondary" id="cc-del" style="color:var(--bad)">Delete card</button>'}
       <button class="secondary" id="cc-cancel">Cancel</button></section>`;
@@ -2488,7 +2490,7 @@ function viewCards() {
         <div class="kv"><span>Limit · available</span><span class="num">${inr(l)} · ${inr(Math.max(0, l - o))}</span></div>
         ${c.dueDate ? `<a class="linkbtn" href="${esc(calLink(c))}" target="_blank" rel="noopener">📅 Add monthly due date to Google Calendar</a>` : ''}
         ${l ? `<div class="cc-bar sm"><i style="width:${Math.min(100, u * 100).toFixed(1)}%;background:${u > .3 ? 'var(--warn)' : 'var(--good)'}"></i></div>` : ''}
-        ${c.dueDate ? `<div class="kv"><span>Due ${esc(fDay(pDate(c.dueDate)))}${c.minDue ? ` · minimum ${inr(c.minDue)}` : ''}</span><span class="${dd != null && dd < 0 ? 'bad' : dd != null && dd <= 3 ? 'warn' : 'muted'}">${dd == null ? '' : dd < 0 ? `${-dd} days late` : dd === 0 ? 'today' : `in ${dd} days`}</span></div>` : ''}
+        ${c.dueDate ? `<div class="kv"><span>Due ${esc(fDay(pDate(c.dueDate)))}${c.minDue ? ` · minimum ${inr(c.minDue)}` : ''}<br><button class="linkbtn" data-cc-paid="${i}" style="font-size:12px">✓ Paid this bill</button></span><span class="${dd != null && dd < 0 ? 'bad' : dd != null && dd <= 3 ? 'warn' : 'muted'}">${dd == null ? '' : dd < 0 ? `${-dd} days late` : dd === 0 ? 'today' : `in ${dd} days`}</span></div>` : ''}
         <p class="small muted" style="margin:6px 0 0">Updated ${c.updated ? esc(fDay(pDate(c.updated))) : '–'}${u > .3 ? ' · using more than 30% of the limit can lower your credit score' : ''}</p></section>`; }).join('') || '<div class="empty">No cards yet. Add one, or pick a screenshot of the card page in your bank or CRED app.</div>'}`;
 }
 async function ocrImage(file) {
@@ -2533,7 +2535,7 @@ function bindCards() {
     const e = state.ccEdit, it = e.item, n = id => { const v = $(id).value.replace(/[,₹\s]/g, ''); return v === '' ? null : Number(v); };
     it.name = $('cc-name').value.trim(); it.last4 = $('cc-last4').value.replace(/\D/g, '').slice(0, 4);
     if ($('cc-last4').value.replace(/\D/g, '').length > 4) { toast('Only the last 4 digits, please – never the full card number'); return; }
-    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.budget = n('cc-budget'); it.useFor = $('cc-use').value.trim(); it.fixed = $('cc-fixed').value.trim(); it.tip = $('cc-tip').value.trim(); it.dueDate = $('cc-due').value; { const sd = Math.round(Number($('cc-stmt').value)); it.stmt = sd >= 1 && sd <= 31 ? sd : null; } it.updated = isoToday();
+    it.limit = n('cc-limit'); it.outstanding = n('cc-out'); it.minDue = n('cc-min'); it.budget = n('cc-budget'); it.useFor = $('cc-use').value.trim(); it.fixed = $('cc-fixed').value.trim(); it.tip = $('cc-tip').value.trim(); { const dd = Math.round(Number($('cc-dueday').value)); it.dueDay = dd >= 1 && dd <= 31 ? dd : null; it.dueDate = it.dueDay ? ymdOf(cardNextDue(it)) : ''; } { const sd = Math.round(Number($('cc-stmt').value)); it.stmt = sd >= 1 && sd <= 31 ? sd : null; } it.updated = isoToday();
     if (!it.name) { toast('Enter the card name'); return; }
     const old = list.slice(); if (e.isNew) list.push(it); else list[e.i] = it;
     try { await saveDoc('ccards', `${e.isNew ? 'Add' : 'Update'} card ${it.name}`); state.ccEdit = null; toast('Saved'); render(); }
@@ -2599,6 +2601,7 @@ function bindCardPayPrompts() {
   const save = async (msg, ok) => { try { await saveDoc('ccards', msg); toast(ok); render(); } catch (e) { toast(e.message || 'Couldn’t reach GitHub – try again'); } };
   document.querySelectorAll('[data-ccpay]').forEach(b => b.onclick = () => { const p = ps[Number(b.dataset.ccpay)], c = list.find(x => x.id === b.dataset.card); if (!p || !c) return;
     c.outstanding = Math.max(0, Math.round(((Number(c.outstanding) || 0) - p.amt) * 100) / 100); c.lastPaid = p.d; (c.seenPays || (c.seenPays = [])).push(p.key);
+    { const due = cardDueDay(c) ? cardNextDue(c) : null, pd = pDate(p.d); if (due && pd && (due - pd) / DAY <= 20 && !(c.outstanding > 0)) cardMarkPaid(c); }
     save(`Card paid: ${c.name}`, c.outstanding ? `${c.name}: ${inr(c.outstanding)} still to pay` : `${c.name} paid in full`); });
   document.querySelectorAll('[data-ccpay-no]').forEach(b => b.onclick = () => { const p = ps[Number(b.dataset.ccpayNo)]; if (!p) return;
     list.forEach(c => { (c.seenPays || (c.seenPays = [])).push(p.key); }); save('Not a card bill', 'Ignored'); });
@@ -5928,7 +5931,7 @@ function payEvents(y, m) {
   add(lastDayOf(null, /^Housing$/) || 1, 'Rent', lim.Housing, 'fixed');
   for (const x of state.docs.sips || []) add(Number(x.day), /PPF/i.test(x.name) ? 'PPF' : x.name.replace(/ Fund.*| Direct.*/i, ''), x.amount, 'save');
   for (const x of [...(state.docs.bills || []), ...excelBills()]) { if (x.every === 'Yearly' && Number(x.month) !== m + 1) continue; add(Number(x.day), x.name, x.amount, 'bill'); }
-  for (const c of state.docs.ccards || []) { const d = pDate(c.dueDate); if (d) add(d.getDate(), c.name + ' bill due', c.budget, 'card'); if (Number(c.stmt)) add(Number(c.stmt), c.name + ' statement', 0, 'stmt'); }
+  for (const c of state.docs.ccards || []) { const dd = cardDueDay(c); if (dd) add(dd, c.name + ' bill due', c.budget, 'card'); if (Number(c.stmt)) add(Number(c.stmt), c.name + ' statement', 0, 'stmt'); }
   { const d = lastDayOf(/LIC OF INDIA|NACH\/LIC/i); if (d && ![...(state.docs.bills || []), ...excelBills()].some(b => /\bLIC\b/i.test(b.name))) add(d, 'LIC premium', 10219, 'bill'); }
   for (const l of allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0)) add(lastDayOf(new RegExp(({ 'credit saison': 'credit ?saison|kisetsu|ksfpl' })[l.name.toLowerCase()] || l.name.split(/[\s(]/)[0].replace(/[^A-Za-z]/g, ''), 'i'), /Loans/i) || lastDayOf(null, /Loans/i) || 5, l.name + ' EMI', l.emi, 'loan');
   for (const sp of state.docs.subplan || []) { const r = pDate(sp.renew); if (r && (sp.every === 'Monthly' || r.getMonth() === m)) add(r.getDate(), sp.name, sp.cost, 'sub'); }
@@ -6727,3 +6730,29 @@ function excelGoals() {
   return out;
 }
 document.addEventListener('change', e => { if (e.target && e.target.id === 'rt-goals') { state.rtGoals = e.target.checked; const t = state.retireTry, rp = document.getElementById('rt-path'); if (rp && t) rp.innerHTML = retirePathChart(t.x, t.b); const e2 = state.retireEdit, rp2 = document.getElementById('rp-path'); if (rp2 && e2) rp2.innerHTML = retirePathChart(e2.x, e2.b); } });
+
+/* ======================================================================
+   Card due date repeats on the same day each month: paid (or passed) → clear what was owed, move to next month
+   ====================================================================== */
+function ymdOf(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function cardDueDay(c) { const n2 = Number(c.dueDay); if (n2 >= 1 && n2 <= 31) return n2; const d = pDate(c.dueDate); return d ? d.getDate() : null; }
+function cardDueIn(y, m, day) { return new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate())); }
+function cardNextDue(c) {
+  const day = cardDueDay(c); if (!day) return null; const t = dayOnly(new Date());
+  let d = cardDueIn(t.getFullYear(), t.getMonth(), day);
+  if (d < t || c.paidFor === ymKey(d)) d = cardDueIn(d.getFullYear(), d.getMonth() + 1, day);     // passed, or already paid → next month
+  if (c.paidFor === ymKey(d)) d = cardDueIn(d.getFullYear(), d.getMonth() + 1, day);
+  return d;
+}
+function cardMarkPaid(c) { const d = cardNextDue(c); if (!d) return; c.paidFor = ymKey(d); c.outstanding = 0; c.minDue = null; c.lastPaid = c.lastPaid || isoToday(); c.dueDate = ymdOf(cardNextDue(c)); c.updated = isoToday(); }
+/* run when the cards screen opens: any bill whose date has passed is treated as paid (you pay before the due date) */
+async function cardsRollDue() {
+  const list = state.docs.ccards || []; let changed = 0; const t = dayOnly(new Date());
+  for (const c of list) { if (!cardDueDay(c)) continue; const old = pDate(c.dueDate), next = ymdOf(cardNextDue(c));
+    if (old && old < t) { c.outstanding = 0; c.minDue = null; c.paidFor = c.paidFor && c.paidFor > ymKey(old) ? c.paidFor : ymKey(old); }
+    if (c.dueDate !== next) { c.dueDate = next; changed++; } }
+  if (changed && !state.ccRolling) { state.ccRolling = true; try { await saveDoc('ccards', `Cards: next due dates (${changed})`); } catch (e) {} state.ccRolling = false; if (state.tab === 'ccards') render(); }
+}
+document.addEventListener('click', async e => { const b = e.target && e.target.closest && e.target.closest('[data-cc-paid]'); if (!b) return;
+  const list = state.docs.ccards || [], c = list[Number(b.dataset.ccPaid)]; if (!c) return; const before = JSON.stringify(c); cardMarkPaid(c); render();
+  try { await saveDoc('ccards', `Card paid: ${c.name}`); toast(`${c.name}: paid – next due ${fDay(pDate(c.dueDate))}`); } catch (err) { Object.assign(c, JSON.parse(before)); toast(err.message || 'Couldn’t reach GitHub'); render(); } });
