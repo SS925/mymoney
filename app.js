@@ -386,6 +386,7 @@ function render() {
   if (state.tab === 'whatif') bindWhatIf();
   if (state.tab === 'fundrev') bindFundRev();
   if (state.tab === 'moneyin' || state.tab === 'home' || state.tab === 'mplan') bindSplit();
+  if (state.tab === 'home') bindHomeSearch();
   bindStepUp();
   if (state.tab === 'loans') bindLoanPayoff();
   document.querySelectorAll('[data-mi-done]').forEach(b => b.onclick = () => markIncomeDone([b.dataset.miDone], true));
@@ -694,7 +695,7 @@ function viewHome() {
   };
   const fixed = ['remind1', 'remind2', 'token'].map(k => S[k]()).join('');
   const order = homeLayout().filter(x => x.on && S[x.id]).map(x => x.id);
-  return order.map((id, j) => S[id]() + (j === 0 ? fixed : '')).join('\n') + (order.length ? '' : fixed)
+  return homeSearchBox() + order.map((id, j) => S[id]() + (j === 0 ? fixed : '')).join('\n') + (order.length ? '' : fixed)
     + `<button class="secondary" data-gotab="homeedit" style="margin:4px 0 16px">Customise Home</button>`;
 }
 /* Home layout: which sections show, in what order (kept on this phone) */
@@ -6363,4 +6364,51 @@ function bindMoneyDate() {
     state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { moneyDate: md }); state.mdStep = i < MD_STEPS.length - 1 ? i + 1 : i; render();
     if (s2.done.length === MD_STEPS.length) toast('Money date done – see you next month');
     try { await saveDoc('profile', 'Money date'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } };
+}
+
+/* ======================================================================
+   Search on Home: type anything – a screen, a word like "emi", "cibil", "netflix" – and go straight there
+   ====================================================================== */
+const SEARCH_WORDS = {
+  loans: 'emi loan credit saison foreclose prepay', credit: 'cibil score credit report', pfedit: 'pf epf ppf passbook eps', moneyin: 'bonus class remitly extra income split tds',
+  subplan: 'netflix prime hotstar crunchyroll zee5 ott subscription renew', subcheck: 'subscription app store play charges', ccards: 'card credit card hsbc icici coral amazon limit statement due',
+  cards: 'card offers cashback reward', tax: 'tax 80c 80d deduction', regime: 'advance tax old new regime itr', gains: 'capital gains stcg ltcg sell profit', rent: 'rent receipt hra',
+  rentplan: 'rent landlord agreement hike renewal', car: 'car xuv vehicle down payment', homeloan: 'house home flat property home loan', jars: 'jar emergency fund pots',
+  nosalary: 'job loss layoff salary stops survive', goals: 'goal target', sips: 'sip mutual fund monthly invest', holdings: 'fund stock share portfolio groww holdings gain',
+  dips: 'dip fall crash drop market', fundrev: 'fund review switch performance returns', wrapped: 'year summary fy wrapped recap', report: 'pdf report monthly email',
+  paycal: 'calendar due dates bills dates', famtx: 'family parents transfer mother father', health: 'health score', whatif: 'simulate what if slider', warranty: 'warranty bill phone laptop tv fridge',
+  salary: 'payslip salary pay', earned: 'lifetime earnings total salary', worth: 'net worth assets total', tx: 'transactions payments search history', add: 'add expense spend cash entry',
+  sort: 'upi categorise category', newpay: 'new payee upi', cover: 'insurance term health cover mediclaim', lic: 'lic policy endowment maturity', sinking: 'diwali trip birthday festival gift travel',
+  moneydate: 'monthly review checklist money date', mplan: 'plan budget next month cushion spare', budget: 'limits budget plan', future: 'retirement retire corpus age fire',
+  coaching: 'classes coaching receipts part time', documents: 'passport documents aadhaar pan', emergency: 'emergency info nominee family', bills: 'bills electricity wifi mobile recharge',
+  creep: 'spending growth lifestyle creep', extrapat: 'bonus pattern class months', invest: 'investments overview nifty', mix: 'rebalance allocation large mid small',
+  dupes: 'duplicate double', shared: 'owe owed split friends', nospend: 'no spend streak', habits: 'habits coffee save', afford: 'afford buy emi purchase', money: 'spending expenses categories',
+  review: 'monthly review', year: 'year review', restore: 'backup restore', check: 'data health problems', coverage: 'statements missing upload drive', settings: 'settings token github notifications',
+  divs: 'dividend', overlap: 'overlap common stocks', alerts: 'price alert', others: 'fd nps sgb gold fixed deposit', trade: 'buy sell redeem', import: 'import groww file', yearend: 'march year end checklist' };
+function searchScreens(q) {
+  const w = String(q || '').toLowerCase().trim().split(/\s+/).filter(Boolean); if (!w.length) return [];
+  const skip = new Set(['sheet', 'more', 'homeedit']);
+  return Object.entries(TITLES).filter(([t]) => !skip.has(t) && (!isViewer() || viewerMay(t))).map(([t, title]) => {
+    const tl = title.toLowerCase(), hay = `${tl} ${t} ${SEARCH_WORDS[t] || ''}`;
+    const words = hay.split(/[^a-z0-9₹]+/).filter(Boolean); if (!w.every(x => words.some(y => y.startsWith(x)))) return null;     // each typed word starts a word – “rent” doesn’t match “parents”
+    const first = w[0], sc = tl === w.join(' ') ? 100 : tl.startsWith(first) ? 60 : tl.split(/\W+/).some(x => x.startsWith(first)) ? 45 : (SEARCH_WORDS[t] || '').split(' ').includes(first) ? 40 : 20;
+    return { t, title, sc };
+  }).filter(Boolean).sort((a, b) => b.sc - a.sc || a.title.length - b.title.length);
+}
+function homeSearchBox() {
+  return `<div class="hsearch" style="position:relative;margin:0 0 12px"><input class="inp" id="hs-q" type="search" enterkeyhint="go" placeholder="🔍 Search – emi, cibil, rent, car, sip, netflix…" autocomplete="off" style="margin:0">
+    <div id="hs-res" style="display:none;margin-top:6px"></div></div>`;
+}
+function bindHomeSearch() {
+  const q = document.getElementById('hs-q'), res = document.getElementById('hs-res'); if (!q) return; let timer = null;
+  const go = t => { if (!t) return; state.tab = t; state.homeQ = ''; window.scrollTo(0, 0); render(); };
+  const show = () => { clearTimeout(timer); const hits = searchScreens(q.value);
+    if (!q.value.trim()) { res.style.display = 'none'; res.innerHTML = ''; return; }
+    res.style.display = ''; res.innerHTML = hits.length ? `<div class="group">${hits.slice(0, 6).map((h, i) => `<button class="navrow" data-hs="${h.t}"><span class="nt">${esc(h.title)}${i === 0 ? ' <span class="small muted">· Enter</span>' : ''}</span><span class="chev">›</span></button>`).join('')}</div>`
+      : '<p class="small muted" style="margin:4px">Nothing matches – try another word.</p>';
+    res.querySelectorAll('[data-hs]').forEach(b => b.onclick = () => go(b.dataset.hs));
+    if (hits.length === 1 && q.value.trim().length >= 3) timer = setTimeout(() => go(hits[0].t), 700);       // only one screen fits: go there by itself
+  };
+  q.oninput = show;
+  q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const h = searchScreens(q.value); if (h.length) go(h[0].t); } };
 }
