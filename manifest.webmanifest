@@ -38,6 +38,39 @@
       ]
     },
     {
+      "name": "Card dues",
+      "short_name": "Cards",
+      "url": "./#ccards",
+      "icons": [
+        {
+          "src": "icon-192.png?v=2",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "This week and money plan",
+      "short_name": "This week",
+      "url": "./#mplan",
+      "icons": [
+        {
+          "src": "icon-192.png?v=2",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Why over the limit?",
+      "short_name": "Why over",
+      "url": "./#whyover",
+      "icons": [
+        {
+          "src": "icon-192.png?v=2",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Say an expense",
       "short_name": "Voice",
       "url": "./#voice",
