@@ -113,6 +113,17 @@ const GH = {
     const r = await this.call('PUT', path, { body: { message, branch: state.cfg.branch || 'main', content: b64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) } });
     if (!r.ok) throw httpError(r.status);
   },
+  async putMany(files, message) {          // several files in ONE commit: [{path, obj}]
+    const c = state.cfg, br = c.branch || 'main', base = `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/git`;
+    if (c.viewOnly) throw new AppError('This phone is view-only – changes are made on the owner’s phone.');
+    const api = async (method, url, body) => { const r = await fetch(base + url, { method, cache: 'no-store', headers: { Authorization: 'Bearer ' + c.token, Accept: 'application/vnd.github+json', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); if (!r.ok) throw httpError(r.status); return r.json(); };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const ref = await api('GET', `/ref/heads/${encodeURIComponent(br)}`), head = ref.object.sha, cm = await api('GET', `/commits/${head}`);
+      const tree = await api('POST', '/trees', { base_tree: cm.tree.sha, tree: files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: JSON.stringify(f.obj, null, 1) })) });
+      const nc = await api('POST', '/commits', { message, tree: tree.sha, parents: [head] });
+      try { await api('PATCH', `/refs/heads/${encodeURIComponent(br)}`, { sha: nc.sha }); return; } catch (e) { if (attempt === 2) throw e; }   // someone else pushed: try again on top
+    }
+  },
   async remove(path, message) {
     const sha = await this.sha(path); if (!sha) return;
     const r = await this.call('DELETE', path, { body: { message, branch: state.cfg.branch || 'main', sha } });
@@ -3205,25 +3216,21 @@ function viewSort() {
       <p class="hero-s" style="margin:0">${cnt} payments to ${gs.length} payees left to sort. Pick a category for the big ones – every past and future payment to them moves.</p></section>
     <div class="seg" id="sort-range" style="margin:0 0 12px">${[['6', 'Last 6 months'], ['all', 'All time']].map(([v, l]) => `<button data-v="${v}" class="${(v === 'all') === !!state.sortAll ? 'on' : ''}">${l}</button>`).join('')}</div>
     <section class="sec box">${gs.slice(0, shown).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(nickOf(x.payee) || x.payee)}</b>${nickOf(x.payee) ? ` <span class="small muted">(${esc(x.payee)})</span>` : ''}<br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
-        <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-sort-cat="${i}"><option value="">Choose category…</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option>${esc(c)}</option>`).join('')}</select>
-        <button class="chip" data-sort-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
+        <div class="row" style="gap:8px;margin-top:6px"><select class="inp ${(state.sortPick || {})[x.payee] ? 'picked' : ''}" data-sort-cat="${i}"><option value="">${state.sortRest !== false ? 'Utilities (not chosen)' : 'Choose category…'}</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option ${(state.sortPick || {})[x.payee] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
       ${gs.length > shown ? `<button class="more-btn" data-sort-more>Show all ${gs.length} payees</button>` : ''}</section>
-    <p class="note">Each choice is saved as a rule for that payee; Excel adds it to the top of Auto Rules next time it opens.</p>`;
+    ${gs.length || np.length ? (() => { const upiPicked = gs.slice(0, shown).filter(x => (state.sortPick || {})[x.payee]).length, picked = upiPicked + Object.keys(state.npPick || {}).length, rest = state.sortRest !== false ? gs.slice(0, shown).length - upiPicked : 0;
+      return `<div class="sort-bar"><label class="tick small"><input type="checkbox" id="sort-rest" ${state.sortRest !== false ? 'checked' : ''}> Payees I don’t choose → Utilities</label>
+        <button class="primary" id="sort-save" ${picked + rest ? '' : 'disabled'} style="margin:6px 0 0">${state.sortBusy ? 'Saving…' : `Save ${picked} choice${picked === 1 ? '' : 's'}${rest ? ` + ${rest} to Utilities` : ''}`}</button></div>`; })() : ''}
+    <p class="note">Pick categories for as many payees as you like, then save once. Each choice becomes a rule for that payee – past and future payments move – and Excel adds them next time it opens.${state.sortMore ? '' : ' “Not chosen → Utilities” only applies to the payees shown on this screen.'}</p>`;
 }
 function bindSort() {
   const gs = upiGroups();
   document.querySelectorAll('#sort-range button').forEach(b => b.onclick = () => { state.sortAll = b.dataset.v === 'all'; render(); });
   const more = document.querySelector('[data-sort-more]'); if (more) more.onclick = () => { state.sortMore = true; render(); };
-  document.querySelectorAll('[data-sort-go]').forEach(b => b.onclick = async () => {
-    const i = Number(b.dataset.sortGo), sel = document.querySelector(`[data-sort-cat="${i}"]`), g = gs[i];
-    if (!sel.value) { toast('Choose a category first'); return; }
-    if (g.payee.length < 3) { toast('Payee name too short to match safely'); return; }
-    b.disabled = true; b.textContent = 'Saving…';
-    const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, keyword: g.payee.slice(0, 60),
-      direction: 'Debit', type: 'Expenses', category: sel.value, scope: 'payee', tx: txKey(g.last), note: `Payee sorted from phone (was ${g.cat})`, createdAt: now.toISOString() };
-    try { await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`); state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats); toast(`${g.payee} → ${sel.value}`); render(); }
-    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; b.textContent = 'Save'; }
-  });
+  const shown = state.sortMore ? gs.length : 40;
+  document.querySelectorAll('[data-sort-cat]').forEach(sel => sel.onchange = () => { const g = gs[Number(sel.dataset.sortCat)], pk = state.sortPick || (state.sortPick = {}); if (sel.value) pk[g.payee] = sel.value; else delete pk[g.payee]; render(); });
+  const rest = document.getElementById('sort-rest'); if (rest) rest.onchange = () => { state.sortRest = rest.checked; render(); };
+  const save = document.getElementById('sort-save'); if (save) save.onclick = () => sortSaveAll(true);
 }
 
 /* ======================================================================
@@ -3443,22 +3450,33 @@ function viewNewPayees() {
       <h2 class="hero-v">${gs.length ? gs.length + ' to sort' : 'All sorted'}</h2>
       <p class="hero-s" style="margin:0">People and shops you paid for the first time. Pick a category once – future payments to them follow.</p></section>
     <section class="sec box">${gs.map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(nickOf(x.payee) || x.payee.replace(/\b\w+/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase()))}</b><br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · first ${esc(fDay(pDate(x.first)))}</span></span><b class="num">${inr(x.sum)}</b></div>
-        <div class="row" style="gap:8px;margin-top:6px"><select class="inp" data-np-cat="${i}"><option value="">Choose category…</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select>
-        <button class="chip" data-np-go="${i}">Save</button></div></div>`).join('') || '<p class="small muted" style="margin:0">Nothing new to sort. 🎉</p>'}</section>
+        <div class="row" style="gap:8px;margin-top:6px"><select class="inp ${(state.npPick || {})[x.payee] ? 'picked' : ''}" data-np-cat="${i}"><option value="">Choose category…</option>${cats.map(c => `<option ${(state.npPick || {})[x.payee] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>`).join('') || '<p class="small muted" style="margin:0">Nothing new to sort. 🎉</p>'}</section>
+    ${state.tab === 'newpay' && gs.length ? (() => { const k = Object.keys(state.npPick || {}).length; return `<div class="sort-bar"><button class="primary" id="sort-save" ${k ? '' : 'disabled'} style="margin:0">${state.sortBusy ? 'Saving…' : `Save ${k} choice${k === 1 ? '' : 's'}`}</button></div>`; })() : ''}
     <p class="note">Older payees: Money › Sort UPI.</p>`;
 }
 function bindNewPayees() {
   const gs = newPayees();
-  document.querySelectorAll('[data-np-go]').forEach(b => b.onclick = async () => {
-    const g = gs[Number(b.dataset.npGo)], sel = document.querySelector(`[data-np-cat="${b.dataset.npGo}"]`);
-    if (!sel.value) { toast('Choose a category first'); return; }
-    if (g.payee.length < 3) { toast('Payee name too short to match safely'); return; }
-    b.disabled = true; b.textContent = 'Saving…';
-    const now = new Date(), entry = { id: `${now.toISOString().replace(/[-:]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 7)}`, keyword: g.payee.slice(0, 60),
-      direction: 'Debit', type: 'Expenses', category: sel.value, scope: 'payee', tx: txKey(g.last), note: 'New payee sorted from phone', createdAt: now.toISOString() };
-    try { await GH.putJson(`recat/${entry.id}.json`, entry, `Category change ${entry.id}`); state.recats.unshift({ id: entry.id, entry }); LS.set('recats', state.recats); toast(`${g.payee} → ${sel.value}`); render(); }
-    catch (e) { toast(e.message || 'Couldn’t reach GitHub'); b.disabled = false; b.textContent = 'Save'; }
-  });
+  document.querySelectorAll('[data-np-cat]').forEach(sel => sel.onchange = () => { const g = gs[Number(sel.dataset.npCat)], pk = state.npPick || (state.npPick = {}); if (sel.value) pk[g.payee] = sel.value; else delete pk[g.payee]; render(); });
+  if (state.tab === 'newpay') { const b = document.getElementById('sort-save'); if (b) b.onclick = () => sortSaveAll(false); }
+}
+/* One save for everything picked on Sort UPI / New payees: all rules go up in a single commit */
+async function sortSaveAll(withUpi) {
+  const now = new Date(), stamp = now.toISOString().replace(/[-:]/g, '').slice(0, 15), todo = [];
+  const np = state.npPick || {}; for (const g of newPayees()) if (np[g.payee]) todo.push({ g, cat: np[g.payee], note: 'New payee sorted from phone' });
+  if (withUpi) {
+    const pk = state.sortPick || {}, gs = upiGroups(), shown = state.sortMore ? gs.length : 40, done = new Set(todo.map(x => x.g.payee.toUpperCase()));
+    for (const g of gs.slice(0, shown)) { if (done.has(g.payee.toUpperCase())) continue; const cat = pk[g.payee] || (state.sortRest !== false ? 'Utilities' : ''); if (cat) todo.push({ g, cat, note: `Payee sorted from phone (was ${g.cat})${pk[g.payee] ? '' : ' – not chosen, Utilities'}` }); }
+  }
+  const entries = todo.filter(x => x.g.payee.length >= 3).map(({ g, cat, note }, k) => ({ id: `${stamp}-${String(k).padStart(3, '0')}${Math.random().toString(36).slice(2, 5)}`, keyword: g.payee.slice(0, 60), direction: 'Debit', type: 'Expenses', category: cat,
+    scope: 'payee', tx: txKey(g.last), note, createdAt: now.toISOString() }));
+  if (!entries.length) { toast('Choose at least one category'); return; }
+  state.sortBusy = true; render();
+  try {
+    await GH.putMany(entries.map(e => ({ path: `recat/${e.id}.json`, obj: e })), `Sort UPI: ${entries.length} payees`);
+    entries.forEach(e => state.recats.unshift({ id: e.id, entry: e })); LS.set('recats', state.recats); state.sortPick = {}; state.npPick = {};
+    toast(`Saved ${entries.length} payees – Excel picks them up next time`);
+  } catch (e) { toast(e.message || 'Couldn’t reach GitHub – nothing was saved'); }
+  state.sortBusy = false; render();
 }
 
 /* ======================================================================

@@ -494,3 +494,5 @@ hr.hair{border:0;border-top:1px solid var(--hair);margin:8px 0}
 .py-edit .inp{flex:1;min-width:0}
 .brow .meter.thin.over>i{background:var(--bad)}
 .brow .meter.thin.inc>i{background:var(--good)}
+.sort-bar{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin:0 0 12px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+select.inp.picked{border-color:var(--good)}
