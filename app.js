@@ -1428,6 +1428,7 @@ function bindPfEdit() {
     $('pf-m-you').textContent = inr(m.you); $('pf-m-eps').textContent = inr(m.eps); $('pf-m-er').textContent = inr(m.erEpf); $('pf-m-epf').textContent = inr(m.epf);
   };
   ['pf-wage', 'pf-you', 'pf-er'].forEach(id => $(id).oninput = live);
+  ['pf-epf', 'pf-eps', 'pf-ppf'].forEach(id => liveType(id, () => read()));
   $('pf-cancel').onclick = () => { state.pfEdit = null; state.tab = 'invest'; window.scrollTo(0, 0); render(); };
   $('pf-save').onclick = async () => {
     read();
@@ -3184,11 +3185,12 @@ function viewCover0() {
       <p class="small muted" style="margin:8px 0 0">Rules of thumb, not advice. Company health cover ends when you change jobs, so personal cover matters.</p></section>` : ''}`;
 }
 function bindCover() {
+  [['cv-life', 'life'], ['cv-health', 'health']].forEach(([id, k]) => liveType(id, v => { state.coverDraft = Object.assign({}, state.coverDraft, { [k]: numOf(v) || null }); }));
   const $ = id => document.getElementById(id);
   $('cv-save').onclick = async () => {
     const v = x => { const t = $(x).value.replace(/[,₹\s]/g, ''); return t === '' ? null : Number(t); };
     const prof = { ...(state.docs.profile || {}), lifeCover: v('cv-life'), healthCover: v('cv-health'), people: v('cv-people') || 1 };
-    const old = state.docs.profile; state.docs.profile = prof;
+    const old = state.docs.profile; state.coverDraft = null; state.docs.profile = prof;
     try { await saveDoc('profile', 'Insurance cover'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); }
     render();
   };
@@ -4223,7 +4225,7 @@ function currentMix() {
   return { eq, safe, gold, tot: eq + safe + gold };
 }
 function viewMix() {
-  const m = currentMix(), t = (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000;
+  const m = currentMix(), t = state.mixDraft || (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000;
   const after = m.tot + add, need = { eq: Math.max(0, after * t.eq / 100 - m.eq), safe: Math.max(0, after * t.safe / 100 - m.safe), gold: Math.max(0, after * t.gold / 100 - m.gold) };
   const ns = need.eq + need.safe + need.gold || 1, split = k => Math.round(add * need[k] / ns / 100) * 100;
   const row = (k, l) => `<div class="brow"><div class="row"><span>${l}</span><span class="num small"><b>${m.tot ? Math.round(m[k] / m.tot * 100) : 0}%</b> now · target ${t[k]}%</span></div><div class="meter thin"><i style="width:${m.tot ? (m[k] / m.tot * 100).toFixed(1) : 0}%"></i></div></div>`;
@@ -4240,10 +4242,11 @@ function bindMix() {
   const $ = id => document.getElementById(id);
   $('mx-add').onchange = () => { state.mixAdd = Number($('mx-add').value.replace(/[,₹\s]/g, '')) || 0; render(); };
   liveType('mx-add', v => { state.mixAdd = numOf(v); });
+  ['mt-eq', 'mt-safe', 'mt-gold'].forEach(id => liveType(id, () => { const d = { eq: numOf($('mt-eq').value), safe: numOf($('mt-safe').value), gold: numOf($('mt-gold').value) }; if (d.eq + d.safe + d.gold === 100) state.mixDraft = d; }));
   $('mt-save').onclick = async () => {
     const mix = { eq: Number($('mt-eq').value) || 0, safe: Number($('mt-safe').value) || 0, gold: Number($('mt-gold').value) || 0 };
     if (mix.eq + mix.safe + mix.gold !== 100) { toast('The three should add up to 100'); return; }
-    const old = state.docs.profile; state.docs.profile = { ...(state.docs.profile || {}), mix };
+    const old = state.docs.profile; state.mixDraft = null; state.docs.profile = { ...(state.docs.profile || {}), mix };
     try { await saveDoc('profile', 'Target mix'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); } render();
   };
 }
@@ -6041,7 +6044,7 @@ function viewHomeLoan() {
       <button class="primary" id="hl-save">Save</button></section>`;
 }
 function bindHomeLoan() { const $ = id => document.getElementById(id); if (!$('hl-save')) return;
-  [['hl-price', 'price'], ['hl-year', 'year'], ['hl-rate', 'rate'], ['hl-years', 'years'], ['hl-hike', 'hike'], ['hl-foir', 'foir']].forEach(([id, k]) => liveType(id, v => { const x = numOf(v); if (x > 0 && (k !== 'year' || x >= 2026)) state.homeDraft = Object.assign({}, state.homeDraft, { [k]: x }); }));
+  [['hl-price', 'price'], ['hl-year', 'year'], ['hl-rate', 'rate'], ['hl-years', 'years'], ['hl-hike', 'hike'], ['hl-foir', 'foir']].forEach(([id, k]) => liveType(id, v => { const x = numOf(v); if (x > 0 && (k !== 'year' || (x >= 2026 && x <= 2060))) state.homeDraft = Object.assign({}, state.homeDraft, { [k]: x }); }));
   $('hl-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
     const home = Object.assign(homeGet(), { price: v('hl-price'), year: Math.round(v('hl-year')) || 2031, rate: v('hl-rate') || 8.5, years: Math.round(v('hl-years')) || 20, hike: v('hl-hike'), foir: v('hl-foir') || 40 });
     const old = state.docs.profile; state.homeDraft = null; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { home }); render();
@@ -6297,7 +6300,7 @@ function viewRetireAge() {
 /* ======================================================================
    Insurance gap check: cover needed now vs after a child / home loan / car loan
    ====================================================================== */
-function lifeGet() { return Object.assign({ childYear: '', kids: 1, homeLoan: 4800000, carLoan: 590000, edu: 2500000 }, (state.docs.profile || {}).life || {}); }
+function lifeGet() { return Object.assign({ childYear: '', kids: 1, homeLoan: 4800000, carLoan: 590000, edu: 2500000 }, (state.docs.profile || {}).life || {}, state.lifeDraft || {}); }
 function viewCoverGap() {
   const p = state.docs.profile || {}, xc = excelCover(), L = lifeGet(), net = netPay(), yearly = isFinite(net) ? net * 12 : 0, loansNow = n(kpis().loans_owed) || 0;
   const life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0;
@@ -6315,9 +6318,10 @@ function viewCoverGap() {
     <button class="secondary" id="cg-save">Save</button><p class="small muted" style="margin:6px 0 0">You get a reminder every January to review cover.</p></section>`;
 }
 function bindCoverGap() { const $ = id => document.getElementById(id); if (!$('cg-save')) return;
+  [['cg-kids', 'kids'], ['cg-home', 'homeLoan'], ['cg-edu', 'edu']].forEach(([id, k]) => liveType(id, v => { state.lifeDraft = Object.assign({}, state.lifeDraft, { [k]: numOf(v) }); }));
   $('cg-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
     const life = Object.assign(lifeGet(), { childYear: $('cg-kid').value.replace(/\D/g, ''), kids: Math.max(0, v('cg-kids')), homeLoan: v('cg-home'), edu: v('cg-edu') });
-    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { life }); render();
+    const old = state.docs.profile; state.lifeDraft = null; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { life }); render();
     try { await saveDoc('profile', 'Insurance: life events'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
 
 /* ======================================================================
@@ -6578,9 +6582,12 @@ const CHARTS = {
   spends_off: () => { if (!state.data) return ''; const months = spendMonths(); if (!months.length) return ''; const m = state.spM && months.includes(state.spM) ? state.spM : months[0], SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i, g = {};
     allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(m) || SKIP.test(t.Category || '')) return; const k = payeeOf(t); g[k] = (g[k] || 0) + Math.abs(n(t.Amount) || 0); });
     return cbox(`Top 10 payees, ${mLab(m)}`, cHBars(Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 10))); },
-  tx: () => { if (!state.data) return ''; const to = new Date(), from = new Date(to.getFullYear(), to.getMonth() - 3, to.getDate()), days = {};
-    allTx().forEach(t => { if (t.Type !== 'Expenses' || /Credit Card Bills|Housing|Loans|Insurance/i.test(t.Category || '')) return; const k = String(t.Date).slice(0, 10); days[k] = (days[k] || 0) + Math.abs(n(t.Amount) || 0); });
-    return cbox('Day-to-day spending, last 3 months', cHeat(days, from, to), 'Rent, card bills, EMIs and insurance are left out so everyday spending stands out.'); },
+  tx: () => { if (!state.data) return ''; const f = state.tx || {}, now = new Date(), days = {};
+    let from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()), to = now, title = 'Day-to-day spending, last 3 months';
+    if (f.year && f.year !== 'All') { const y = Number(f.year); if (f.month && f.month !== 'All') { const mo = Number(f.month) - 1; from = new Date(y, mo, 1); to = new Date(y, mo + 1, 0); title = `Spending each day, ${MONF[mo]} ${y}`; } else { from = new Date(y, 0, 1); to = new Date(y, 11, 31) > now ? now : new Date(y, 11, 31); title = `Spending each day, ${y}`; } }
+    const cat = f.cat && f.cat !== 'All' ? f.cat : null, FIX = /Credit Card Bills|Housing|Loans|Insurance/i; if (cat) title += ` – ${cat}`;
+    allTx().forEach(t => { if (t.Type !== 'Expenses' || (cat ? t.Category !== cat : FIX.test(t.Category || ''))) return; const k = String(t.Date).slice(0, 10); days[k] = (days[k] || 0) + Math.abs(n(t.Amount) || 0); });
+    return cbox(title, cHeat(days, from, to), cat ? 'Only this category.' : 'Rent, card bills, EMIs and insurance are left out so everyday spending stands out. Follows the year, month and category you pick below.'); },
   bills: () => CHARTS.paycal(true), paycal: (small) => { const t = new Date(), off = small === true ? 0 : (state.pcOff || 0), b = new Date(t.getFullYear(), t.getMonth() + off, 1), ev = payEvents(b.getFullYear(), b.getMonth()).filter(e => e.amt > 0 && e.kind !== 'in'), dim = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
     if (!ev.length) return ''; const mx = Math.max(...ev.map(e => e.amt)), x = d => 10 + (d - 1) / (dim - 1) * 280, col = { fixed: '#4b7fbf', save: '#3fb68b', bill: '#e0a43a', card: '#e06a6a', loan: '#b07ad9', sub: '#9aa7b8' };
     const dots = ev.map(e => `<circle cx="${x(e.d).toFixed(1)}" cy="40" r="${(3 + Math.sqrt(e.amt / mx) * 13).toFixed(1)}" fill="${col[e.kind] || '#9aa7b8'}" fill-opacity=".75"><title>${e.d} · ${esc(e.name)} ${inr(e.amt)}</title></circle>`).join('');
@@ -6604,7 +6611,7 @@ const CHARTS = {
     return cbox('What you have invested', cDonut([['Mutual funds', hv('mf')], ['Stocks', hv('st')], ['EPF', hv('epf')], ['PPF', hv('ppf')], ['FD', hv('fd')], ['Other', hv('oth')]], kfmt(hv('mf') + hv('st') + hv('epf') + hv('ppf') + hv('fd') + hv('oth')), 'invested')) + nifty; },
   sips: () => { const st = statuses('sips'); if (!st.length) return ''; const T = st.reduce((a, x) => a + (Number(x.it.amount) || 0), 0);
     return cbox('This month: paid ✓ / still due ○', cStack(st.map((x, j) => [`${x.st.s === 'paid' ? '✓ ' : '○ '}${x.it.name.replace(/ Fund.*| Direct.*/i, '')}`, Number(x.it.amount) || 0, CPAL[j]]), T), '✓ paid this month · ○ still due'); },
-  pfedit: () => { const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, epf0 = Number(e.value) || 0, ppf0 = Number(p.balance) || 0, epfM = Number(e.epfMonth) || 6000, ppfM = (state.docs.sips || []).filter(s2 => /PPF/i.test(s2.name)).reduce((a, s2) => a + (Number(s2.amount) || 0), 0);
+  pfedit: () => { const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, f = state.pfEdit || {}, nn = v => num(v) || 0, epf0 = f.epf != null && String(f.epf).trim() !== '' ? nn(f.epf) + nn(f.eps) : Number(e.value) || 0, ppf0 = f.ppf != null && String(f.ppf).trim() !== '' ? nn(f.ppf) : Number(p.balance) || 0, epfM = Number(e.epfMonth) || 6000, ppfM = (state.docs.sips || []).filter(s2 => /PPF/i.test(s2.name)).reduce((a, s2) => a + (Number(s2.amount) || 0), 0);
     if (!epf0 && !ppf0) return ''; const yrs = [...Array(11).keys()], gr = (v0, m, r) => yrs.map(y => { let v = v0; for (let k = 0; k < y * 12; k++) v = v * (1 + r / 12) + m; return Math.round(v); });
     return cbox('EPF and PPF – next 10 years', cLine([['EPF (8.25%)', gr(epf0, epfM, .0825), 'var(--blue1)'], ['PPF (7.1%)', gr(ppf0, ppfM, .071), 'var(--good)']], yrs.map(y => String(new Date().getFullYear() + y))), `If you keep adding about ${inr(epfM)} to EPF and ${inr(ppfM)} to PPF each month.`); },
   gains: () => { const rows = realisedGains(), fys = [...new Set(rows.map(r => fyOf(r.sell)).concat([fyOf(isoToday())]))].sort().reverse(), fy = state.gainsFy && fys.includes(state.gainsFy) ? state.gainsFy : fys[0], by = {};
@@ -6620,7 +6627,7 @@ const CHARTS = {
   goals: () => { const gs = (state.docs.goals || []).filter(g => Number(g.target) > 0); if (!gs.length) return '';
     return cbox('Goals', `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-around">${gs.map(g => { const c = goalCalc(g); return `<div style="text-align:center;font-size:11px;max-width:140px">${cRing(c.pct, Math.round(c.pct * 100) + '%', kfmt(Number(g.target)), c.atDate >= g.target ? 'var(--good)' : 'var(--warn)', 104)}<div><b>${esc(String(g.name).split(/[(–-]/)[0].trim())}</b></div><div class="muted">by ${esc(monthsLabel(c.months))} · ${c.atDate >= g.target ? 'on track' : 'short'}</div></div>`; }).join('')}</div>`, 'Ring = saved so far against the target.'); },
   cover: () => { if (!state.data) return ''; const p = state.docs.profile || {}, xc = excelCover(), L = lifeGet(), net = netPay(), yearly = isFinite(net) ? net * 12 : 0, loansNow = n(kpis().loans_owed) || 0;
-    const life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0, needs = [['Today', yearly * 10 + loansNow, 500000], ['With a child', yearly * 10 + loansNow + L.edu * L.kids, 1000000], ['With a home loan', yearly * 10 + L.homeLoan + L.carLoan + L.edu * L.kids, 1000000]];
+    const dr = state.coverDraft || {}, life = (dr.life != null ? dr.life : Number(p.lifeCover)) || (xc && xc.life) || 0, health = (dr.health != null ? dr.health : Number(p.healthCover)) || (xc && xc.health) || 0, needs = [['Today', yearly * 10 + loansNow, 500000], ['With a child', yearly * 10 + loansNow + L.edu * L.kids, 1000000], ['With a home loan', yearly * 10 + L.homeLoan + L.carLoan + L.edu * L.kids, 1000000]];
     return cbox('Life cover vs need', cHBars([['You have', life, 'var(--good)'], ...needs.map(x => [`Need – ${x[0]}`, x[1], '#9aa7b8'])], { fmt: kfmt })) + cbox('Health cover vs need', cHBars([['You have', health, 'var(--good)'], ...needs.map(x => [`Need – ${x[0]}`, x[2], '#9aa7b8'])], { fmt: kfmt })); },
   nosalary: () => { if (!state.data) return ''; const o = Object.assign({ food: 12000, family: 5000, sellFunds: false }, LS.get('nsOpt', {})), lim = activePlan().limits || {};
     const banks = bankAccounts().reduce((a, x) => a + x.bal, 0) + efLiquid(), funds = invHoldings().filter(h => h.units > 1e-6).reduce((a, h) => a + (Number(h.value) || 0), 0) * 0.9, fixedCard = (state.docs.ccards || []).reduce((a, c) => a + cardFixed(c).reduce((x2, f) => x2 + f.amt, 0), 0);
@@ -6645,7 +6652,7 @@ const CHARTS = {
     const W = L + N * C + 44, top = o.top.slice(0, 10);
     return cbox('Overlap between your funds (%)', `<svg viewBox="0 0 ${W} ${W}" width="100%" style="max-width:420px;display:block;margin:auto">${cells}</svg>`, 'Each square = how much two funds hold the same companies. <span class="good">Green</span> under 20% is fine · <span class="warn">amber</span> 20–40% · <span class="bad">red</span> over 40%: keep one of the two.')
       + cbox('Each fund’s biggest overlap', cHBars(names.map(a => [sh(a), o.pairs.filter(p => p.a === a || p.b === a).reduce((m, p) => Math.max(m, p.ov), 0)]).sort((x, y) => y[1] - x[1]), { fmt: v => Math.round(v) + '% max' }), 'Highest overlap of each fund with any other fund you own.'); },
-  mix: () => { const m = currentMix(); if (!m.tot) return ''; const t = (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000, K = [['eq', 'Equity', '#4b7fbf'], ['safe', 'Safe', '#3fb68b'], ['gold', 'Gold', '#e0a43a']];
+  mix: () => { const m = currentMix(); if (!m.tot) return ''; const t = state.mixDraft || (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000, K = [['eq', 'Equity', '#4b7fbf'], ['safe', 'Safe', '#3fb68b'], ['gold', 'Gold', '#e0a43a']];
     const after = m.tot + add, need = Object.fromEntries(K.map(([k]) => [k, Math.max(0, after * t[k] / 100 - m[k])])), ns = K.reduce((a, [k]) => a + need[k], 0) || 1;
     const pc = k => m[k] / m.tot * 100, { m: cm, funds } = capMix();
     const gap = K.map(([k, l, c]) => { const d = pc(k) - t[k], w = Math.min(50, Math.abs(d)); return `<div style="display:flex;align-items:center;gap:8px;margin:7px 0;font-size:12px"><span style="width:52px">${l}</span><div style="flex:1;position:relative;height:14px"><i style="position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:currentColor;opacity:.5"></i><i style="position:absolute;top:0;bottom:0;border-radius:3px;background:${Math.abs(d) <= 5 ? 'var(--good)' : d > 0 ? 'var(--warn)' : '#4b7fbf'};${d >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`}"></i></div><b class="num" style="width:62px;text-align:right">${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(0)} pts</b></div>`; }).join('');
