@@ -325,8 +325,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -353,7 +353,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -370,6 +370,9 @@ function render() {
   if (state.tab === 'credit') bindCredit();
   if (state.tab === 'yearend') bindYearEnd();
   if (state.tab === 'famtx') bindFamTx();
+  if (state.tab === 'car') bindCar();
+  if (state.tab === 'whatif') bindWhatIf();
+  if (state.tab === 'fundrev') bindFundRev();
   if (state.tab === 'moneyin' || state.tab === 'home' || state.tab === 'mplan') bindSplit();
   bindStepUp();
   if (state.tab === 'loans') bindLoanPayoff();
@@ -382,7 +385,7 @@ function render() {
   if (state.tab === 'mix') bindMix();
   if (state.tab === 'regime') bindRegime();
   if (state.tab === 'emergency') bindEmergency();
-  if (state.tab === 'report') bindReport();
+  if (state.tab === 'report') { bindReport(); document.querySelectorAll('[data-rp-pdf]').forEach(b => b.onclick = async () => { try { const r = await GH.call('GET', 'reports/' + b.dataset.rpPdf, { raw: true }); if (!r.ok) throw new Error('Couldn’t download'); const u = URL.createObjectURL(await r.blob()); window.open(u, '_blank'); } catch (e) { toast(e.message || 'Couldn’t download'); } }); }
   if (state.tab === 'coaching') bindCoaching();
   if (state.tab === 'import') bindImport();
   if (state.tab === 'pcode') bindPcode();
@@ -1982,7 +1985,9 @@ function viewReport() {
   const top = Object.entries(cats).sort((a, b) => b[1] - a[1]);
   const inc = {}; tx.filter(t => t.Type === 'Income').forEach(t => { inc[t.Category] = (inc[t.Category] || 0) + Math.abs(n(t.Amount)); });
   const k = kpis(), d = pDate(mk + '-01'), hs = invHoldings();
-  return `<div class="noprint"><div class="row2">
+  if (state.rpPdfs == null && !state.rpPdfsBusy) { state.rpPdfsBusy = true; ghList('reports').then(l => { state.rpPdfs = l.filter(f => /\.pdf$/i.test(f.name)).map(f => f.name).sort().reverse(); state.rpPdfsBusy = false; if (state.tab === 'report') render(); }).catch(() => { state.rpPdfs = []; state.rpPdfsBusy = false; }); }
+  const pdfs = (state.rpPdfs || []).slice(0, 6), pdfBox = pdfs.length ? `<section class="sec box noprint"><div class="sec-h"><h3>Emailed monthly reports</h3></div>${pdfs.map(f => `<button class="linkbtn" data-rp-pdf="${esc(f)}" style="display:block;margin:4px 0">📄 ${esc(f.replace(/\.pdf$/i, ''))}</button>`).join('')}</section>` : '';
+  return pdfBox + `<div class="noprint"><div class="row2">
         <div><label class="f" for="rp-y">Year</label><select class="inp" id="rp-y">${years.map(y => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
         <div><label class="f" for="rp-m">Month</label><select class="inp" id="rp-m">${inYear.map(m => `<option value="${m}" ${m === mk ? 'selected' : ''}>${MONF[Number(m.slice(5)) - 1]}</option>`).join('')}</select></div></div>
       <button class="primary" id="rp-print" style="margin-top:12px">Save as PDF / print</button></div>
@@ -4560,6 +4565,7 @@ function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
   return g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
+    + g('Plan ahead', [['whatif', '🎚', 'What if…'], ['car', '🚗', 'Car planner'], ['fundrev', '🔎', 'Fund review']])
     + g('Salary', [['earned', '📊', 'Salary to date'], ['salary', '💼', 'Payslips'], ['health', '🩺', 'Health score'], ['famtx', '👨‍👩‍👧', 'Family money']])
     + g('Tax', [['yearend', '📆', 'Year-end checklist'], ['moneyin', '💸', 'Money in'], ['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['credit', '📈', 'Credit score'], ['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
@@ -5542,12 +5548,12 @@ function viewEarned() {
    ====================================================================== */
 function forecastRun(o) {
   const w = worthNow(), hv = k => (w.have.find(r => r.k === k) || {}).v || 0;
-  const sip = Object.values(sipPlanGet()).reduce((a, v) => a + (Number(v) || 0), 0), ppfM = (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const sip = o.sipM != null ? o.sipM : Object.values(sipPlanGet()).reduce((a, v) => a + (Number(v) || 0), 0), ppfM = (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0);
   const psh = sheetList().find(x => x.name === 'Payslips'), last = psh && psh.rows.length > 1 ? psh.rows[psh.rows.length - 1] : null, hd = psh ? psh.rows[0].c : [];
   const pf = last ? (num(last.c[hd.indexOf('PF (Employee)')]) || 0) + (num(last.c[hd.indexOf('PF (Employer)')]) || 0) : 0;
-  const P = efPlanGet(), efM = num(P.monthly) || 0, efGoal = efMonths() * (num(P.base) || 0);
+  const P = efPlanGet(), efM = o.efM != null ? o.efM : num(P.monthly) || 0, efGoal = efMonths() * (num(P.base) || 0);
   const since = new Date(); since.setMonth(since.getMonth() - 6);
-  const extra = o.extra ? incomeCredits(since).reduce((a, c) => a + c.save, 0) / 6 : 0;          // bonus + class money saved, monthly average
+  const extra = o.extraM != null ? o.extraM : o.extra ? incomeCredits(since).reduce((a, c) => a + c.save, 0) / 6 : 0;          // bonus + class money saved, monthly average
   const loans = allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0).map(l => ({ owed: Number(l.owed) || l.emi * l.left, emi: l.emi, left: l.left }));
   let mf = hv('mf') + hv('st'), ppf = hv('ppf'), epf = hv('epf'), bank = w.banks.reduce((a, x) => a + x.bal, 0) + hv('fd') + hv('oth'), sipNow = sip;
   const r = { mf: o.ret / 1200, ppf: 7.1 / 1200, epf: 8.25 / 1200, bank: 3 / 1200 }, pts = [{ m: 0, v: w.net }], start = new Date();
@@ -5691,3 +5697,153 @@ function bindFamTx() {
     const old = state.plan; state.plan = plan; LS.set('plan', plan);
     try { await GH.putJson('plan.json', plan, 'Family limit'); toast('Saved'); } catch (e) { state.plan = old; LS.set('plan', old); toast(e.message || 'Couldn’t reach GitHub'); } render(); };
 }
+
+/* ======================================================================
+   Car planner (XUV 3XO): down payment goal, EMI vs take-home, 20/4/10 check, running cost, effect on the plan
+   ====================================================================== */
+const CAR_DEFAULT = { name: 'Mahindra XUV 3XO AX5 petrol MT', price: 1340000, down: 750000, rate: 7.5, years: 4, fuel: 4500, insYear: 32000, serviceYear: 8000, oldFuel: 3000 };
+function carGet() { return Object.assign({}, CAR_DEFAULT, (state.docs.profile || {}).car || {}); }
+function emiOf(P, ratePct, months) { const r = ratePct / 1200; return r ? P * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1) : P / months; }
+function viewCar() {
+  const c = carGet(), loan = Math.max(0, c.price - c.down), n = c.years * 12, emi = Math.round(emiOf(loan, c.rate, n)), interest = Math.round(emi * n - loan);
+  const run = Math.round(c.fuel + c.insYear / 12 + c.serviceYear / 12), carMonth = emi + run, net = netPay(), extraCost = carMonth - (Number(c.oldFuel) || 0);
+  const g = (state.docs.goals || []).find(x => /car/i.test(x.id + ' ' + x.name)), gc = g ? goalCalc(g) : null;
+  const gross = (() => { const sh = sheetList().find(x => x.name === 'Payslips'); if (!sh || sh.rows.length < 2) return 0; const h = sh.rows[0].c, r = sh.rows[sh.rows.length - 1].c; return (num(r[h.indexOf('Gross Earnings')]) || 0) * 12; })();
+  const pct = isFinite(net) && net ? carMonth / net : 0, otherEmi = allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0 && l.left > 0).reduce((a, l) => a + l.emi, 0);
+  const ok = (b, t, why) => `<div class="kv"><span>${t}<br><span class="small muted">${why}</span></span><b class="${b ? 'good' : 'warn'}">${b ? '✓' : '⚠'}</b></div>`;
+  const p = activePlan(), sv = Number(p.savings) || 0;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">${esc(c.name)}</p><h2 class="hero-v num">${inr(emi)}<small style="font-size:.45em"> / month EMI</small></h2>
+      <p class="hero-s" style="margin:0">On-road ${inr(c.price)} · down ${inr(c.down)} · loan ${inr(loan)} at ${c.rate}% for ${c.years} years · interest ${inr(interest)}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Down payment</h3>${gc ? `<span class="small muted">${Math.round(gc.pct * 100)}% saved</span>` : ''}</div>
+      ${g ? `<div class="kv"><span>Goal: ${inr(g.target)} by ${esc(monthsLabel(gc.months))}<br><span class="small muted">${inr(g.monthly)} a month${g.from ? ' from ' + esc(g.from) : ''} at ${g.ret || 0}%</span></span><b class="num ${gc.atDate >= g.target ? 'good' : 'warn'}">${inr(gc.atDate)}</b></div>
+        <p class="small muted" style="margin:4px 0 0">${gc.atDate >= g.target ? 'On track – the goal is reached by the date.' : `Short at the date – save about ${inr(gc.need)} a month instead.`} Keep it in a safe place (RD / liquid fund), not equity – the date is close.</p>` : '<p class="small muted" style="margin:0">Add a car goal under Goals to track the down payment.</p>'}</section>
+    <section class="sec box"><div class="sec-h"><h3>Can you afford it?</h3></div>
+      ${ok(c.down >= c.price * 0.2, `Down payment ${Math.round(c.down / c.price * 100)}% of the price`, 'Rule: at least 20% down')}
+      ${ok(c.years <= 4, `Loan for ${c.years} years`, 'Rule: 4 years or less')}
+      ${ok(pct <= 0.15, `Car costs ${inr(carMonth)} a month = ${Math.round(pct * 100)}% of take-home`, `EMI + fuel ${inr(c.fuel)} + insurance and service ${inr(run - c.fuel)} · rule: under 10–15% of take-home (${inr(net)})`)}
+      ${gross ? ok(c.price <= gross * 0.5, `Price is ${(c.price / gross * 100).toFixed(0)}% of yearly gross pay`, `Rule of thumb: car price under 50% of a year’s gross (${inr(gross)})`) : ''}
+      ${ok(otherEmi === 0, otherEmi ? `Other EMIs now ${inr(otherEmi)}` : 'No other loans by then', 'Close other loans before a car loan; all EMIs under 30% of take-home')}</section>
+    <section class="sec box"><div class="sec-h"><h3>What changes in your month</h3></div>
+      <div class="kv"><span>New car costs<br><span class="small muted">minus the ${inr(c.oldFuel)} fuel you spend now</span></span><b class="num bad">+${inr(extraCost)}</b></div>
+      <div class="kv"><span>Savings now</span><span class="num">${inr(sv)} · ${isFinite(net) ? Math.round(sv / net * 100) : 0}%</span></div>
+      <div class="kv"><span>Savings if paid from today’s salary</span><span class="num ${sv - extraCost < sv * 0.6 ? 'bad' : 'warn'}">${inr(Math.max(0, sv - extraCost))} · ${isFinite(net) ? Math.round(Math.max(0, sv - extraCost) / net * 100) : 0}%</span></div>
+      <p class="small muted" style="margin:8px 0 0">By 2029 your salary should be higher – plan for the hike, not today’s pay, to cover the EMI so SIPs don’t stop.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>When to buy</h3></div>
+      <p class="small" style="margin:0">• <b>December</b>: biggest discounts (year-end stock), but the car counts as a year older at resale.<br>• <b>March</b>: dealers chase year-end targets – good for extra accessories / insurance deals.<br>• <b>Festive season</b> (Navratri–Diwali): offers, but less room to bargain.<br>• Get loan quotes from 2–3 banks (your salary bank first) on the same day – one hard enquiry window – and compare the on-road price including insurance from outside the dealer.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Change the numbers</h3></div>
+      <div class="row2"><div><label class="f" for="car-price">On-road price (₹)</label><input class="inp num" id="car-price" inputmode="numeric" value="${c.price}"></div><div><label class="f" for="car-down">Down payment (₹)</label><input class="inp num" id="car-down" inputmode="numeric" value="${c.down}"></div></div>
+      <div class="row2"><div><label class="f" for="car-rate">Loan rate (%)</label><input class="inp num" id="car-rate" inputmode="decimal" value="${c.rate}"></div><div><label class="f" for="car-years">Years</label><input class="inp num" id="car-years" inputmode="numeric" value="${c.years}"></div></div>
+      <div class="row2"><div><label class="f" for="car-fuel">Fuel a month (₹)</label><input class="inp num" id="car-fuel" inputmode="numeric" value="${c.fuel}"></div><div><label class="f" for="car-ins">Insurance a year (₹)</label><input class="inp num" id="car-ins" inputmode="numeric" value="${c.insYear}"></div></div>
+      <button class="primary" id="car-save">Save</button></section>`;
+}
+function bindCar() {
+  const $ = id => document.getElementById(id); if (!$('car-save')) return;
+  $('car-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
+    const car = Object.assign(carGet(), { price: v('car-price'), down: v('car-down'), rate: v('car-rate'), years: Math.max(1, Math.round(v('car-years'))), fuel: v('car-fuel'), insYear: v('car-ins') });
+    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { car }); render();
+    try { await saveDoc('profile', 'Car planner'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } };
+}
+
+/* ======================================================================
+   What-if simulator: change a few numbers, see the month, savings rate and 5-year net worth move
+   ====================================================================== */
+function whatIfBase() {
+  const p = activePlan(), lim = p.limits || {}, sip = Object.values(sipPlanGet()).reduce((a, v) => a + (Number(v) || 0), 0);
+  const ppf = (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0), sv = Number(p.savings) || 0;
+  const since = new Date(); since.setMonth(since.getMonth() - 6);
+  return { hike: 0, rent: Number(lim.Housing) || 0, sip, family: Number(lim['Family & Transfers']) || 0, cards: Number(lim['Credit Card Bills']) || 0,
+    extra: Math.round(incomeCredits(since).reduce((a, c) => a + c.save, 0) / 6 / 1000) * 1000, ppf, efOwn: Math.max(0, sv - sip - ppf), lim };
+}
+function whatIfCalc(v, b) {
+  const net0 = netPay(), net = (isFinite(net0) ? net0 : 0) * (1 + v.hike / 100);
+  const fixedOther = Object.entries(b.lim).filter(([c]) => !['Housing', 'Family & Transfers', 'Credit Card Bills'].includes(c)).reduce((a, [, x]) => a + (Number(x) || 0), 0);
+  const save = v.sip + b.ppf + b.efOwn, out = v.rent + v.family + v.cards + fixedOther + save, spare = net - out;
+  const lic = 10219, rate = net ? (save + lic) / net : 0;
+  const P = efPlanGet(), wife = Math.max(0, (num(P.monthly) || 0) - b.efOwn);
+  const f = forecastRun({ ret: 11, step: false, extra: true, sipM: v.sip, extraM: v.extra, efM: b.efOwn + wife + Math.max(0, spare) });
+  return { net, out, spare, rate, nw5: f.pts[60].v, nw1: f.pts[12].v, fixedOther };
+}
+function viewWhatIf() {
+  if (!state.data) return '<div class="empty">Sync Excel first.</div>';
+  const b = whatIfBase(), v = Object.assign({ hike: b.hike, rent: b.rent, sip: b.sip, family: b.family, cards: b.cards, extra: b.extra }, state.whatIf || {});
+  const now = whatIfCalc(b, b), r = whatIfCalc(v, b), d = (x, y, money = true) => { const k = x - y; if (Math.abs(k) < 1) return ''; return ` <span class="small ${k > 0 ? 'good' : 'bad'}">${k > 0 ? '+' : '−'}${money ? inr(Math.abs(k)) : Math.abs(k).toFixed(0) + ' pts'}</span>`; };
+  const S = (id, l, min, max, step, val, fmt) => `<div class="brow"><div class="row"><label for="wi-${id}">${l}</label><b class="num" id="wi-${id}-v">${fmt(val)}</b></div><input type="range" id="wi-${id}" min="${min}" max="${max}" step="${step}" value="${val}" style="width:100%"></div>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Spare each month</p><h2 class="hero-v num ${r.spare < 0 ? 'bad' : ''}">${inr(r.spare)}</h2>
+      <p class="hero-s" style="margin:0">Take-home ${inr(r.net)} · planned ${inr(r.out)}${d(r.spare, now.spare)}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Results</h3><span class="small muted">vs today’s plan</span></div>
+      <div class="kv"><span>Savings rate<br><span class="small muted">SIPs + PPF + emergency + LIC</span></span><b class="num">${Math.round(r.rate * 100)}%${d(r.rate * 100, now.rate * 100, false)}</b></div>
+      <div class="kv"><span>Net worth in 1 year</span><b class="num">${inr(r.nw1)}${d(r.nw1, now.nw1)}</b></div>
+      <div class="kv"><span>Net worth in 5 years</span><b class="num">${inr(r.nw5)}${d(r.nw5, now.nw5)}</b></div>
+      <p class="small muted" style="margin:6px 0 0">Any spare money is assumed to go to the emergency fund, then investments. Funds at 11% a year.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Change</h3><button class="edit-btn" id="wi-reset">Reset</button></div>
+      ${S('hike', 'Salary hike', 0, 40, 1, v.hike, x => x + '%')}
+      ${S('rent', 'Rent', 10000, 50000, 1000, v.rent, inr)}
+      ${S('sip', 'SIPs a month', 0, 80000, 1000, v.sip, inr)}
+      ${S('family', 'Family money', 0, 50000, 1000, v.family, inr)}
+      ${S('cards', 'Card spending', 5000, 70000, 1000, v.cards, inr)}
+      ${S('extra', 'Bonus + class money saved / month', 0, 80000, 1000, v.extra, inr)}
+      <p class="small muted" style="margin:6px 0 0">Nothing here changes your plan – it’s a playground.</p></section>`;
+}
+function bindWhatIf() {
+  ['hike', 'rent', 'sip', 'family', 'cards', 'extra'].forEach(k => { const el = document.getElementById('wi-' + k); if (!el) return;
+    el.oninput = () => { const lab = document.getElementById(`wi-${k}-v`); if (lab) lab.textContent = k === 'hike' ? el.value + '%' : inr(Number(el.value)); };
+    el.onchange = () => { state.whatIf = Object.assign({}, state.whatIf || {}, { [k]: Number(el.value) }); const y = window.scrollY; render(); window.scrollTo(0, y); }; });
+  const r = document.getElementById('wi-reset'); if (r) r.onclick = () => { state.whatIf = null; render(); };
+}
+
+/* ======================================================================
+   Fund review: 1/3/5-year returns of each fund vs a matching index fund (mfapi.in), keep / watch / switch
+   ====================================================================== */
+const BENCH_Q = { Large: ['120716', 'UTI Nifty 50 Index'], Multi: [null, 'Nifty 500 Index Fund Direct Growth'], Mid: [null, 'Nifty Midcap 150 Index Fund Direct Growth'], Small: [null, 'Nifty Smallcap 250 Index Fund Direct Growth'], NN50: [null, 'UTI Nifty Next 50 Index Fund Direct Growth'] };
+async function navHist(code) {
+  const j = await (await fetch(`https://api.mfapi.in/mf/${code}`)).json(); if (!j || !Array.isArray(j.data)) return null;
+  return { name: j.meta && j.meta.scheme_name, pts: j.data.map(x => { const [d, m, y] = String(x.date).split('-').map(Number); return { t: new Date(y, m - 1, d).getTime(), v: Number(x.nav) }; }).filter(x => x.v > 0) };
+}
+function cagr(h, yrs) {
+  if (!h || !h.pts.length) return null; const last = h.pts[0], target = last.t - yrs * 365.25 * DAY, old = h.pts.find(x => x.t <= target);
+  if (!old || (target - old.t) > 15 * DAY) return null; return Math.pow(last.v / old.v, 1 / yrs) - 1;
+}
+async function benchCode(cap) {
+  const q = BENCH_Q[cap] || BENCH_Q.Large; if (q[0]) return q[0];
+  const cache = LS.get('benchCodes', {}); if (cache[cap]) return cache[cap];
+  const arr = await (await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q[1]))).json();
+  const hit = (arr || []).find(x => /direct/i.test(x.schemeName) && /growth/i.test(x.schemeName) && !/idcw|dividend/i.test(x.schemeName)); if (!hit) return null;
+  cache[cap] = String(hit.schemeCode); LS.set('benchCodes', cache); return cache[cap];
+}
+async function runFundRev() {
+  state.frBusy = 'Fetching fund prices…'; render();
+  try {
+    const funds = invHoldings().filter(h => h.units > 1e-6 && /^\d+$/.test(String(h.code || '')) && !/liquid|overnight|debt|gilt/i.test(h.name + ' ' + (h.type || '')));
+    const out = [], bcache = {};
+    for (const h of funds) {
+      const cap = capOf(h), bc = await benchCode(/next 50/i.test(h.name) ? 'NN50' : cap === 'Theme' ? 'Multi' : cap); if (bc && !bcache[bc]) bcache[bc] = await navHist(bc);
+      const fh = await navHist(h.code), b = bc ? bcache[bc] : null;
+      out.push({ name: h.name, code: h.code, cap, value: h.value, invested: h.invested, bench: b && b.name, r: [1, 3, 5].map(y => cagr(fh, y)), b: [1, 3, 5].map(y => cagr(b, y)) });
+    }
+    LS.set('fundRev', { at: isoToday(), out }); state.frBusy = '';
+  } catch (e) { state.frBusy = 'Couldn’t reach mfapi.in – check your internet and try again.'; }
+  render();
+}
+function fundVerdict(f) {
+  const i = f.r[1] != null && f.b[1] != null ? 1 : f.r[0] != null && f.b[0] != null ? 0 : -1; if (i < 0) return ['New – check again later', 'muted', null];
+  const gap = (f.r[i] - f.b[i]) * 100, yrs = [1, 3, 5][i];
+  if (/index/i.test(f.name)) return [Math.abs(gap) <= 1 ? 'Keep – tracks its index' : 'Watch – tracking error', Math.abs(gap) <= 1 ? 'good' : 'warn', gap];
+  if (gap >= 0) return [`Keep – ahead by ${gap.toFixed(1)}% a year (${yrs}y)`, 'good', gap];
+  if (gap > -2) return [`Watch – behind by ${(-gap).toFixed(1)}% a year (${yrs}y)`, 'warn', gap];
+  return [`Switch candidate – behind by ${(-gap).toFixed(1)}% a year (${yrs}y)`, 'bad', gap];
+}
+function viewFundRev() {
+  const fr = LS.get('fundRev', null), pc = x => x == null ? '–' : (x * 100).toFixed(1) + '%';
+  const due = !fr || (Date.now() - new Date(fr.at).getTime()) / DAY > 180;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Fund review</p><h2 class="hero-v" style="font-size:1.4rem">${fr ? `Checked ${esc(fDay(pDate(fr.at)))}` : 'Not checked yet'}</h2>
+      <p class="hero-s" style="margin:0">Each fund vs a matching index fund over 1, 3 and 5 years. Review every 6 months – not more often.</p></section>
+    <button class="primary" id="fr-run" ${state.frBusy === 'Fetching fund prices…' ? 'disabled' : ''}>${due ? 'Run the review' : 'Run again'}</button>
+    ${state.frBusy ? `<p class="small" style="margin:6px 4px">${esc(state.frBusy)}</p>` : ''}
+    ${fr ? fr.out.map(f => { const v = fundVerdict(f); return `<section class="sec box"><div class="sec-h"><h3 style="font-size:.95rem">${esc(f.name)}</h3><span class="small muted">${esc(CAP_LABEL[f.cap] || f.cap)}</span></div>
+      <div class="kv"><span class="small muted">Return a year</span><span class="small num">1y · 3y · 5y</span></div>
+      <div class="kv"><span>This fund</span><span class="num">${f.r.map(pc).join(' · ')}</span></div>
+      <div class="kv"><span>Index<br><span class="small muted">${esc(f.bench || '–')}</span></span><span class="num">${f.b.map(pc).join(' · ')}</span></div>
+      <p class="small ${v[1]}" style="margin:6px 0 0"><b>${esc(v[0])}</b></p></section>`; }).join('') : ''}
+    <p class="note">Switching costs tax on gains and exit load if within a year – only switch a fund that has lagged its index for 3 years. Past returns don’t promise future ones.</p>`;
+}
+function bindFundRev() { const b = document.getElementById('fr-run'); if (b) b.onclick = () => runFundRev(); }
