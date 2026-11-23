@@ -3216,9 +3216,9 @@ function viewSort() {
       <p class="hero-s" style="margin:0">${cnt} payments to ${gs.length} payees left to sort. Pick a category for the big ones – every past and future payment to them moves.</p></section>
     <div class="seg" id="sort-range" style="margin:0 0 12px">${[['6', 'Last 6 months'], ['all', 'All time']].map(([v, l]) => `<button data-v="${v}" class="${(v === 'all') === !!state.sortAll ? 'on' : ''}">${l}</button>`).join('')}</div>
     <section class="sec box">${gs.slice(0, shown).map((x, i) => `<div class="sortrow"><div class="row"><span><b>${esc(nickOf(x.payee) || x.payee)}</b>${nickOf(x.payee) ? ` <span class="small muted">(${esc(x.payee)})</span>` : ''}<br><span class="small muted">${x.n} payment${x.n === 1 ? '' : 's'} · last ${esc(fDay(pDate(x.last.Date)))}</span></span><b class="num">${inr(x.sum)}</b></div>
-        <div class="row" style="gap:8px;margin-top:6px"><select class="inp ${(state.sortPick || {})[x.payee] ? 'picked' : ''}" data-sort-cat="${i}"><option value="">${state.sortRest !== false ? 'Utilities (not chosen)' : 'Choose category…'}</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option ${(state.sortPick || {})[x.payee] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
+        <div class="row" style="gap:8px;margin-top:6px">${broadPayee(x.payee) ? `<span class="small muted">Name also matches other payments – change these one by one in Transactions</span>` : `<select class="inp ${(state.sortPick || {})[x.payee] ? 'picked' : ''}" data-sort-cat="${i}"><option value="">${state.sortRest !== false ? 'Utilities (not chosen)' : 'Choose category…'}</option>${cats.filter(c => !/UPI – Other/.test(c)).map(c => `<option ${(state.sortPick || {})[x.payee] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`}</div></div>`).join('') || '<p class="small muted">Nothing left in “UPI – Other”.</p>'}
       ${gs.length > shown ? `<button class="more-btn" data-sort-more>Show all ${gs.length} payees</button>` : ''}</section>
-    ${gs.length || np.length ? (() => { const upiPicked = gs.slice(0, shown).filter(x => (state.sortPick || {})[x.payee]).length, picked = upiPicked + Object.keys(state.npPick || {}).length, rest = state.sortRest !== false ? gs.slice(0, shown).length - upiPicked : 0;
+    ${gs.length || np.length ? (() => { const ok = gs.slice(0, shown).filter(x => !broadPayee(x.payee)), upiPicked = ok.filter(x => (state.sortPick || {})[x.payee]).length, picked = upiPicked + Object.keys(state.npPick || {}).length, rest = state.sortRest !== false ? ok.length - upiPicked : 0;
       return `<div class="sort-bar"><label class="tick small"><input type="checkbox" id="sort-rest" ${state.sortRest !== false ? 'checked' : ''}> Payees I don’t choose → Utilities</label>
         <button class="primary" id="sort-save" ${picked + rest ? '' : 'disabled'} style="margin:6px 0 0">${state.sortBusy ? 'Saving…' : `Save ${picked} choice${picked === 1 ? '' : 's'}${rest ? ` + ${rest} to Utilities` : ''}`}</button></div>`; })() : ''}
     <p class="note">Pick categories for as many payees as you like, then save once. Each choice becomes a rule for that payee – past and future payments move – and Excel adds them next time it opens.${state.sortMore ? '' : ' “Not chosen → Utilities” only applies to the payees shown on this screen.'}</p>`;
@@ -3459,6 +3459,15 @@ function bindNewPayees() {
   document.querySelectorAll('[data-np-cat]').forEach(sel => sel.onchange = () => { const g = gs[Number(sel.dataset.npCat)], pk = state.npPick || (state.npPick = {}); if (sel.value) pk[g.payee] = sel.value; else delete pk[g.payee]; render(); });
   if (state.tab === 'newpay') { const b = document.getElementById('sort-save'); if (b) b.onclick = () => sortSaveAll(false); }
 }
+/* A payee name is too broad for a rule if it also appears in payments that are already sorted (rent, EMIs, card bills,
+   savings, other payees) – e.g. "MOB" or "BANGALOR". Those can't be sorted here; Excel's rule would move the wrong rows. */
+const BROAD_WORDS = /^(MOB|DR|CR|UPI|PAY|PAYMENT|BANGALOR|BANGALORE|RAZORPAY|PAYTM|PHONEPE|GPAY|BHARATPE|YESB|HDFC|SBIN|ICIC|UTIB|AIRP)\b/i;
+function broadPayee(payee) {
+  const k = String(payee || '').trim().toUpperCase(); if (k.length < 4 || BROAD_WORDS.test(k)) return true;
+  const c = state._broad || (state._broad = { data: null, m: {} }); if (c.data !== state.data) { c.data = state.data; c.m = {}; }
+  if (k in c.m) return c.m[k];
+  return (c.m[k] = allTx().some(t => String(t.Details || '').toUpperCase().includes(k) && !(t.Type === 'Expenses' && /UPI – Other|Uncategorised/i.test(t.Category || ''))));
+}
 /* One save for everything picked on Sort UPI / New payees: all rules go up in a single commit */
 async function sortSaveAll(withUpi) {
   const now = new Date(), stamp = now.toISOString().replace(/[-:]/g, '').slice(0, 15), todo = [];
@@ -3467,14 +3476,15 @@ async function sortSaveAll(withUpi) {
     const pk = state.sortPick || {}, gs = upiGroups(), shown = state.sortMore ? gs.length : 40, done = new Set(todo.map(x => x.g.payee.toUpperCase()));
     for (const g of gs.slice(0, shown)) { if (done.has(g.payee.toUpperCase())) continue; const cat = pk[g.payee] || (state.sortRest !== false ? 'Utilities' : ''); if (cat) todo.push({ g, cat, note: `Payee sorted from phone (was ${g.cat})${pk[g.payee] ? '' : ' – not chosen, Utilities'}` }); }
   }
-  const entries = todo.filter(x => x.g.payee.length >= 3).map(({ g, cat, note }, k) => ({ id: `${stamp}-${String(k).padStart(3, '0')}${Math.random().toString(36).slice(2, 5)}`, keyword: g.payee.slice(0, 60), direction: 'Debit', type: 'Expenses', category: cat,
+  const skipped = todo.filter(x => broadPayee(x.g.payee)).length;
+  const entries = todo.filter(x => !broadPayee(x.g.payee)).map(({ g, cat, note }, k) => ({ id: `${stamp}-${String(k).padStart(3, '0')}${Math.random().toString(36).slice(2, 5)}`, keyword: g.payee.slice(0, 60), direction: 'Debit', type: 'Expenses', category: cat,
     scope: 'payee', tx: txKey(g.last), note, createdAt: now.toISOString() }));
-  if (!entries.length) { toast('Choose at least one category'); return; }
+  if (!entries.length) { toast(skipped ? 'Those payee names also match other payments – can’t sort them here' : 'Choose at least one category'); return; }
   state.sortBusy = true; render();
   try {
     await GH.putMany(entries.map(e => ({ path: `recat/${e.id}.json`, obj: e })), `Sort UPI: ${entries.length} payees`);
     entries.forEach(e => state.recats.unshift({ id: e.id, entry: e })); LS.set('recats', state.recats); state.sortPick = {}; state.npPick = {};
-    toast(`Saved ${entries.length} payees – Excel picks them up next time`);
+    toast(`Saved ${entries.length} payees${skipped ? ` · skipped ${skipped} whose name also matches other payments` : ''} – Excel picks them up next time`);
   } catch (e) { toast(e.message || 'Couldn’t reach GitHub – nothing was saved'); }
   state.sortBusy = false; render();
 }
