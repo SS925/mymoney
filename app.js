@@ -1090,10 +1090,10 @@ function viewFuture0() {
   <section class="sec"><div class="sec-h"><h3>At your actual SIP pace</h3></div>
     <div class="row"><span style="font-size:24px;font-weight:700" class="num">${cr(k.actual_pace_60)}</span><span class="small ${tone(k.actual_pace_status)}">${esc(k.actual_pace_status)}</span></div>
     <p class="small ${tone(k.actual_pace_note)}" style="margin:8px 0 0">${esc(k.actual_pace_note)}</p></section>
-  <section class="sec"><div class="sec-h"><h3>Path to ${ageR}</h3></div>${projChart(rows)}
+  <section class="sec"><details><summary class="small" style="cursor:pointer"><b>Excel’s year-by-year plan to ${ageR}</b> (table)</summary>
     <table class="proj" style="margin-top:10px"><tr><th>Year</th><th>Age</th><th>Net worth</th><th>Today’s ₹</th></tr>
     ${pick.map(r => `<tr><td>${r.Year}</td><td>${r.Age}</td><td class="num">${cr(r.NetWorth)}</td><td class="num">${cr(r.NetWorthToday)}</td></tr>`).join('')}</table>
-    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included) – this one changes only after you save and Excel recalculates.</p></section>
+    <p class="small muted" style="margin:10px 0 0">From NW Projection in Excel (car and house plans included). It’s the blue dashed line in the chart at the top; it changes only after you save and Excel recalculates.</p></details></section>
   <section class="sec"><div class="group"><button class="navrow" data-gotab="goals"><span class="nt">Goals<br><span class="small muted">${(state.docs.goals || []).length ? `${state.docs.goals.length} goal${state.docs.goals.length === 1 ? '' : 's'} · what-if` : 'Emergency fund, car, trip – with what-if'}</span></span><span class="chev">›</span></button><button class="navrow" data-gotab="cover"><span class="nt">Insurance cover check</span><span class="chev">›</span></button></div></section>`;
 }
 
@@ -6711,7 +6711,9 @@ function retirePathChart(x, b) {
     else { const spend = r.costR * 12 * Math.pow(1 + x.inf, a - x.retire); pot = (pot + epf) * (1 + x.ra) - spend; epf = 0; need.push(null); }
   }
   const atR = have[Math.max(0, x.retire - x.age)], ok = atR >= r.corpus, lastsTo = (() => { const i = have.findIndex((v, k) => k > x.retire - x.age && v <= 0); return i < 0 ? x.until : x.age + i; })();
-  const line = cLine([['Your money', have, ok ? 'var(--good)' : 'var(--warn)'], ['Needed at ' + x.retire, ages.map((a, i) => i <= x.retire - x.age ? r.corpus : null), '#9aa7b8', true]], ages);
+  const proj = {}; tbl('AppProjection').forEach(q => { const a = n(q.Age); if (isFinite(a)) proj[a] = n(q.NetWorth); });
+  const ex = ages.map(a => proj[Number(a)] != null && isFinite(proj[Number(a)]) ? proj[Number(a)] : null), hasEx = ex.some(v => v != null);
+  const line = cLine([['Your money (this screen)', have, ok ? 'var(--good)' : 'var(--warn)'], ['Needed at ' + x.retire, ages.map((a, i) => i <= x.retire - x.age ? r.corpus : null), '#9aa7b8', true]].concat(hasEx ? [['Excel plan – net worth incl. house', ex, '#4b7fbf', true]] : []), ages);
   const gl = goals.length ? `<label class="tick" style="font-size:12px"><input type="checkbox" id="rt-goals" ${useG ? 'checked' : ''}> Pay goals from this money: ${goals.map(g => `${esc(g.short)} ${cr(g.cost)} (${g.year})`).join(' · ')}</label>` : (state.rtGoals === false ? '<label class="tick" style="font-size:12px"><input type="checkbox" id="rt-goals"> Pay goals (car, house, baby, education) from this money</label>' : '');
   return cbox('Your path with these settings', line + gl, `At ${x.retire}: ${cr(atR)} against ${cr(r.corpus)} needed – ${ok ? `<span class="good">enough</span>` : `<span class="bad">short by ${cr(r.corpus - atR)}</span>`}. ${lastsTo < x.until ? `<span class="bad">Money runs out around age ${lastsTo}.</span>` : `Lasts until ${x.until}.`}${state.rtShort > 0 ? ` <span class="warn">Goals need ${cr(state.rtShort)} more than this money has at the time (a loan or other savings).</span>` : ''} Moves as you slide.`);
 }
