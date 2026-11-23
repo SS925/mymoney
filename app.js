@@ -1188,7 +1188,10 @@ function invHoldings() {
     if (e.side === 'Sell') { h.units += Number(e.units); h.invested += Number(e.amount) || 0; } else { h.units -= Number(e.units); h.invested -= Number(e.amount) || 0; }
     h.pending++;
   }
+  const fifo = fifoCosts();
   for (const h of list) {
+    const f = fifo[h.name.toLowerCase()];         // cost of the units you still hold (FIFO, like Groww) – profit from earlier sales isn't counted again
+    if (f && Math.abs(f.units - h.units) <= Math.max(0.01, h.units * 0.001)) { h.avgInvested = h.invested; h.invested = f.cost; }
     const fx = fixedCode(h.name); if (fx && fx !== h.code) { h.codeWas = h.code; h.code = fx; }
     const p = priceOf(h.code);
     h.price = p ? p.price : null; h.priceDate = p ? p.date : '';
@@ -1196,6 +1199,19 @@ function invHoldings() {
     h.gain = h.value - h.invested;
   }
   return list.filter(h => h.units > 1e-6 || h.pending).sort((a, b) => b.value - a.value);
+}
+/* FIFO cost of what you still hold, per holding: oldest units are the ones sold (Groww and the tax rules work this way) */
+function fifoCosts() {
+  const key = [state.data, state.trades.length, state.tradeDels.length];
+  if (state._fifo && state._fifo.key.every((x, i) => x === key[i])) return state._fifo.v;
+  const out = {}, rows = tradeLog().filter(r => !r.empty && !r.deleting && Number(r.units) > 0 && /^(Buy|Sell)$/.test(r.side)).sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.side === 'Buy' ? -1 : 1));
+  for (const r of rows) {
+    const k = String(r.name).toLowerCase(), o = out[k] || (out[k] = { lots: [] }); let u = Number(r.units);
+    if (r.side === 'Buy') { o.lots.push([u, Number(r.amount) || 0]); continue; }
+    while (u > 1e-9 && o.lots.length) { const l = o.lots[0], t = Math.min(u, l[0]); l[1] -= l[1] * t / l[0]; l[0] -= t; u -= t; if (l[0] < 1e-9) o.lots.shift(); }
+  }
+  for (const o of Object.values(out)) { o.units = o.lots.reduce((a, l) => a + l[0], 0); o.cost = o.lots.reduce((a, l) => a + l[1], 0); }
+  state._fifo = { key, v: out }; return out;
 }
 function tradeLog() {
   const x = inv(), inExcel = new Set(((x && x.log) || []).map(r => r[5]));
