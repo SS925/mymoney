@@ -2700,13 +2700,14 @@ function viewDivs() {
    ====================================================================== */
 function viewEmergencyMeter(w) {
   const bank = w.banks.reduce((a, x) => a + x.bal, 0), ym = isoToday().slice(0, 7);
-  const months = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), avg = months.length ? months.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / months.length : 0;
+  const months = tbl('AppMonthly').filter(r => String(r.Month).slice(0, 7) < ym).slice(-6), mine = num(efPlanGet().base);
+  const avg = mine || (months.length ? months.reduce((a, r) => a + (Number(r.Spending) || 0), 0) / months.length : 0);
   if (!avg) return '';
   const target = LS.get('efTarget', 6), cover = bank / avg, need = Math.max(0, target * avg - bank), pct = Math.min(100, cover / target * 100);
   return `<section class="sec box"><div class="sec-h"><h3>Emergency fund</h3><span class="small muted">target ${target} months</span></div>
     <p style="margin:0 0 8px">Your banks cover <b class="${cover >= target ? 'good' : cover >= target / 2 ? 'warn' : 'bad'}">${cover.toFixed(1)} months</b> of spending.</p>
     <div class="cc-bar sm"><i style="width:${pct.toFixed(1)}%;background:${cover >= target ? 'var(--good)' : cover >= target / 2 ? 'var(--warn)' : 'var(--bad)'}"></i></div>
-    <div class="kv"><span>Average spending a month<br><span class="small muted">last ${months.length} months</span></span><span class="num">${inr(avg)}</span></div>
+    <div class="kv"><span>${mine ? 'Monthly expenses' : 'Average spending a month'}<br><span class="small muted">${mine ? 'your figure (Emergency fund plan)' : `last ${months.length} months`}</span></span><span class="num">${inr(avg)}</span></div>
     <div class="kv"><span>${need ? 'Still needed' : 'Target reached'}</span><b class="num">${need ? inr(need) : '✓'}</b></div>
     <div class="row2" style="margin-top:8px"><button class="secondary" data-ef="-1" style="margin:0">− 1 month</button><button class="secondary" data-ef="1" style="margin:0">+ 1 month</button></div>
     <p class="small muted" style="margin:8px 0 0">3–6 months of spending kept in a savings account or liquid fund is the usual advice; more if your income is irregular.</p></section>`;
