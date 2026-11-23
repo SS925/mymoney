@@ -1215,13 +1215,7 @@ function viewInvest() {
     <div style="height:64px"></div><button class="fab" data-newtrade><span>＋</span> Add buy / sell</button>`;
 }
 function viewHoldings() {
-  const hs = invHoldings().filter(h => h.units > 1e-6), isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
-  const grp = l => ({ inv: l.reduce((a, h) => a + (Number(h.invested) || 0), 0), val: l.reduce((a, h) => a + (Number(h.value) || 0), 0), n: l.length });
-  const f = grp(hs.filter(h => !isStock(h))), st = grp(hs.filter(isStock)), all = { inv: f.inv + st.inv, val: f.val + st.val };
-  const row = (name, g, cls) => { const d = g.val - g.inv, pc = g.inv ? d / g.inv * 100 : 0;
-    return `<div class="worth-row ${cls || ''}"><span class="wr-t"><b>${name}</b><small>invested ${inr(g.inv)}</small></span><span class="wr-v"><b class="num">${inr(g.val)}</b><small class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : '−'}${inr(Math.abs(d))} (${d >= 0 ? '+' : '−'}${Math.abs(pc).toFixed(1)}%)</small></span></div>`; };
-  return `<section class="sec box">${row(`Mutual funds <span class="small muted">${f.n}</span>`, f)}${row(`Stocks <span class="small muted">${st.n}</span>`, st)}${row('Funds + stocks', all, 'total')}</section>
-    ${viewInvestFunds()}${viewInvestChart()}
+  return `${viewInvestFunds()}${viewInvestChart()}
     <button class="secondary" data-sheet-open="Stocks & MF">Funds and stocks in Excel</button>
     <div style="height:64px"></div><button class="fab" data-newtrade><span>＋</span> Add buy / sell</button>`;
 }
@@ -1322,22 +1316,41 @@ function viewLongTerm() {
 function fUnits(u) { return (Math.round(u * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }); }
 
 function viewInvestFunds() {
-  const hs = invHoldings(), tot = hs.reduce((s, h) => s + h.value, 0), invd = hs.reduce((s, h) => s + h.invested, 0);
-  const dates = hs.map(h => h.priceDate).filter(Boolean).sort();
-  const log = tradeLog().slice(0, state.logAll ? 60 : 8);
-  return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${hs.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
+  const all = invHoldings().filter(h => h.units > 1e-6), isStock = h => /stock|share|etf/i.test(h.type || '') || (h.code && !/^\d+$/.test(h.code));
+  const mf = all.filter(h => !isStock(h)).sort((a, b) => b.value - a.value), st = all.filter(isStock).sort((a, b) => b.value - a.value);
+  const tv = l => l.reduce((s, h) => s + (Number(h.value) || 0), 0), ti = l => l.reduce((s, h) => s + (Number(h.invested) || 0), 0), tot = tv(all);
+  const dates = all.map(h => h.priceDate).filter(Boolean).sort(), short = nm => String(nm).replace(/ (Fund|Direct|Plan|Growth|Limited|Ltd)\b.*$/i, '').replace(/\s+(Fund|Limited)$/i, '');
+  const PAL = ['#4b7fbf', '#3fb68b', '#e0a43a', '#b07ad9', '#e06a6a', '#4fb3c8', '#9aa7b8', '#c98b5a'];
+  const donut = (l, label) => { const T = tv(l) || 1; let a0 = -Math.PI / 2; const arcs = l.map((h, k) => { const a1 = a0 + (Number(h.value) || 0) / T * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0;
+      const p = (a, r) => `${(60 + r * Math.cos(a)).toFixed(2)},${(60 + r * Math.sin(a)).toFixed(2)}`, d = `M${p(a0, 52)} A52,52 0 ${big} 1 ${p(a1 - 0.0001, 52)} L${p(a1 - 0.0001, 32)} A32,32 0 ${big} 0 ${p(a0, 32)} Z`; a0 = a1;
+      return `<path d="${d}" fill="${PAL[k % PAL.length]}"/>`; }).join('');
+    return `<svg viewBox="0 0 120 120" width="112" height="112" aria-label="${esc(label)} split">${arcs}<text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${esc(label)}</text><text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${l.length}</text></svg>`; };
+  const block = (title, l) => { if (!l.length) return ''; const v = tv(l), inv = ti(l), g = v - inv, mx = Math.max(...l.map(h => Math.max(h.value || 0, h.invested || 0)), 1);
+    return `<section class="sec box"><div class="sec-h"><h3>${title}</h3><span class="small num">${inr(v)} <span class="${g >= 0 ? 'good' : 'bad'}">${g >= 0 ? '+' : '−'}${inr(Math.abs(g))}${inv ? ` (${(g / inv * 100).toFixed(1)}%)` : ''}</span></span></div>
+      <div style="display:flex;gap:12px;align-items:center;margin:2px 0 10px">${donut(l, title.split(' ')[0])}<div style="flex:1;font-size:12px">${l.slice(0, 10).map((h, k) => `<div style="display:flex;align-items:center;gap:6px;margin:2px 0"><i style="width:9px;height:9px;border-radius:2px;background:${PAL[k % PAL.length]};flex:none"></i><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(short(h.name))}</span><b class="num">${v ? Math.round(h.value / v * 100) : 0}%</b></div>`).join('')}</div></div>
+      ${l.map((h, k) => { const s2 = holdingStats(h), gp = h.invested > 0 ? h.gain / h.invested * 100 : 0;
+        return `<div class="hbar" style="margin:10px 0 0"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${PAL[k % PAL.length]};margin-right:5px"></i>${esc(short(h.name))}</span><span class="num" style="white-space:nowrap"><b>${inr(h.value)}</b> <span class="${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : ''}${gp.toFixed(1)}%</span></span></div>
+          <div style="position:relative;height:10px;border-radius:5px;background:var(--hair,#2a2f36);margin-top:4px;overflow:hidden" title="invested ${inr(h.invested)} · now ${inr(h.value)}"><i style="position:absolute;left:0;top:0;bottom:0;width:${(Math.min(h.invested, h.value) / mx * 100).toFixed(1)}%;background:${PAL[k % PAL.length]};opacity:.9"></i><i style="position:absolute;top:0;bottom:0;left:${(Math.min(h.invested, h.value) / mx * 100).toFixed(1)}%;width:${(Math.abs(h.value - h.invested) / mx * 100).toFixed(1)}%;background:${h.gain >= 0 ? 'var(--good)' : 'var(--bad)'};opacity:${h.gain >= 0 ? .9 : .45}"></i></div>
+          <div class="small muted" style="margin-top:2px;font-size:11px">invested ${inr(h.invested)}${s2.day != null ? ` · <span class="${s2.day >= 0 ? 'good' : 'bad'}">${s2.day >= 0 ? '▲' : '▼'}${inr(Math.abs(s2.day))} today</span>` : ''}${s2.xirr != null ? ` · XIRR ${pctTxt(s2.xirr)}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''} · <button class="linkbtn" data-hcode="${esc(h.name)}" style="font-size:11px">code ${esc(h.code || 'missing')}</button></div></div>`; }).join('')}
+      <p class="small muted" style="margin:8px 0 0;font-size:11px">Each bar: colour = money still there, <span class="good">green</span> = gain over what you put in${l.some(h => h.gain < 0) ? ', <span class="bad">dark red</span> = money lost' : ''}. Longer bar = bigger holding.</p></section>`; };
+  const log = tradeLog().slice(0, state.logAll ? 60 : 6), pen = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>';
+  const mfV = tv(mf), stV = tv(st);
+  return `<section class="sec box"><div class="sec-h"><h3>Funds and stocks</h3>${all.length ? `<span class="small num">${inr(tot)}</span>` : ''}</div>
       ${(() => { const td = portfolioToday(); return td ? `<p class="small" style="margin:-4px 0 8px">Today <b class="num ${td.d >= 0 ? 'good' : 'bad'}">${td.d >= 0 ? '+' : '−'}${inr(Math.abs(td.d))} (${pctTxt(td.pct, 2)})</b></p>` : ''; })()}
-      ${hs.length ? hs.map(h => { const st = holdingStats(h); return `<div class="kv hold"><span>${esc(h.name)}<br><span class="small muted">${st.day != null ? `<span class="${st.day >= 0 ? 'good' : 'bad'}">${st.day >= 0 ? '▲' : '▼'} ${inr(Math.abs(st.day))} today</span> · ` : ''}${st.xirr != null ? `XIRR ${pctTxt(st.xirr)} · ` : ''}${st.divTot ? `dividends ${inr(st.divTot)} · ` : ''}${fUnits(h.units)} units${h.price ? ` × ₹${h.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}${h.pending ? ` · <span class="warn">${h.pending} waiting for Excel</span>` : ''}<br><button class="linkbtn" data-hcode="${esc(h.name)}">Price code ${esc(h.code || 'missing')}${h.codeWas != null ? ' (changed)' : ''}</button></span></span>
-          <span class="num" style="text-align:right">${inr(h.value)}<br><span class="small ${h.gain >= 0 ? 'good' : 'bad'}">${h.gain >= 0 ? '+' : '−'}${inr(Math.abs(h.gain))}${h.invested > 0 ? ` (${(h.gain / h.invested * 100).toFixed(1)}%)` : ''}</span></span></div>`; }).join('')
-        + `<p class="small muted" style="margin:8px 0 0">Invested ${inr(invd)}. ${dates.length ? `Prices from ${fDay(pDate(dates[dates.length - 1]))}.` : 'Add a price code to get the latest price.'}</p>`
-        : `<p class="small muted" style="margin:4px 0 0">No buys or sells yet. Add your first one and it becomes a holding.</p>`}
-      <button class="primary" data-gotab="trade" style="margin-top:12px">Add buy / sell</button>
-    </section>
-    ${log.length ? `<section class="sec box"><div class="sec-h"><h3>Recent buys and sells</h3></div>
-      ${log.map(r => `<div class="kv ${r.deleting ? 'striked' : ''}"><span>${esc(r.name)}<br><span class="small ${r.empty ? 'warn' : 'muted'}">${esc(fDay(pDate(r.date)))} · ${r.empty ? 'empty row in Excel (row ' + esc(r.row) + ')' : `${r.bonus || (r.pending && r.side === 'Buy' && !(Number(r.amount) > 0)) ? 'Bonus / split +' : esc(r.side) + ' '}${fUnits(Number(r.units) || 0)} units`}${r.pending ? ' · waiting for Excel' : ''}${r.deleting ? ' · deleting – waiting for Excel' : ''}</span></span>
-        <span class="num" style="text-align:right">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}${r.pending ? `<br><button class="edit-btn sm" data-trade-edit="${esc(r.id)}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button> · <button class="linkbtn" data-trade-del="${esc(r.id)}">Remove</button>`
-          : r.row && !r.deleting ? `<br><button class="edit-btn sm" data-log-edit="${esc(r.row)}"><svg class="eb-i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>Edit</button> · <button class="linkbtn" data-log-del="${esc(r.row)}">Delete</button>` : r.deleting ? `<br><button class="linkbtn" data-log-undo="${esc(r.row)}">Undo</button>` : ''}</span></div>`).join('')}
-      ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}</section>` : ''}`;
+      ${tot ? `<div style="display:flex;height:16px;border-radius:8px;overflow:hidden;margin:4px 0 6px"><i style="width:${(mfV / tot * 100).toFixed(1)}%;background:#4b7fbf"></i><i style="width:${(stV / tot * 100).toFixed(1)}%;background:#e0a43a"></i></div>
+        <div class="small" style="display:flex;justify-content:space-between"><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#4b7fbf"></i> Mutual funds ${Math.round(mfV / tot * 100)}% · ${inr(mfV)}</span><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#e0a43a"></i> Stocks ${Math.round(stV / tot * 100)}% · ${inr(stV)}</span></div>` : '<p class="small muted" style="margin:4px 0 0">No buys or sells yet. Add your first one and it becomes a holding.</p>'}
+      <p class="small muted" style="margin:6px 0 0;font-size:11px">Invested ${inr(ti(all))}. ${dates.length ? `Prices from ${fDay(pDate(dates[dates.length - 1]))}.` : ''}</p></section>
+    ${block('Mutual funds', mf)}${block('Stocks', st)}
+    ${log.length ? `<section class="sec box" style="padding-top:10px;padding-bottom:10px"><div class="sec-h" style="margin-bottom:4px"><h3 style="font-size:.9rem">Recent buys and sells</h3>${tradeLog().length > 6 ? `<button class="linkbtn" id="log-more" style="font-size:12px">${state.logAll ? 'Show fewer' : 'Show all'}</button>` : ''}</div>
+      ${log.map(r => `<div class="${r.deleting ? 'striked' : ''}" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;border-top:1px solid var(--hair,#2a2f36)">
+        <span class="muted" style="width:46px;flex:none">${esc((fDay(pDate(r.date)) || '').replace(/ \d{4}$/, ''))}</span>
+        <span style="width:34px;flex:none" class="${r.side === 'Sell' ? 'good' : ''}">${r.empty ? '–' : r.bonus ? 'Bonus' : esc(r.side)}</span>
+        <span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${r.empty ? `<span class="warn">empty Excel row ${esc(r.row)}</span>` : esc(short(r.name))}${r.pending ? ' <span class="warn">·⏳</span>' : ''}</span>
+        <span class="num" style="flex:none">${r.empty ? '' : (r.side === 'Sell' ? '+' : '') + inr(Number(r.amount) || 0)}</span>
+        ${r.pending ? `<button class="linkbtn" data-trade-edit="${esc(r.id)}" aria-label="Edit" style="padding:0 4px">${pen}</button><button class="linkbtn" data-trade-del="${esc(r.id)}" aria-label="Remove" style="font-size:12px">✕</button>`
+          : r.row && !r.deleting ? `<button class="linkbtn" data-log-edit="${esc(r.row)}" aria-label="Edit" style="padding:0 4px">${pen}</button><button class="linkbtn" data-log-del="${esc(r.row)}" aria-label="Delete" style="font-size:12px">✕</button>` : r.deleting ? `<button class="linkbtn" data-log-undo="${esc(r.row)}" style="font-size:12px">Undo</button>` : ''}</div>`).join('')}
+      ${log.some(r => r.empty && !r.deleting) ? `<button class="secondary" id="log-del-empty">Delete all ${log.filter(r => r.empty && !r.deleting).length} empty rows</button>` : ''}
+      <p class="small muted" style="margin:4px 0 0;font-size:11px">⏳ = waiting for Excel. Tap ✎ to edit.</p></section>` : ''}`;
 }
 function viewInvestPf() {
   const x = inv() || {}, e = x.epf, p = x.ppf || {}, b = balPending(), pc = v => (Number(v) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
@@ -1612,6 +1625,7 @@ function bindInvest() {
   document.querySelectorAll('[data-newtrade]').forEach(b => b.onclick = () => { state.trade = newTrade(); state.tradeFromAdd = false; state.tab = 'trade'; window.scrollTo(0, 0); render(); });
   document.querySelectorAll('[data-trade-edit]').forEach(b => b.onclick = () => editTrade(b.dataset.tradeEdit));
   document.querySelectorAll('[data-log-edit]').forEach(b => b.onclick = () => { const r = tradeLog().find(x => !x.pending && String(x.row) === b.dataset.logEdit); if (r) editLogRow(r); });
+  { const lm = document.getElementById('log-more'); if (lm) lm.onclick = () => { state.logAll = !state.logAll; render(); }; }
   document.querySelectorAll('[data-hcode]').forEach(b => b.onclick = () => { const h = invHoldings().find(x => x.name === b.dataset.hcode); if (!h) return;
     const mf = /^\d+$/.test(h.code || '') || /MF|fund|ELSS|index/i.test(h.type || '');
     state.pcode = { name: h.name, kind: mf ? 'MF' : 'Stock', q: h.name.replace(/\s*-?\s*direct.*$/i, '').replace(/\s*\(.*?\)/g, '').trim(), results: [], busy: false };
