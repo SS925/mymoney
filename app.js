@@ -2736,7 +2736,8 @@ function viewOverlap() {
       ${o.pairs.length > 6 ? `<button class="more-btn" data-ovall>${state.ovAll ? 'Show fewer' : `Show all ${o.pairs.length} pairs`}</button>` : ''}
       <p class="small muted" style="margin:8px 0 0">Over 40% means the two funds mostly hold the same companies – you could keep one and put the SIP into the other.</p></section>
     <section class="sec box"><div class="sec-h"><h3>Where your money really is</h3><span class="small muted">top 15</span></div>
-      ${o.top.map(e => `<div class="kv"><span>${esc(e.name)}<br><span class="small muted">via ${esc([...new Set(e.via)].join(', '))}</span></span><span style="text-align:right"><b class="num">${inr(e.amt)}</b><br><span class="small muted">${o.total ? (e.amt / o.total * 100).toFixed(1) : 0}%</span></span></div>`).join('')}</section>
+      ${(() => { const mx = Math.max(1, ...o.top.map(e => e.amt)); return o.top.map((e, k) => `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(e.name)}</span><span class="num" style="white-space:nowrap"><b>${inr(e.amt)}</b> <span class="muted">${o.total ? (e.amt / o.total * 100).toFixed(1) : 0}%</span></span></div>
+        <div style="height:8px;border-radius:4px;background:var(--hair,#2a2f36);margin:3px 0 2px;overflow:hidden"><i style="display:block;height:100%;width:${(e.amt / mx * 100).toFixed(1)}%;background:${CPAL[k % CPAL.length]}"></i></div><div class="small muted" style="font-size:11px">via ${esc([...new Set(e.via)].join(', '))}</div></div>`).join(''); })()}</section>
     ${o.missing.length ? `<p class="small muted" style="margin:0 4px 8px">No portfolio for: ${esc(o.missing.join(', '))}.</p>` : ''}
     <p class="note">Fund portfolios from Groww, updated ${o.asOf ? esc(fDay(new Date(o.asOf))) : '–'}; funds publish them once a month.</p>`;
 }
@@ -4238,6 +4239,7 @@ function viewMix() {
 function bindMix() {
   const $ = id => document.getElementById(id);
   $('mx-add').onchange = () => { state.mixAdd = Number($('mx-add').value.replace(/[,₹\s]/g, '')) || 0; render(); };
+  liveType('mx-add', v => { state.mixAdd = numOf(v); });
   $('mt-save').onclick = async () => {
     const mix = { eq: Number($('mt-eq').value) || 0, safe: Number($('mt-safe').value) || 0, gold: Number($('mt-gold').value) || 0 };
     if (mix.eq + mix.safe + mix.gold !== 100) { toast('The three should add up to 100'); return; }
@@ -5537,7 +5539,7 @@ function viewCardScore(list, compact) {
     return `<div class="kv"><span>${esc(c.name)}<br><span class="small muted">keep under ${inr(cap)} on the statement day${sd ? ` · next ${esc(fDay(sd))}${days <= 5 ? ` – pay down by ${esc(fDay(pay))}` : ''}` : ' · <span class="warn">add the statement day</span>'}</span></span>
       <span class="num small ${use > .3 ? 'bad' : use > .1 ? 'warn' : 'good'}"><b>${Math.round(use * 100)}%</b><br>${o ? 'owed now' : 'if you spend the limit'}</span></div>`; }).join('');
   const lim = cs.reduce((a, c) => a + Number(c.limit), 0), tot = cs.reduce((a, c) => a + (Number(c.outstanding) || Number(c.budget) || 0), 0);
-  return `<section class="sec box"><div class="sec-h"><h3>Card use for your credit score</h3><span class="small num">${Math.round(tot / lim * 100)}% of ${inr(lim)}</span></div>
+  return `<section class="sec box"><div class="sec-h"><h3>Statement days and the 10% line</h3><span class="small num">${Math.round(tot / lim * 100)}% of ${inr(lim)}</span></div>
     ${rows}
     <p class="small muted" style="margin:8px 0 0">The bank reports the balance on the <b>statement day</b>, not the due date. Under 10% per card and overall is best for the score; over 30% pulls it down. ${compact ? '' : 'Pay part of a card a couple of days before its statement if it’s above the line – you’ll get a reminder.'}</p></section>`;
 }
@@ -5706,7 +5708,7 @@ function viewHealth() {
    Family money: monthly cap (plan "Family & Transfers"), who received how much
    ====================================================================== */
 function famData(ym) {
-  ym = ym || budgetYm(); const cap = Number(((activePlan().limits) || {})['Family & Transfers']) || 0, a = t => Math.abs(n(t.Amount) || 0);
+  ym = ym || budgetYm(); const cap = state.famDraft != null ? state.famDraft : Number(((activePlan().limits) || {})['Family & Transfers']) || 0, a = t => Math.abs(n(t.Amount) || 0);
   const out = allTx().filter(t => t.Type === 'Expenses' && ASIDE_OUT.test(t.Category || '')), inn = allTx().filter(t => t.Type === 'Income' && /Family Support/i.test(t.Category || ''));
   const mo = out.filter(t => String(t.Date).startsWith(ym)), by = {};
   mo.forEach(t => { const k = payeeOf(t) || 'Other'; by[k] = (by[k] || 0) + a(t); });
@@ -5729,13 +5731,11 @@ function viewFamTx() {
   return `${viewFamCard()}
     <section class="sec box"><div class="sec-h"><h3>Monthly family limit</h3></div>
       <div class="row2"><div><label class="f" for="fm-cap">Limit a month (₹)</label><input class="inp num" id="fm-cap" inputmode="numeric" value="${esc(f.cap || '')}"></div><div><label class="f">&nbsp;</label><button class="primary" id="fm-save" style="margin:0">Save</button></div></div>
-      <p class="small muted" style="margin:6px 0 0">Saved in your plan as “Family & Transfers”. Last 6 months you sent about <b>${inr(f.avg)}</b> a month. A limit you can keep is better than a low one you break – bigger help can come from bonus money.</p></section>
-    <section class="sec box"><div class="sec-h"><h3>Who received it (6-month average)</h3></div>
-      ${f.per6.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><span class="num">${inr(v)} / month</span></div>`).join('') || '<p class="small muted" style="margin:0">Nothing in the last 6 months.</p>'}
-      ${f.got ? `<p class="small muted" style="margin:8px 0 0">Received from family this month: ${inr(f.got)}.</p>` : ''}</section>`;
+      <p class="small muted" style="margin:6px 0 0">Saved in your plan as “Family & Transfers”. Last 6 months you sent about <b>${inr(f.avg)}</b> a month. A limit you can keep is better than a low one you break – bigger help can come from bonus money.</p></section>`;
 }
 function bindFamTx() {
   const b = document.getElementById('fm-save'); if (!b) return;
+  liveType('fm-cap', v => { state.famDraft = numOf(v); });
   b.onclick = async () => { const v = Math.max(0, Math.round(Number(document.getElementById('fm-cap').value.replace(/[,₹\s]/g, '')) || 0));
     const cur = activePlan(), plan = { savings: cur.savings, limits: Object.assign({}, cur.limits, { 'Family & Transfers': v }), netPay: netPay(), updatedAt: new Date().toISOString() };
     const old = state.plan; state.plan = plan; LS.set('plan', plan);
@@ -5746,7 +5746,7 @@ function bindFamTx() {
    Car planner (XUV 3XO): down payment goal, EMI vs take-home, 20/4/10 check, running cost, effect on the plan
    ====================================================================== */
 const CAR_DEFAULT = { name: 'Mahindra XUV 3XO AX5 petrol MT', price: 1340000, down: 750000, rate: 7.5, years: 4, fuel: 4500, insYear: 32000, serviceYear: 8000, oldFuel: 3000 };
-function carGet() { return Object.assign({}, CAR_DEFAULT, (state.docs.profile || {}).car || {}); }
+function carGet() { return Object.assign({}, CAR_DEFAULT, (state.docs.profile || {}).car || {}, state.carDraft || {}); }
 function emiOf(P, ratePct, months) { const r = ratePct / 1200; return r ? P * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1) : P / months; }
 function viewCar() {
   const c = carGet(), loan = Math.max(0, c.price - c.down), n = c.years * 12, emi = Math.round(emiOf(loan, c.rate, n)), interest = Math.round(emi * n - loan);
@@ -5782,9 +5782,10 @@ function viewCar() {
 }
 function bindCar() {
   const $ = id => document.getElementById(id); if (!$('car-save')) return;
+  [['car-price', 'price'], ['car-down', 'down'], ['car-rate', 'rate'], ['car-years', 'years'], ['car-fuel', 'fuel'], ['car-ins', 'insYear']].forEach(([id, k]) => liveType(id, v => { const x = numOf(v); if (x > 0) state.carDraft = Object.assign({}, state.carDraft, { [k]: k === 'years' ? Math.max(1, Math.round(x)) : x }); }));
   $('car-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
     const car = Object.assign(carGet(), { price: v('car-price'), down: v('car-down'), rate: v('car-rate'), years: Math.max(1, Math.round(v('car-years'))), fuel: v('car-fuel'), insYear: v('car-ins') });
-    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { car }); render();
+    const old = state.docs.profile; state.carDraft = null; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { car }); render();
     try { await saveDoc('profile', 'Car planner'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } };
 }
 
@@ -5812,7 +5813,7 @@ function viewWhatIf() {
   const b = whatIfBase(), v = Object.assign({ hike: b.hike, rent: b.rent, sip: b.sip, family: b.family, cards: b.cards, extra: b.extra }, state.whatIf || {});
   const now = whatIfCalc(b, b), r = whatIfCalc(v, b), d = (x, y, money = true) => { const k = x - y; if (Math.abs(k) < 1) return ''; return ` <span class="small ${k > 0 ? 'good' : 'bad'}">${k > 0 ? '+' : '−'}${money ? inr(Math.abs(k)) : Math.abs(k).toFixed(0) + ' pts'}</span>`; };
   const S = (id, l, min, max, step, val, fmt) => `<div class="brow"><div class="row"><label for="wi-${id}">${l}</label><b class="num" id="wi-${id}-v">${fmt(val)}</b></div><input type="range" id="wi-${id}" min="${min}" max="${max}" step="${step}" value="${val}" style="width:100%"></div>`;
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">Spare each month</p><h2 class="hero-v num ${r.spare < 0 ? 'bad' : ''}">${inr(r.spare)}</h2>
+  const out = `<section class="hero"><p class="hero-k" style="margin-top:0">Spare each month</p><h2 class="hero-v num ${r.spare < 0 ? 'bad' : ''}">${inr(r.spare)}</h2>
       <p class="hero-s" style="margin:0">Take-home ${inr(r.net)} · planned ${inr(r.out)}${d(r.spare, now.spare)}</p></section>
     <section class="sec box"><div class="sec-h"><h3>Results</h3><span class="small muted">vs today’s plan</span></div>
       <div class="kv"><span>Savings rate<br><span class="small muted">SIPs + PPF + emergency + LIC</span></span><b class="num">${Math.round(r.rate * 100)}%${d(r.rate * 100, now.rate * 100, false)}</b></div>
@@ -5820,6 +5821,9 @@ function viewWhatIf() {
       <div class="kv"><span>Net worth in 5 years</span><b class="num">${inr(r.nw5)}${d(r.nw5, now.nw5)}</b></div>
       <p class="small muted" style="margin:6px 0 0">Any spare money is assumed to go to the emergency fund, then investments. Funds at 11% a year.</p></section>
     ${cbox('Net worth over 5 years', cLine([['Today’s plan', now.pts.filter((_, i) => i % 3 === 0).map(p => p.v), '#9aa7b8', true], ['With your changes', r.pts.filter((_, i) => i % 3 === 0).map(p => p.v), 'var(--blue1)']], now.pts.filter((_, i) => i % 3 === 0).map(p => { const d = new Date(); d.setMonth(d.getMonth() + p.m); return `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; })))}
+`;
+  if (state.wiOutOnly) return out;
+  return `<div id="wi-out">${out}</div>
     <section class="sec box"><div class="sec-h"><h3>Change</h3><button class="edit-btn" id="wi-reset">Reset</button></div>
       ${S('hike', 'Salary hike', 0, 40, 1, v.hike, x => x + '%')}
       ${S('rent', 'Rent', 10000, 50000, 1000, v.rent, inr)}
@@ -5831,8 +5835,10 @@ function viewWhatIf() {
 }
 function bindWhatIf() {
   ['hike', 'rent', 'sip', 'family', 'cards', 'extra'].forEach(k => { const el = document.getElementById('wi-' + k); if (!el) return;
-    el.oninput = () => { const lab = document.getElementById(`wi-${k}-v`); if (lab) lab.textContent = k === 'hike' ? el.value + '%' : inr(Number(el.value)); };
-    el.onchange = () => { state.whatIf = Object.assign({}, state.whatIf || {}, { [k]: Number(el.value) }); const y = window.scrollY; render(); window.scrollTo(0, y); }; });
+    const live = () => { const lab = document.getElementById(`wi-${k}-v`); if (lab) lab.textContent = k === 'hike' ? el.value + '%' : inr(Number(el.value));
+      state.whatIf = Object.assign({}, state.whatIf || {}, { [k]: Number(el.value) }); clearTimeout(state.wiT);
+      state.wiT = setTimeout(() => { const o = document.getElementById('wi-out'); if (!o) return; state.wiOutOnly = true; try { o.innerHTML = viewWhatIf(); } finally { state.wiOutOnly = false; } }, 60); };
+    el.oninput = live; el.onchange = live; });
   const r = document.getElementById('wi-reset'); if (r) r.onclick = () => { state.whatIf = null; render(); };
 }
 
@@ -6005,7 +6011,7 @@ function viewJars() {
 /* ======================================================================
    Home loan readiness: how big a loan banks would give, what you can afford, down payment and when
    ====================================================================== */
-function homeGet() { return Object.assign({ rate: 8.5, years: 20, hike: 8, foir: 40, price: 6000000, year: 2031 }, (state.docs.profile || {}).home || {}); }
+function homeGet() { return Object.assign({ rate: 8.5, years: 20, hike: 8, foir: 40, price: 6000000, year: 2031 }, (state.docs.profile || {}).home || {}, state.homeDraft || {}); }
 function viewHomeLoan() {
   const h = homeGet(), net0 = netPay(), car = carGet(), carEmi = Math.round(emiOf(Math.max(0, car.price - car.down), car.rate, car.years * 12));
   const now = new Date(), yrs = Math.max(0, h.year - now.getFullYear()), net = (isFinite(net0) ? net0 : 0) * Math.pow(1 + h.hike / 100, yrs);
@@ -6035,9 +6041,10 @@ function viewHomeLoan() {
       <button class="primary" id="hl-save">Save</button></section>`;
 }
 function bindHomeLoan() { const $ = id => document.getElementById(id); if (!$('hl-save')) return;
+  [['hl-price', 'price'], ['hl-year', 'year'], ['hl-rate', 'rate'], ['hl-years', 'years'], ['hl-hike', 'hike'], ['hl-foir', 'foir']].forEach(([id, k]) => liveType(id, v => { const x = numOf(v); if (x > 0 && (k !== 'year' || x >= 2026)) state.homeDraft = Object.assign({}, state.homeDraft, { [k]: x }); }));
   $('hl-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
     const home = Object.assign(homeGet(), { price: v('hl-price'), year: Math.round(v('hl-year')) || 2031, rate: v('hl-rate') || 8.5, years: Math.round(v('hl-years')) || 20, hike: v('hl-hike'), foir: v('hl-foir') || 40 });
-    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { home }); render();
+    const old = state.docs.profile; state.homeDraft = null; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { home }); render();
     try { await saveDoc('profile', 'Home loan plan'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
 
 /* ======================================================================
@@ -6069,7 +6076,9 @@ function viewNoSalary() {
 function bindNoSalary() { const $ = id => document.getElementById(id), set = p => { LS.set('nsOpt', Object.assign({ food: 12000, family: 5000, sellFunds: false }, LS.get('nsOpt', {}), p)); render(); };
   if ($('ns-food')) $('ns-food').onchange = () => set({ food: Number($('ns-food').value.replace(/\D/g, '')) || 0 });
   if ($('ns-fam')) $('ns-fam').onchange = () => set({ family: Number($('ns-fam').value.replace(/\D/g, '')) || 0 });
-  if ($('ns-sell')) $('ns-sell').onchange = () => set({ sellFunds: $('ns-sell').checked }); }
+  if ($('ns-sell')) $('ns-sell').onchange = () => set({ sellFunds: $('ns-sell').checked });
+  const keep = p => LS.set('nsOpt', Object.assign({ food: 12000, family: 5000, sellFunds: false }, LS.get('nsOpt', {}), p));
+  liveType('ns-food', v => keep({ food: numOf(v) })); liveType('ns-fam', v => keep({ family: numOf(v) })); }
 
 /* ======================================================================
    Spending creep: last 6 months vs the 6 before, against how much take-home grew
@@ -6130,7 +6139,6 @@ function viewWrapped() {
       ${w.nwS && w.nwE && w.nwS !== w.nwE ? `<div class="kv"><span>🏦 Net worth</span><b class="num">${inr(w.nwS.v)} → ${inr(w.nwE.v)}</b></div>` : ''}
       <div class="kv"><span>😌 Lightest month</span><span class="num">${esc(mName(w.best && w.best[0]))} · ${inr(w.best && w.best[1])}</span></div>
       <div class="kv"><span>🔥 Heaviest month</span><span class="num">${esc(mName(w.worst && w.worst[0]))} · ${inr(w.worst && w.worst[1])}</span></div></section>
-    <section class="sec box"><div class="sec-h"><h3>Top spending</h3></div>${w.topCat.map(([c, v]) => `<div class="kv"><span>${esc(c)}</span><span class="num">${inr(v)}</span></div>`).join('')}</section>
     <section class="sec box"><div class="sec-h"><h3>Top payees</h3><span class="small muted">not counting cards, rent, EMIs, insurance</span></div>${w.topPay.map(([c, v]) => `<div class="kv"><span>${esc(c)}</span><span class="num">${inr(v)}</span></div>`).join('')}</section>
     ${fy === fys[0] && new Date() < new Date(fy + 1, 3, 1) ? '<p class="note">This year isn’t over yet – the full Wrapped arrives on 1 April.</p>' : ''}`;
 }
@@ -6566,8 +6574,8 @@ const CHARTS = {
     return cbox('Score parts', cRadar(h.parts.map(q => [q.l.replace('Spending vs plan', 'Plan').replace('Emergency fund', 'Emergency').replace('Savings rate', 'Savings').replace('Card bills', 'Cards').replace('Loan EMIs', 'EMIs'), q.got / q.max])), 'The fuller the shape, the healthier.') + cbox('Score, last 6 months', cBars(hs.map(x => mLab(x.ym)), [['Score', hs.map(x => x.score), 'var(--blue1)']], { line: 80, lineLabel: 'strong 80' })); },
   money: () => { if (!state.data) return ''; const ym = budgetYm(), SK = /^(Credit Card Bills)$/; const cur = topN(expBy(ym), 6), ms = monthsBack(6, ym), cats = topN(expBy(ym), 5).map(x => x[0]).filter(c => c !== 'Other');
     const ser = cats.map((c, j) => [c, ms.map(m => expBy(m)[c] || 0), CPAL[j]]).concat([['Other', ms.map(m => { const o = expBy(m); return Object.entries(o).filter(([c]) => !cats.includes(c)).reduce((a, x) => a + x[1], 0); }), '#5b6676']]);
-    return cbox(`Spending by category, ${mLab(ym)}`, cDonut(cur, kfmt(cur.reduce((a, x) => a + x[1], 0)), 'spent')) + cbox('Last 6 months', cBars(ms.map(mLab), ser, { stack: true })); },
-  spends: () => { if (!state.data) return ''; const months = spendMonths(); if (!months.length) return ''; const m = state.spM && months.includes(state.spM) ? state.spM : months[0], SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i, g = {};
+    return cbox(`Spending by category, ${mLab(ym)}`, cDonut(cur, kfmt(cur.reduce((a, x) => a + x[1], 0)), 'spent')) + cbox('By category, last 6 months', cBars(ms.map(mLab), ser, { stack: true })); },
+  spends_off: () => { if (!state.data) return ''; const months = spendMonths(); if (!months.length) return ''; const m = state.spM && months.includes(state.spM) ? state.spM : months[0], SKIP = /Self Transfer|Investments|Savings|Credit Card Bills|Loans|PF/i, g = {};
     allTx().forEach(t => { if (t.Type !== 'Expenses' || !String(t.Date).startsWith(m) || SKIP.test(t.Category || '')) return; const k = payeeOf(t); g[k] = (g[k] || 0) + Math.abs(n(t.Amount) || 0); });
     return cbox(`Top 10 payees, ${mLab(m)}`, cHBars(Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 10))); },
   tx: () => { if (!state.data) return ''; const to = new Date(), from = new Date(to.getFullYear(), to.getMonth() - 3, to.getDate()), days = {};
@@ -6595,7 +6603,7 @@ const CHARTS = {
       nifty = cbox('Your funds vs the same money in Nifty 50', cHBars([['Put in', put, '#9aa7b8'], ['Your funds now', mine, 'var(--blue1)'], ['Nifty 50 index now', b.value, '#e0a43a']])); }
     return cbox('What you have invested', cDonut([['Mutual funds', hv('mf')], ['Stocks', hv('st')], ['EPF', hv('epf')], ['PPF', hv('ppf')], ['FD', hv('fd')], ['Other', hv('oth')]], kfmt(hv('mf') + hv('st') + hv('epf') + hv('ppf') + hv('fd') + hv('oth')), 'invested')) + nifty; },
   sips: () => { const st = statuses('sips'); if (!st.length) return ''; const T = st.reduce((a, x) => a + (Number(x.it.amount) || 0), 0);
-    return cbox(`SIPs + PPF each month: ${inr(T)}`, cStack(st.map((x, j) => [`${x.st.s === 'paid' ? '✓ ' : '○ '}${x.it.name.replace(/ Fund.*| Direct.*/i, '')}`, Number(x.it.amount) || 0, CPAL[j]]), T), '✓ paid this month · ○ still due'); },
+    return cbox('This month: paid ✓ / still due ○', cStack(st.map((x, j) => [`${x.st.s === 'paid' ? '✓ ' : '○ '}${x.it.name.replace(/ Fund.*| Direct.*/i, '')}`, Number(x.it.amount) || 0, CPAL[j]]), T), '✓ paid this month · ○ still due'); },
   pfedit: () => { const x = inv() || {}, e = x.epf || {}, p = x.ppf || {}, epf0 = Number(e.value) || 0, ppf0 = Number(p.balance) || 0, epfM = Number(e.epfMonth) || 6000, ppfM = (state.docs.sips || []).filter(s2 => /PPF/i.test(s2.name)).reduce((a, s2) => a + (Number(s2.amount) || 0), 0);
     if (!epf0 && !ppf0) return ''; const yrs = [...Array(11).keys()], gr = (v0, m, r) => yrs.map(y => { let v = v0; for (let k = 0; k < y * 12; k++) v = v * (1 + r / 12) + m; return Math.round(v); });
     return cbox('EPF and PPF – next 10 years', cLine([['EPF (8.25%)', gr(epf0, epfM, .0825), 'var(--blue1)'], ['PPF (7.1%)', gr(ppf0, ppfM, .071), 'var(--good)']], yrs.map(y => String(new Date().getFullYear() + y))), `If you keep adding about ${inr(epfM)} to EPF and ${inr(ppfM)} to PPF each month.`); },
@@ -6636,7 +6644,6 @@ const CHARTS = {
       names.forEach((b, j) => { const v = i === j ? null : ov(a, b); cells += `<rect x="${L + j * C}" y="${L + i * C}" width="${C - 2}" height="${C - 2}" rx="3" fill="${i === j ? 'rgba(127,127,127,.22)' : col(v)}"><title>${esc(sh(a))} + ${esc(sh(b))}: ${v == null ? '' : Math.round(v) + '%'}</title></rect>${i !== j && v != null ? `<text x="${L + j * C + (C - 2) / 2}" y="${L + i * C + C / 2 + 2}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff">${Math.round(v)}</text>` : ''}`; }); });
     const W = L + N * C + 44, top = o.top.slice(0, 10);
     return cbox('Overlap between your funds (%)', `<svg viewBox="0 0 ${W} ${W}" width="100%" style="max-width:420px;display:block;margin:auto">${cells}</svg>`, 'Each square = how much two funds hold the same companies. <span class="good">Green</span> under 20% is fine · <span class="warn">amber</span> 20–40% · <span class="bad">red</span> over 40%: keep one of the two.')
-      + cbox('Where your money really is – top 10 companies', cHBars(top.map((e, k) => [e.name.replace(/\s+(Ltd|Limited)\.?$/i, ''), e.amt])) , `Across all funds and stocks together · these 10 are ${o.total ? Math.round(top.reduce((a, e) => a + e.amt, 0) / o.total * 100) : 0}% of your ${inr(o.total)}.`)
       + cbox('Each fund’s biggest overlap', cHBars(names.map(a => [sh(a), o.pairs.filter(p => p.a === a || p.b === a).reduce((m, p) => Math.max(m, p.ov), 0)]).sort((x, y) => y[1] - x[1]), { fmt: v => Math.round(v) + '% max' }), 'Highest overlap of each fund with any other fund you own.'); },
   mix: () => { const m = currentMix(); if (!m.tot) return ''; const t = (state.docs.profile || {}).mix || { eq: 60, safe: 30, gold: 10 }, add = Number(state.mixAdd) || 10000, K = [['eq', 'Equity', '#4b7fbf'], ['safe', 'Safe', '#3fb68b'], ['gold', 'Gold', '#e0a43a']];
     const after = m.tot + add, need = Object.fromEntries(K.map(([k]) => [k, Math.max(0, after * t[k] / 100 - m[k])])), ns = K.reduce((a, [k]) => a + need[k], 0) || 1;
@@ -6646,7 +6653,7 @@ const CHARTS = {
         + cBars(K.map(x => x[1]), [['Now %', K.map(([k]) => pc(k)), '#9aa7b8'], ['Target %', K.map(([k]) => t[k]), 'var(--blue1)']]))
       + cbox('Off target by', gap, 'Centre line = on target. Right = too much, left = too little. Green = within 5 points.')
       + cbox(`Next ${inr(add)}: where to put it`, cStack(K.map(([k, l, c]) => [l, Math.round(add * need[k] / ns / 100) * 100, c]), add), 'Buying the part that is short brings the mix back without selling anything.')
-      + (funds ? cbox('Equity funds by company size', cDonut(['Large', 'Multi', 'Mid', 'Small', 'Theme'].map((k, j) => [CAP_LABEL[k], cm[k] || 0, CPAL[j]]), kfmt(funds), 'in funds')) : ''); },
+; },
   creep: () => { if (!state.data) return ''; const c = creepData(), ds = c.drivers.filter(d => d[2] + d[3] > 1000).sort((a, b) => (b[2] + b[3]) - (a[2] + a[3])).slice(0, 7);
     return ds.length ? cbox('Before vs after (monthly average)', cBars(ds.map(d => String(d[0]).split(/[ /]/)[0].slice(0, 8)), [['6 months before', ds.map(d => d[3]), '#9aa7b8'], ['Last 6 months', ds.map(d => d[2]), 'var(--blue1)']])) : ''; },
 };
@@ -6672,3 +6679,11 @@ if (window.matchMedia) matchMedia('(prefers-color-scheme: light)').addEventListe
 render();
 if (lockCfg()) showLock();
 if (state.cfg) sync();
+
+/* redraw the screen while a number is typed (after a short pause), keeping the cursor in the same box */
+function liveType(id, apply, wait = 450) {
+  const el = document.getElementById(id); if (!el) return;
+  el.oninput = () => { clearTimeout(state.ltT); state.ltT = setTimeout(() => { const pos = el.selectionStart; apply(el.value); const y = window.scrollY; render(); window.scrollTo(0, y);
+    const n2 = document.getElementById(id); if (n2) { n2.focus(); try { n2.setSelectionRange(pos, pos); } catch (e) {} } }, wait); };
+}
+const numOf = v => Number(String(v).replace(/[,₹\s]/g, '')) || 0;
