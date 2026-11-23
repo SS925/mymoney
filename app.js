@@ -325,8 +325,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { paycal: 'Bill-pay calendar', dips: 'Price-drop watch', jars: 'Money jars', homeloan: 'Home loan readiness', car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { paycal: 'money', dips: 'invest', jars: 'future', homeloan: 'future', car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -353,7 +353,7 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
   v.innerHTML = subnav() + views[state.tab]();
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
@@ -371,6 +371,9 @@ function render() {
   if (state.tab === 'yearend') bindYearEnd();
   if (state.tab === 'famtx') bindFamTx();
   if (state.tab === 'car') bindCar();
+  if (state.tab === 'paycal') bindPayCal();
+  if (state.tab === 'dips') bindDips();
+  if (state.tab === 'homeloan') bindHomeLoan();
   if (state.tab === 'whatif') bindWhatIf();
   if (state.tab === 'fundrev') bindFundRev();
   if (state.tab === 'moneyin' || state.tab === 'home' || state.tab === 'mplan') bindSplit();
@@ -4565,7 +4568,7 @@ function viewTools() {
   const g = (title, items) => `<section class="sec"><div class="sec-h"><h3>${title}</h3></div><div class="shortcuts">${items.map(([t, i, l]) => `<button class="sc" data-gotab="${t}"><span class="sc-i" aria-hidden="true">${i}</span><span>${l}</span></button>`).join('')}</div></section>`;
   return g('Spending', [['mplan', '🧭', 'Money plan'], ['moneyin', '💸', 'Money in'], ['subplan', '📺', 'Subscription plan'], ['subcheck', '🔍', 'Subscriptions found'], ['nospend', '🗓', 'No-spend'], ['habits', '☕', 'Habits'], ['cards', '💳', 'Card offers'], ['dupes', '👯', 'Duplicates'], ['shared', '🤝', 'Shared'], ['sort', '🗂', 'Sort UPI'], ['review', '📝', 'Review'], ['spends', '🏪', 'Top payees'], ['afford', '🤔', 'Afford it?']])
     + g('Investments', [['mix', '⚖️', 'Rebalance'], ['alerts', '🔔', 'Price alerts'], ['gains', '📑', 'Capital gains'], ['overlap', '🧩', 'Fund overlap'], ['divs', '💸', 'Dividends'], ['others', '🏦', 'FD / NPS / SGB'], ['tax', '🧮', 'Tax & 80C'], ['import', '📥', 'Import']])
-    + g('Plan ahead', [['whatif', '🎚', 'What if…'], ['car', '🚗', 'Car planner'], ['fundrev', '🔎', 'Fund review']])
+    + g('Plan ahead', [['paycal', '🗓', 'Bill-pay calendar'], ['jars', '🫙', 'Money jars'], ['whatif', '🎚', 'What if…'], ['car', '🚗', 'Car planner'], ['homeloan', '🏠', 'Home loan'], ['fundrev', '🔎', 'Fund review'], ['dips', '📉', 'Price-drop watch']])
     + g('Salary', [['earned', '📊', 'Salary to date'], ['salary', '💼', 'Payslips'], ['health', '🩺', 'Health score'], ['famtx', '👨‍👩‍👧', 'Family money']])
     + g('Tax', [['yearend', '📆', 'Year-end checklist'], ['moneyin', '💸', 'Money in'], ['rent', '🧾', 'Rent receipts'], ['regime', '⚖', 'Tax regime']])
     + g('Life', [['credit', '📈', 'Credit score'], ['lic', '🛡', 'LIC worth it?'], ['emergency', '🆘', 'Emergency info'], ['documents', '📁', 'Documents'], ['goals', '🎯', 'Goals'], ['cover', '☂️', 'Insurance'], ['family', '👪', 'Family']])
@@ -5847,3 +5850,140 @@ function viewFundRev() {
     <p class="note">Switching costs tax on gains and exit load if within a year – only switch a fund that has lagged its index for 3 years. Past returns don’t promise future ones.</p>`;
 }
 function bindFundRev() { const b = document.getElementById('fr-run'); if (b) b.onclick = () => runFundRev(); }
+
+/* ======================================================================
+   Bill-pay calendar: every due date of the month on one grid
+   ====================================================================== */
+function lastDayOf(re, cat) {                    // day of the month a repeating payment usually happens (from the latest one in the bank)
+  const ds = allTx().filter(x => x.Type === 'Expenses' && (!cat || cat.test(x.Category || '')) && (!re || re.test(String(x.Details || '')))).map(x => pDate(x.Date)).filter(Boolean).sort((a, b) => b - a).slice(0, 6).map(d => d.getDate());
+  if (!ds.length) return null; const c = {}; ds.forEach(d => c[d] = (c[d] || 0) + 1); return Number(Object.entries(c).sort((a, b) => b[1] - a[1] || ds.indexOf(Number(a[0])) - ds.indexOf(Number(b[0])))[0][0]);   // most usual day of the last 6
+}
+function payEvents(y, m) {
+  const dim = new Date(y, m + 1, 0).getDate(), ev = [], add = (day, name, amt, kind) => { if (day) ev.push({ d: Math.min(dim, day), name, amt: Number(amt) || 0, kind }); };
+  const lim = (activePlan().limits || {});
+  add(lastDayOf(null, /^Housing$/) || 1, 'Rent', lim.Housing, 'fixed');
+  for (const x of state.docs.sips || []) add(Number(x.day), /PPF/i.test(x.name) ? 'PPF' : x.name.replace(/ Fund.*| Direct.*/i, ''), x.amount, 'save');
+  for (const x of [...(state.docs.bills || []), ...excelBills()]) { if (x.every === 'Yearly' && Number(x.month) !== m + 1) continue; add(Number(x.day), x.name, x.amount, 'bill'); }
+  for (const c of state.docs.ccards || []) { const d = pDate(c.dueDate); if (d) add(d.getDate(), c.name + ' bill due', c.budget, 'card'); if (Number(c.stmt)) add(Number(c.stmt), c.name + ' statement', 0, 'stmt'); }
+  { const d = lastDayOf(/LIC OF INDIA|NACH\/LIC/i); if (d && ![...(state.docs.bills || []), ...excelBills()].some(b => /\bLIC\b/i.test(b.name))) add(d, 'LIC premium', 10219, 'bill'); }
+  for (const l of allLoans().filter(l => !l.cleared && l.left > 0 && l.emi > 0)) add(lastDayOf(new RegExp(({ 'credit saison': 'credit ?saison|kisetsu|ksfpl' })[l.name.toLowerCase()] || l.name.split(/[\s(]/)[0].replace(/[^A-Za-z]/g, ''), 'i'), /Loans/i) || lastDayOf(null, /Loans/i) || 5, l.name + ' EMI', l.emi, 'loan');
+  for (const sp of state.docs.subplan || []) { const r = pDate(sp.renew); if (r && (sp.every === 'Monthly' || r.getMonth() === m)) add(r.getDate(), sp.name, sp.cost, 'sub'); }
+  add(dim, 'Salary (for next month)', netPay(), 'in');
+  return ev.sort((a, b) => a.d - b.d);
+}
+function viewPayCal() {
+  const t = new Date(), off = state.pcOff || 0, base = new Date(t.getFullYear(), t.getMonth() + off, 1), y = base.getFullYear(), m = base.getMonth();
+  const ev = payEvents(y, m), dim = new Date(y, m + 1, 0).getDate(), lead = (base.getDay() + 6) % 7, by = {}; ev.forEach(e => (by[e.d] || (by[e.d] = [])).push(e));
+  const out = ev.filter(e => e.kind !== 'in' && e.kind !== 'stmt').reduce((a, e) => a + e.amt, 0), today = off === 0 ? t.getDate() : -1;
+  const col = { fixed: 'var(--blue1)', save: 'var(--good)', bill: 'var(--warn)', card: '#b3261e', loan: '#8a3ffc', sub: '#6b7a90', stmt: '#6b7a90', in: 'var(--good)' };
+  const cells = []; for (let i = 0; i < lead; i++) cells.push('<div></div>');
+  for (let d = 1; d <= dim; d++) { const es = by[d] || [], amt = es.filter(e => e.kind !== 'in' && e.kind !== 'stmt').reduce((a, e) => a + e.amt, 0);
+    cells.push(`<div style="border:1px solid var(--line,#e3e8ef);border-radius:8px;min-height:46px;padding:3px;font-size:11px;${d === today ? 'outline:2px solid var(--blue1);' : ''}"><b>${d}</b><div>${es.map(e => `<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col[e.kind]};margin-right:2px"></i>`).join('')}</div>${amt ? `<div class="num" style="font-size:10px">${amt >= 1000 ? Math.round(amt / 1000) + 'k' : amt}</div>` : ''}</div>`); }
+  const heavy = Object.entries(by).map(([d, es]) => [d, es.filter(e => e.kind !== 'in' && e.kind !== 'stmt').reduce((a, e) => a + e.amt, 0)]).sort((a, b) => b[1] - a[1])[0];
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">${MONF[m]} ${y}</p><h2 class="hero-v num">${inr(out)}</h2><p class="hero-s" style="margin:0">going out on fixed dates${heavy && heavy[1] ? ` · busiest day: ${heavy[0]} ${MON[m]} (${inr(heavy[1])})` : ''}</p></section>
+    <div class="row2"><button class="secondary" id="pc-prev" style="margin:0">‹ ${MON[(m + 11) % 12]}</button><button class="secondary" id="pc-next" style="margin:0">${MON[(m + 1) % 12]} ›</button></div>
+    <section class="sec box"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px;text-align:center;color:var(--muted,#6b7a90)">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<div>${d}</div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px">${cells.join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">${[['fixed', 'rent'], ['save', 'SIP / PPF'], ['bill', 'bills'], ['card', 'card due'], ['loan', 'EMI'], ['sub', 'subscription'], ['in', 'salary']].map(([k, l]) => `<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col[k]}"></i> ${l}`).join(' &nbsp;')}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Dates</h3></div>
+      ${ev.map(e => `<div class="kv"><span><b>${e.d} ${MON[m]}</b> · ${esc(e.name)}</span><span class="num ${e.kind === 'in' ? 'good' : ''}">${e.kind === 'stmt' ? '<span class="small muted">keep under 10%</span>' : e.amt ? (e.kind === 'in' ? '+' : '') + inr(e.amt) : '<span class="small muted">varies</span>'}</span></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">Days come from your SIPs, bills, cards and the last payment seen in the bank. Edit dates in SIPs, Bills and Credit cards.</p></section>`;
+}
+function bindPayCal() { const $ = id => document.getElementById(id);
+  if ($('pc-prev')) $('pc-prev').onclick = () => { state.pcOff = (state.pcOff || 0) - 1; render(); };
+  if ($('pc-next')) $('pc-next').onclick = () => { state.pcOff = (state.pcOff || 0) + 1; render(); }; }
+
+/* ======================================================================
+   Price-drop watch: how far each SIP fund is below its 3-month high; extra buy suggestion on dips
+   ====================================================================== */
+function dipLevels() { const p = state.docs.profile || {}; return { watch: Number(p.dipWatch) || 7, buy: Number(p.dipBuy) || 10 }; }
+async function runDips() {
+  state.dipBusy = 'Checking prices…'; render();
+  try { const funds = invHoldings().filter(h => h.units > 1e-6 && /^\d+$/.test(String(h.code || '')) && !/liquid|overnight|debt|gilt/i.test(h.name + ' ' + (h.type || ''))), out = [];
+    for (const h of funds) { const nh = await navHist(h.code); if (!nh) continue; const cut = nh.pts[0].t - 92 * DAY, win = nh.pts.filter(x => x.t >= cut), hi = win.reduce((a, x) => x.v > a.v ? x : a, win[0]);
+      out.push({ name: h.name, code: h.code, nav: nh.pts[0].v, hi: hi.v, hiT: hi.t, drop: 1 - nh.pts[0].v / hi.v, sip: Number(sipPlanGet()[h.name]) || 0 }); }
+    LS.set('dips', { at: isoToday(), out }); state.dipBusy = ''; } catch (e) { state.dipBusy = 'Couldn’t reach mfapi.in – try again later.'; }
+  render();
+}
+function viewDips() {
+  const d = LS.get('dips', null), L = dipLevels(), since = new Date(); since.setMonth(since.getMonth() - 6);
+  const invest = Math.round(incomeCredits(since).reduce((a, c) => a + (c.invest || 0), 0) / 6 / 1000) * 1000;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Price-drop watch</p><h2 class="hero-v" style="font-size:1.4rem">Watch at −${L.watch}% · buy extra at −${L.buy}%</h2>
+      <p class="hero-s" style="margin:0">From each fund’s 3-month high. You get a phone alert when a fund crosses a line.</p></section>
+    <button class="primary" id="dp-run" ${state.dipBusy === 'Checking prices…' ? 'disabled' : ''}>${d ? 'Check again' : 'Check now'}</button>${state.dipBusy ? `<p class="small" style="margin:6px 4px">${esc(state.dipBusy)}</p>` : ''}
+    ${d ? `<section class="sec box"><div class="sec-h"><h3>Your funds</h3><span class="small muted">${esc(fDay(pDate(d.at)))}</span></div>
+      ${d.out.sort((a, b) => b.drop - a.drop).map(f => { const pc = f.drop * 100, lvl = pc >= L.buy ? 'bad' : pc >= L.watch ? 'warn' : 'good';
+        return `<div class="brow"><div class="row"><span>${esc(f.name.replace(/ Direct.*$/i, ''))}<br><span class="small muted">high ${f.hi.toFixed(2)} on ${esc(fDay(new Date(f.hiT)))} · now ${f.nav.toFixed(2)}</span></span><b class="num ${lvl}">−${pc.toFixed(1)}%</b></div>
+          <div class="meter thin ${pc >= L.buy ? 'over' : ''}"><i style="width:${Math.min(100, pc / L.buy * 100).toFixed(0)}%"></i></div>
+          ${pc >= L.buy ? `<p class="small" style="margin:4px 0 0">Good moment for an extra lump sum: about <b>${inr(Math.max(2000, f.sip || 4000))}</b> (one month’s SIP) from bonus money – keep the SIP running.</p>` : pc >= L.watch ? '<p class="small muted" style="margin:4px 0 0">Getting cheaper – keep the SIP; get bonus money ready.</p>' : ''}</div>`; }).join('')}</section>` : ''}
+    <section class="sec box"><div class="sec-h"><h3>Lines</h3></div>
+      <div class="row2"><div><label class="f" for="dp-w">Watch at (−%)</label><input class="inp num" id="dp-w" inputmode="numeric" value="${L.watch}"></div><div><label class="f" for="dp-b">Buy extra at (−%)</label><input class="inp num" id="dp-b" inputmode="numeric" value="${L.buy}"></div></div>
+      <button class="secondary" id="dp-save">Save lines</button>
+      <p class="small muted" style="margin:6px 0 0">Extra buys come from the “invest” part of bonus and class money (about ${inr(invest)} a month lately) – never from the emergency fund. Don’t stop or cut SIPs when prices fall; that’s when they buy the most units.</p></section>`;
+}
+function bindDips() { const $ = id => document.getElementById(id);
+  if ($('dp-run')) $('dp-run').onclick = () => runDips();
+  if ($('dp-save')) $('dp-save').onclick = async () => { const w = Math.max(1, Number($('dp-w').value) || 7), b = Math.max(w + 1, Number($('dp-b').value) || 10);
+    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { dipWatch: w, dipBuy: b }); render();
+    try { await saveDoc('profile', 'Price-drop lines'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
+
+/* ======================================================================
+   Money jars: emergency fund, car down payment, next-month buffer, tax set aside – each with its own progress
+   ====================================================================== */
+function viewJars() {
+  if (!state.data) return '<div class="empty">Sync Excel first.</div>';
+  const P = efPlanGet(), efGoal = efMonths() * (num(P.base) || 0), joint = bankAccounts().filter(a => a.manual).reduce((a, x) => a + x.bal, 0) + efLiquid();
+  const g = (state.docs.goals || []).find(x => /car/i.test(x.id + ' ' + x.name)), gc = g ? goalCalc(g) : null, carHave = g ? (Number(g.saved) || 0) + linkedValue(g) : 0;
+  const c = cushion(), buffer = Math.max(0, c.have - c.still);
+  const ic = incomeCredits(), done = incomeDone(), taxDue = ic.filter(x => !done.has(x.key)).reduce((a, x) => a + x.keep, 0), taxAll = ic.reduce((a, x) => a + x.keep, 0);
+  const jars = [
+    { i: '🛟', n: 'Emergency fund', where: 'Joint IDFC account', have: joint, goal: efGoal, note: `${efMonths()} months × ${inr(num(P.base) || 0)} · adding ${inr(num(P.monthly) || 0)} a month`, tab: 'worth' },
+    g ? { i: '🚗', n: 'Car down payment', where: 'RD / liquid fund (keep it safe)', have: carHave, goal: Number(g.target) || 0, note: `by ${monthsLabel(gc.months)} · ${inr(g.monthly)} a month${g.from ? ' from ' + g.from : ''}`, tab: 'car' } : null,
+    { i: '📅', n: 'Next month’s money', where: 'Your salary account', have: buffer, goal: c.planned, note: `${MONF[c.nx.getMonth()]} plan ${inr(c.planned)} – the salary at month end fills it`, tab: 'mplan' },
+    { i: '🧾', n: 'Tax set aside', where: 'A separate savings account', have: Math.max(0, taxAll - taxDue), goal: taxAll, note: taxDue ? `${inr(taxDue)} from bonus / class money not moved yet` : 'all moved ✓', tab: 'moneyin' },
+  ].filter(Boolean);
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Money jars</p><h2 class="hero-v num">${inr(jars.reduce((a, j) => a + j.have, 0))}</h2><p class="hero-s" style="margin:0">set aside for ${jars.length} jobs – keep each in its own place so it isn’t spent</p></section>
+    ${jars.map(j => { const pc = j.goal ? Math.min(100, j.have / j.goal * 100) : 0; return `<button class="sec box" data-gotab="${j.tab}" style="display:block;width:100%;text-align:left">
+      <div class="sec-h"><h3>${j.i} ${esc(j.n)}</h3><span class="small num ${pc >= 100 ? 'good' : ''}">${Math.round(pc)}%</span></div>
+      <div style="height:14px;border-radius:7px;background:var(--line,#e3e8ef);overflow:hidden"><i style="display:block;height:100%;width:${pc.toFixed(1)}%;background:${pc >= 100 ? 'var(--good)' : 'var(--blue1)'}"></i></div>
+      <div class="kv" style="margin-top:6px"><span>${inr(j.have)} of ${inr(j.goal)}<br><span class="small muted">${esc(j.note)}</span></span><span class="small muted" style="text-align:right">${esc(j.where)}</span></div></button>`; }).join('')}
+    <p class="note">Tip: open a second savings account (or use sweep-in FDs) for the tax jar, and an RD for the car jar, so each jar is a real place.</p>`;
+}
+
+/* ======================================================================
+   Home loan readiness: how big a loan banks would give, what you can afford, down payment and when
+   ====================================================================== */
+function homeGet() { return Object.assign({ rate: 8.5, years: 20, hike: 8, foir: 40, price: 6000000, year: 2031 }, (state.docs.profile || {}).home || {}); }
+function viewHomeLoan() {
+  const h = homeGet(), net0 = netPay(), car = carGet(), carEmi = Math.round(emiOf(Math.max(0, car.price - car.down), car.rate, car.years * 12));
+  const now = new Date(), yrs = Math.max(0, h.year - now.getFullYear()), net = (isFinite(net0) ? net0 : 0) * Math.pow(1 + h.hike / 100, yrs);
+  const carLeft = (() => { const g = (state.docs.goals || []).find(x => /car/i.test(x.id + ' ' + x.name)); const buy = g && g.date ? Number(g.date.slice(0, 4)) : 2029; return h.year < buy + car.years ? carEmi : 0; })();
+  const maxEmi = Math.max(0, net * h.foir / 100 - carLeft), r = h.rate / 1200, n = h.years * 12, maxLoan = r ? maxEmi * (Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n)) : maxEmi * n;
+  const loanNeed = h.price * 0.8, emiNeed = Math.round(emiOf(loanNeed, h.rate, n)), down = h.price * 0.2, extra = h.price * 0.07, cash = down + extra;
+  const months = Math.max(1, yrs * 12 - now.getMonth()), perMonth = Math.round(cash / months), afford = Math.min(maxLoan / 0.8, (maxLoan + cash));
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Home loan in ${h.year}</p><h2 class="hero-v num">${inr(Math.round(maxLoan / 100000) * 100000)}</h2>
+      <p class="hero-s" style="margin:0">about the most banks would lend · EMI up to ${inr(Math.round(maxEmi))} at ${h.rate}% for ${h.years} years</p></section>
+    <section class="sec box"><div class="sec-h"><h3>How it’s worked out</h3></div>
+      <div class="kv"><span>Take-home in ${h.year}<br><span class="small muted">today ${inr(net0)} + ${h.hike}% a year</span></span><span class="num">${inr(Math.round(net))}</span></div>
+      <div class="kv"><span>Banks allow EMIs up to ${h.foir}%<br><span class="small muted">of take-home, all loans together</span></span><span class="num">${inr(Math.round(net * h.foir / 100))}</span></div>
+      ${carLeft ? `<div class="kv"><span>Car EMI still running</span><span class="num bad">−${inr(carLeft)}</span></div>` : '<div class="kv"><span>Car loan</span><span class="num good">finished by then</span></div>'}
+      <div class="kv"><span><b>Room for a home EMI</b></span><b class="num">${inr(Math.round(maxEmi))}</b></div>
+      <p class="small muted" style="margin:6px 0 0">A house around <b>${inr(Math.round(afford / 100000) * 100000)}</b> fits this. A credit score above 750 gets the best rates.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Your target: ${inr(h.price)}</h3></div>
+      <div class="kv"><span>Loan (80%)</span><span class="num">${inr(loanNeed)}</span></div>
+      <div class="kv"><span>EMI</span><span class="num ${emiNeed > maxEmi ? 'bad' : 'good'}">${inr(emiNeed)} ${emiNeed > maxEmi ? '· too high' : '· fits'}</span></div>
+      <div class="kv"><span>Down payment (20%)</span><span class="num">${inr(down)}</span></div>
+      <div class="kv"><span>Registration, stamp duty, interiors (~7%)</span><span class="num">${inr(extra)}</span></div>
+      <div class="kv"><span><b>Cash needed by ${h.year}</b><br><span class="small muted">save about ${inr(perMonth)} a month from now (after the car)</span></span><b class="num">${inr(cash)}</b></div>
+      <p class="small muted" style="margin:6px 0 0">Old regime: home-loan interest up to ₹2 lakh and principal (80C) cut tax – check the regime again in the year you buy.</p></section>
+    <section class="sec box"><div class="sec-h"><h3>Change</h3></div>
+      <div class="row2"><div><label class="f" for="hl-price">House price (₹)</label><input class="inp num" id="hl-price" inputmode="numeric" value="${h.price}"></div><div><label class="f" for="hl-year">Buy in (year)</label><input class="inp num" id="hl-year" inputmode="numeric" value="${h.year}"></div></div>
+      <div class="row2"><div><label class="f" for="hl-rate">Rate (%)</label><input class="inp num" id="hl-rate" inputmode="decimal" value="${h.rate}"></div><div><label class="f" for="hl-years">Years</label><input class="inp num" id="hl-years" inputmode="numeric" value="${h.years}"></div></div>
+      <div class="row2"><div><label class="f" for="hl-hike">Salary rise a year (%)</label><input class="inp num" id="hl-hike" inputmode="decimal" value="${h.hike}"></div><div><label class="f" for="hl-foir">EMI limit (% of pay)</label><input class="inp num" id="hl-foir" inputmode="numeric" value="${h.foir}"></div></div>
+      <button class="primary" id="hl-save">Save</button></section>`;
+}
+function bindHomeLoan() { const $ = id => document.getElementById(id); if (!$('hl-save')) return;
+  $('hl-save').onclick = async () => { const v = id => Number(String($(id).value).replace(/[,₹\s]/g, '')) || 0;
+    const home = Object.assign(homeGet(), { price: v('hl-price'), year: Math.round(v('hl-year')) || 2031, rate: v('hl-rate') || 8.5, years: Math.round(v('hl-years')) || 20, hike: v('hl-hike'), foir: v('hl-foir') || 40 });
+    const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { home }); render();
+    try { await saveDoc('profile', 'Home loan plan'); toast('Saved'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } }; }
