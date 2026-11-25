@@ -1244,7 +1244,8 @@ function invHoldings() {
     const f = fifo[h.name.toLowerCase()];         // cost of the units you still hold (FIFO, like Groww) – profit from earlier sales isn't counted again
     if (f && Math.abs(f.units - h.units) <= Math.max(0.01, h.units * 0.001)) { h.avgInvested = h.invested; h.invested = f.cost; }
     const fx = fixedCode(h.name); if (fx && fx !== h.code) { h.codeWas = h.code; h.code = fx; }
-    const p = priceOf(h.code);
+    let p = priceOf(h.code); const cpu = h.units > 0 && h.invested > 0 ? h.invested / h.units : 0;
+    if (p && cpu && (p.price / cpu > 25 || p.price / cpu < 1 / 50) && !/^\d+$/.test(h.code)) { h.priceOdd = p.price; p = null; }   // price from the wrong company (e.g. a suspended stock's quote page)
     h.price = p ? p.price : null; h.priceDate = p ? p.date : '';
     h.value = p && h.units > 0 ? h.units * p.price : (h.pending ? Math.max(0, h.invested) : h.xlValue);
     h.gain = h.value - h.invested;
