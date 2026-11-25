@@ -4685,7 +4685,7 @@ function viewMoneyPlan0() {
     <section class="sec box"><div class="sec-h"><h3>Savings</h3><button data-gotab="sips">SIPs</button></div>
       ${line('🔁', 'Mutual fund SIPs', sipTot, mfDone, 'from your buys this month', true)}
       ${ppf ? line('🏛', 'PPF (deposit by the 5th)', ppf, ppfSt.some(x => x.st.s === 'paid') ? ppf : 0, ppfSt[0] ? esc(ppfSt[0].st.txt) : '', true) : ''}
-      ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">wife ₹15,000 + your ₹10,000 from bonus / class money</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
+      ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">into the joint account – your wife’s money, not from your pay</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
       <div class="kv"><span>All savings from your banks this month</span><b class="num ${s.saved >= sv ? 'good' : ''}">${inr(s.saved)} <span class="small muted">of ${inr(sv)}</span></b></div>
       ${s.stocks ? `<p class="small muted" style="margin:6px 0 0">Includes ${inr(s.stocks)} of single stocks – not part of the SIP plan.</p>` : ''}</section>
     ${asideNote(ym)}
