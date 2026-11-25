@@ -331,8 +331,8 @@ async function flushOutbox() {
 }
 
 /* ---------------- render ---------------- */
-const TITLES = { wallet: 'Wallet Score & life stage', yearplan: 'Year money plan', hike: 'Hike splitter', stockwatch: 'Stock watch', rules: 'Money rules', crash: 'Market crash test', milestones: 'Net-worth milestones', lockins: 'When your money is free', ask: 'Ask your money', balance: 'Bank balance ahead', whyover: 'Why over the limit?', alertset: 'Phone alerts', sinking: 'Sinking funds', moneydate: 'Monthly money date', nosalary: 'If salary stops', creep: 'Spending creep', wrapped: 'Money Wrapped', extrapat: 'Bonus & class pattern', rentplan: 'Rent planner', warranty: 'Warranty vault', paycal: 'Bill-pay calendar', dips: 'Price-drop watch', jars: 'Money jars', homeloan: 'Home loan readiness', car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Net worth', salary: 'Salary', money: 'Money', invest: 'Investments', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
-const NAV_OF = { wallet: 'home', yearplan: 'home', hike: 'future', stockwatch: 'invest', rules: 'home', crash: 'worth', milestones: 'worth', lockins: 'worth', ask: 'home', balance: 'money', whyover: 'money', alertset: 'home', sinking: 'future', moneydate: 'home', nosalary: 'future', creep: 'money', wrapped: 'home', extrapat: 'money', rentplan: 'money', warranty: 'future', paycal: 'money', dips: 'invest', jars: 'future', homeloan: 'future', car: 'future', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'home', credit: 'future', yearend: 'home', moneyin: 'money', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'future', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'future', report: 'home', coaching: 'home', lockset: 'home', recat: 'money', loans: 'money', cover: 'future', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'future', documents: 'future', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
+const TITLES = { income: 'Income wallet', wallet: 'Wallet Score & life stage', yearplan: 'Year money plan', hike: 'Hike splitter', stockwatch: 'Stock watch', rules: 'Money rules', crash: 'Market crash test', milestones: 'Net-worth milestones', lockins: 'When your money is free', ask: 'Ask your money', balance: 'Bank balance ahead', whyover: 'Why over the limit?', alertset: 'Phone alerts', sinking: 'Sinking funds', moneydate: 'Monthly money date', nosalary: 'If salary stops', creep: 'Spending creep', wrapped: 'Money Wrapped', extrapat: 'Bonus & class pattern', rentplan: 'Rent planner', warranty: 'Warranty vault', paycal: 'Bill-pay calendar', dips: 'Price-drop watch', jars: 'Money jars', homeloan: 'Home loan readiness', car: 'Car planner', whatif: 'What if…', fundrev: 'Fund review', health: 'Money health score', famtx: 'Family money', earned: 'Salary to date', credit: 'Credit score', yearend: 'Year-end checklist', moneyin: 'Money in', mplan: 'Money plan', subplan: 'Subscription plan', inputs: 'Excel inputs', tidy: 'Tidy category rules', lic: 'Is LIC worth it?', subcheck: 'Subscriptions', newpay: 'Sort UPI', spends: 'Top payees', afford: 'Can I afford it?', rent: 'Rent receipts', routine: 'Monthly routine', home: 'MyMoney', worth: 'Wealth', salary: 'Salary', money: 'Expenses', invest: 'Investment', tx: 'All transactions', add: 'Add transaction', budget: 'Net-pay plan', future: 'Retirement', trade: 'Add buy / sell', pfedit: 'Update PF / PPF', sips: 'SIPs', bills: 'Bills', goals: 'Goals', tax: 'Tax & 80C', report: 'Monthly report', coaching: 'Coaching earnings', import: 'Import holdings', lockset: 'Lock, look and this phone', recat: 'Change category', loans: 'Loans', cover: 'Insurance', review: 'Monthly review', sort: 'Sort UPI', shared: 'Shared expenses', year: 'Year in review', family: 'Family view', sheets: 'Excel sheets', subs: 'Subscriptions', nospend: 'No-spend days', habits: 'Price of habits', cards: 'Card offers', dupes: 'Possible duplicates', check: 'Data health check', homeedit: 'Customise Home', gains: 'Capital gains', overlap: 'Fund overlap', divs: 'Dividends', restore: 'Backups', ccards: 'Credit cards', holdings: 'Funds and stocks', pcode: 'Change price code', coverage: 'Statements and payslips', mix: 'Rebalance', alerts: 'Price alerts', others: 'FD / NPS / SGB', regime: 'Tax regime & advance tax', emergency: 'Emergency info', documents: 'Documents', glance: 'At a glance', tools: 'All tools', telegram: 'Telegram summaries', settings: 'Settings', more: 'More', sheet: 'Sheet' };
+const NAV_OF = { future: 'worth', salary: 'income', wallet: 'home', wallet: 'home', yearplan: 'home', hike: 'income', stockwatch: 'invest', rules: 'home', crash: 'worth', milestones: 'worth', lockins: 'worth', ask: 'home', balance: 'money', whyover: 'money', alertset: 'home', sinking: 'worth', moneydate: 'home', nosalary: 'income', creep: 'money', wrapped: 'home', extrapat: 'income', rentplan: 'money', warranty: 'worth', paycal: 'money', dips: 'invest', jars: 'worth', homeloan: 'worth', car: 'worth', whatif: 'home', fundrev: 'invest', health: 'home', famtx: 'money', earned: 'income', credit: 'worth', yearend: 'home', moneyin: 'income', mplan: 'money', subplan: 'money', inputs: 'home', tidy: 'home', lic: 'worth', subcheck: 'money', newpay: 'money', spends: 'money', afford: 'money', rent: 'invest', routine: 'home', trade: 'invest', gains: 'invest', overlap: 'invest', divs: 'invest', restore: 'home', homeedit: 'home', ccards: 'money', holdings: 'invest', pcode: 'invest', pfedit: 'invest', sips: 'invest', tax: 'invest', import: 'invest', bills: 'money', goals: 'worth', report: 'home', coaching: 'income', lockset: 'home', recat: 'money', loans: 'money', cover: 'worth', review: 'money', sort: 'money', shared: 'money', year: 'home', family: 'home', sheets: 'home', subs: 'money', nospend: 'money', habits: 'money', cards: 'money', dupes: 'money', check: 'home', coverage: 'home', mix: 'invest', alerts: 'invest', others: 'invest', regime: 'invest', emergency: 'worth', documents: 'worth', glance: 'home', tools: 'home', telegram: 'home', tx: 'money', budget: 'money', add: 'money', sheet: 'home', more: 'home', settings: 'home' };
 function render() {
   const v = document.getElementById('view');
   const t = document.getElementById('screen-title'), av = document.getElementById('avatar');
@@ -343,7 +343,7 @@ function render() {
     av.hidden = false; av.textContent = nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   } else { t.textContent = state.tab === 'sheet' ? state.sheet : TITLES[state.tab]; av.hidden = true; }
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === (NAV_OF[state.tab] || state.tab)));
-  document.querySelectorAll('.tab[data-tab]').forEach(b => { b.hidden = isViewer() && !famAllowed().includes(b.dataset.tab); });
+  document.querySelectorAll('.tab[data-tab]').forEach(b => { const al = famAllowed(), t = b.dataset.tab; b.hidden = isViewer() && !(al.includes(t) || (t === 'worth' && al.includes('future')) || (t === 'income' && al.includes('salary'))); });
   if (state.lastTab !== state.tab) { if (!state.goingBack && !MAIN_TABS.includes(state.tab)) state.stack.push(state.lastTab); if (MAIN_TABS.includes(state.tab)) state.stack = []; state.stack = state.stack.slice(-20); state.lastTab = state.tab; }
   state.goingBack = false;
   const bb = document.getElementById('btn-back'); if (bb) bb.hidden = MAIN_TABS.includes(state.tab) || state.tab === 'settings' && !state.cfg;
@@ -359,9 +359,9 @@ function render() {
   document.body.classList.toggle('viewer', isViewer());
   if (isViewer() && !viewerMay(state.tab)) state.tab = famAllowed()[0] || 'home';
   document.body.dataset.tab = state.tab;
-  const views = { wallet: viewWallet, yearplan: viewYearPlan, hike: viewHike, stockwatch: viewStockWatch, rules: viewRules, crash: viewCrash, milestones: viewMilestones, lockins: viewLockins, ask: viewAsk, balance: viewBalance, whyover: viewWhyOver, alertset: viewAlertSet, sinking: viewSinking, moneydate: viewMoneyDate, nosalary: viewNoSalary, creep: viewCreep, wrapped: viewWrapped, extrapat: viewExtraPat, rentplan: viewRentPlan, warranty: viewWarranty, paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
+  const views = { income: viewIncome, wallet: viewWallet, yearplan: viewYearPlan, hike: viewHike, stockwatch: viewStockWatch, rules: viewRules, crash: viewCrash, milestones: viewMilestones, lockins: viewLockins, ask: viewAsk, balance: viewBalance, whyover: viewWhyOver, alertset: viewAlertSet, sinking: viewSinking, moneydate: viewMoneyDate, nosalary: viewNoSalary, creep: viewCreep, wrapped: viewWrapped, extrapat: viewExtraPat, rentplan: viewRentPlan, warranty: viewWarranty, paycal: viewPayCal, dips: viewDips, jars: viewJars, homeloan: viewHomeLoan, car: viewCar, whatif: viewWhatIf, fundrev: viewFundRev, health: viewHealth, famtx: viewFamTx, earned: viewEarned, credit: viewCredit, yearend: viewYearEnd, moneyin: viewMoneyIn, mplan: viewMoneyPlan, subplan: () => viewDocKind('subplan'), inputs: viewInputs, tidy: viewTidy, lic: viewLic, subcheck: viewSubsAll, newpay: viewSort, spends: viewSpends, afford: viewAfford, rent: viewRent, routine: viewRoutine, home: viewHome, worth: viewWorth, salary: viewSalary, money: viewMoney, invest: viewInvest, tx: viewTx, add: viewAdd, budget: viewBudget, future: viewFuture, more: viewMore, sheet: viewSheet, trade: viewTrade, pfedit: viewPfEdit, sips: viewSips, bills: viewBills, goals: viewGoals, tax: viewTax, report: viewReport, coaching: viewCoaching, import: viewImport, lockset: viewLockSettings, recat: viewRecat, loans: viewLoans, cover: viewCover, review: viewReview, sort: viewSort, shared: viewShared, year: viewYear, family: viewFamily, sheets: viewSheetsList, subs: viewSubsAll, nospend: viewNoSpend, habits: viewHabits, cards: () => viewDocKind('cards'), dupes: viewDupes, check: viewCheck, homeedit: viewHomeEdit, gains: viewGains, overlap: viewOverlap, divs: viewDivs, restore: viewRestore, ccards: viewCards, holdings: viewHoldings, pcode: viewPcode, coverage: viewCoverage,
     mix: viewMix, alerts: () => viewLongTerm() + viewDocKind('alerts'), others: () => viewInvestFds() + viewDocKind('others'), regime: viewRegime, emergency: viewEmergency, documents: () => viewDocKind('documents'), glance: viewGlance, tools: viewTools, telegram: viewTelegram };
-  v.innerHTML = helpPanel() + (state.tab === 'home' ? staleBanner() : '') + subnav() + chartBlock(state.tab) + views[state.tab]();
+  v.innerHTML = helpPanel() + (state.tab === 'home' ? staleBanner() : '') + subnav() + (WALLET_KEY[state.tab] ? walletHeader(state.tab) : '') + chartBlock(state.tab) + (state.tab === 'home' && !isViewer() ? (() => { try { return homeWalletGrid(); } catch (e) { return ''; } })() : '') + views[state.tab]();
   { const hb = document.getElementById('btn-help'); if (hb) { hb.hidden = !HELP[state.tab]; hb.classList.toggle('on', !!state.helpOpen); } }
   if (state.tab === 'more' || state.tab === 'sheet' || state.tab === 'sheets') bindSheets();
   if (state.tab === 'tx') bindTx();
@@ -468,11 +468,12 @@ function render() {
 }
 
 /* ---------------- easier navigation: sub-tabs, shortcuts, back ---------------- */
-const MAIN_TABS = ['home', 'worth', 'salary', 'money', 'invest', 'future'];
+const MAIN_TABS = ['home', 'income', 'money', 'invest', 'worth'];
 const SUBNAV = {
-  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['moneyin', 'Money in'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
-  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS / SGB'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', 'Tax & 80C'], ['regime', 'Tax regime'], ['rent', 'Rent'], ['import', 'Import']],
-  future: [['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['credit', 'Credit score'], ['emergency', 'Emergency info'], ['documents', 'Documents']],
+  income: [['income', 'Overview'], ['salary', 'Salary'], ['moneyin', 'Money in'], ['earned', 'Salary to date'], ['coaching', 'Coaching'], ['extrapat', 'Bonus pattern'], ['hike', 'Hike splitter'], ['nosalary', 'If salary stops']],
+  money: [['money', 'Spending'], ['mplan', 'Money plan'], ['whyover', 'Why over'], ['balance', 'Balance ahead'], ['tx', 'Transactions'], ['spends', 'Top payees'], ['bills', 'Bills'], ['subcheck', 'Subscriptions'], ['nospend', 'No-spend'], ['shared', 'Shared'], ['sort', 'Sort UPI'], ['loans', 'Loans'], ['ccards', 'Credit cards'], ['budget', 'Plan'], ['add', '＋ Add']],
+  invest: [['invest', 'Overview'], ['holdings', 'Holdings'], ['stockwatch', 'Stock watch'], ['sips', 'SIPs'], ['trade', 'Buy / sell'], ['pfedit', 'PF / PPF'], ['others', 'FD / NPS / SGB'], ['mix', 'Rebalance'], ['alerts', 'Alerts'], ['gains', 'Gains'], ['overlap', 'Overlap'], ['divs', 'Dividends'], ['tax', 'Tax & 80C'], ['regime', 'Tax regime'], ['rent', 'Rent'], ['import', 'Import']],
+  worth: [['worth', 'Net worth'], ['future', 'Retirement'], ['goals', 'Goals'], ['cover', 'Insurance'], ['lockins', 'Lock-ins'], ['milestones', 'Milestones'], ['jars', 'Jars'], ['credit', 'Credit score'], ['emergency', 'Emergency info'], ['documents', 'Documents']],
 };
 const VIEW_SUBS = new Set(['coverage', 'sheets', 'glance', 'emergency', 'documents', 'others', 'subs', 'nospend', 'check', 'tx', 'bills', 'loans', 'sips', 'tax', 'review', 'year', 'goals', 'cover', 'shared', 'report', 'family', 'more', 'lockset', 'settings', 'sheet']);
 function viewerMay(t) { const a = famAllowed(); return a.includes(t) || (VIEW_SUBS.has(t) && (a.includes(groupOf(t)) || ['family', 'lockset', 'settings', 'more'].includes(t))); }
@@ -6535,7 +6536,7 @@ function cRadar(parts) {
   const grid = [0.33, 0.66, 1].map(f => `<polygon points="${parts.map((_, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-opacity=".15"/>`).join('');
   const shape = `<polygon points="${parts.map((q, i) => pt(i, Math.max(0.04, q[1])).map(v => v.toFixed(1)).join(',')).join(' ')}" fill="var(--blue1)" fill-opacity=".35" stroke="var(--blue1)" stroke-width="1.5"/>`;
   const lab = parts.map((q, i) => { const [x, y] = pt(i, 1.28); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="currentColor">${esc(q[0])}</text>`; }).join('');
-  return `<svg viewBox="-12 -6 144 132" width="100%" style="max-width:300px;display:block;margin:auto">${grid}${shape}${lab}</svg>`;
+  return `<svg viewBox="-34 -6 188 132" width="100%" style="max-width:340px;display:block;margin:auto">${grid}${shape}${lab}</svg>`;
 }
 function cJar(pct, label) {
   const p = Math.max(0, Math.min(1, pct)), top = 18, bot = 96, h = (bot - top) * p, col = p >= 1 ? 'var(--good)' : 'var(--blue1)';
@@ -7353,7 +7354,6 @@ function walletData() {
   const total = Math.round(pillars.reduce((x, p) => x + p.score, 0) / 4);
   return { m, pillars, total, net, inc1, exp3, sip, emi, efMo, M3, classes };
 }
-function walletBand(s) { return s >= 75 ? ['good', 'Wealth Builder'] : s >= 60 ? ['', 'Steady'] : ['warn', 'Needs attention']; }
 /* 50/30/20: needs / wants / card bills (a mix) / saved, as a share of take-home, last 3 full months */
 function needsWants() {
   const M3 = lastFullMonths(3), a = t => Math.abs(n(t.Amount) || 0), net = M3.reduce((x, m) => { const v = netPay(m); return x + (isFinite(v) ? v : 0); }, 0) / 3 || netPay();
@@ -7372,35 +7372,128 @@ const STAGES = {
   preret: ['Pre-retirement', 'Accelerate', s => [['Retirement corpus 30–40× yearly expenses', null], ['Plan withdrawals under 4% a year', null], ['Shift towards safer funds each year', null]]],
   retired: ['Retirement', 'Sustain', s => [['Withdraw under 4% of the corpus a year', null], ['Keep 2–3 years of expenses in safe funds', null]]],
 };
+document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-stage]'); if (!b) return; e.preventDefault();
+  state.docs.profile = Object.assign({}, state.docs.profile || {}, { lifeStage: b.dataset.stage }); render();
+  try { await saveDoc('profile', 'Life stage'); } catch (er) { toast('Couldn’t save to GitHub – try again'); } });
+
+/* ======================================================================
+   Four wallets + 6-part Wallet Score (INDwallet model)
+   Income 15% · Expenses 18% · Liquidity 18% · Investment 18% · Wealth 16% · Protection 15%
+   Bands: under 35 urgent · 35–49 below average · 50–64 moderate · 65–79 good · 80+ excellent
+   ====================================================================== */
+const W6 = [['income', 'Income', 15, '💼'], ['expenses', 'Expenses', 18, '🧾'], ['liquidity', 'Liquidity', 18, '🛟'], ['investment', 'Investment', 18, '📈'], ['wealth', 'Wealth', 16, '🏦'], ['protection', 'Protection', 15, '🛡']];
+const CITY_HEALTH = { metro: 1000000, tier1: 1000000, tier2: 500000, rural: 500000 };
+function score6() {
+  if (!state.data) return null;
+  const W = walletData(), NW = needsWants(), k = kpis(), sr = n(k.savings_rate) || 0, net = W.net || 1, annual = net * 12, cap = v => Math.max(0, Math.min(100, Math.round(v))), avg = l => Math.round(l.reduce((a, x) => a + x, 0) / l.length);
+  const p = state.docs.profile || {}, xc = excelCover(), life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0, tier = p.cityTier || 'tier1', hBench = CITY_HEALTH[tier] || 1000000;
+  const age = Number(retireInputs().x.age) || 31, retire = Number(retireInputs().x.retire) || 60, nw = worthNow().net, nwBench = annual * age / 10;
+  const ess = NW.need / (NW.net || 1), wants = NW.want / (NW.net || 1);
+  const flagged = stockFlags().filter(x => x.why.length).reduce((a, x) => a + (Number(x.h.value) || 0), 0), invTot = invHoldings().filter(h => h.units > 1e-6).reduce((a, h) => a + (Number(h.value) || 0), 0), riskShare = invTot ? flagged / invTot : 0;
+  const parts = {
+    income: { score: avg([W.m.stability.score, W.m.streams.score]), facts: [`Salary ${Math.round(W.m.stability.v * 100)}% of income (≥ 80%)`, `${W.m.streams.v} income streams (≥ 2)`],
+      act: W.m.stability.v < 0.8 ? 'Salary is under 80% of income – fine while side income is steady; don’t plan fixed costs on it.' : W.m.streams.v < 2 ? 'Add a second income stream – classes, freelance or rent.' : 'Keep side income going and save most of it.' },
+    expenses: { score: avg([cap(ess <= 0.5 ? 100 : (1 - ess) / 0.5 * 100), cap(wants <= 0.3 ? 100 : (0.6 - wants) / 0.3 * 100), W.m.adherence.score]), facts: [`Needs ${Math.round(ess * 100)}% of take-home (≤ 50%)`, `Wants ${Math.round(wants * 100)}% (≤ 30%)`, `${W.m.adherence.v} of 6 months within the limit`],
+      act: ess > 0.5 ? 'Keep essentials under 50% – card bills and EMIs are the big ones.' : wants > 0.3 ? 'Wants are over 30% – trim food online, shopping and Paytm.' : 'Stay within the monthly limit.' },
+    liquidity: { score: W.m.ef.score, facts: [`Emergency fund ${W.efMo.toFixed(1)} months (6 = full marks)`], act: W.efMo < 6 ? `Build the emergency fund to 6 months – ${inr(Math.max(0, (num(efPlanGet().base) || W.exp3) * 6 - (W.efMo * (num(efPlanGet().base) || W.exp3))))} to go.` : 'Emergency fund is full – invest the extra.' },
+    investment: { score: avg([W.m.sip.score, W.m.classes.score, cap(100 - riskShare * 500)]), facts: [`SIPs + PPF ${Math.round(W.m.sip.v * 100)}% of take-home (20–30%)`, `${W.m.classes.v} of 4 asset classes`, `${Math.round(riskShare * 100)}% in flagged stocks`],
+      act: riskShare > 0.05 ? 'Exit the flagged stocks and move the money into your SIP funds.' : W.m.classes.v < 4 ? `Add ${Object.entries(W.classes).filter(([, v]) => !v).map(([k2]) => k2).join(' / ')} – e.g. a small gold fund or SGB.` : 'Step SIPs up 10% every April.' },
+    wealth: { score: avg([cap(sr / 0.2 * 100), W.m.debt.score, cap(nw / (nwBench || 1) * 100)]), facts: [`Savings rate ${Math.round(sr * 100)}% (≥ 20%)`, `EMIs ${Math.round(W.m.debt.v * 100)}% of take-home (< 30%)`, `Net worth ${inr(nw)} vs ${inr(nwBench)} benchmark (age × yearly income ÷ 10)`],
+      act: sr < 0.2 ? 'Raise the savings rate to 20% – save bonuses and class money, not just salary.' : 'Keep the savings rate up as income grows.' },
+    protection: { score: avg([cap(life / (annual * 10 || 1) * 100), cap(health / hBench * 100)]), facts: [`Life cover ${inr(life)} (10× yearly income = ${inr(annual * 10)})`, `Health cover ${inr(health)} (${inr(hBench)} for your city)`],
+      act: life < annual * 10 ? 'Add term cover (and critical-illness cover).' : health < hBench ? 'Raise health cover – a super top-up is cheap.' : 'Review cover once a year and when life changes.' },
+  };
+  const total = Math.round(W6.reduce((a, [key, , w]) => a + parts[key].score * w, 0) / 100);
+  const wallets = { income: parts.income.score, expenses: parts.expenses.score, investment: parts.investment.score, wealth: Math.round((parts.liquidity.score * 18 + parts.wealth.score * 16 + parts.protection.score * 15) / 49) };
+  const wl = Object.entries(wallets).sort((a, b) => b[1] - a[1]);
+  const badges = [[sr >= 0.3, '💰 Super saver'], [W.m.sip.v >= 0.2, '🔁 SIP champion'], [W.m.debt.v < 0.1, '🪶 Debt light'], [W.efMo >= 6, '🛟 Safety net'], [life >= annual * 10 && health >= hBench, '🛡 Fully covered'], [W.m.classes.v >= 4, '🧺 Diversified'], [W.m.streams.v >= 2, '🎓 Side earner']].filter(b => b[0]).map(b => b[1]);
+  return { parts, total, wallets, dominant: wl[0][0], weakest: wl[wl.length - 1][0], badges, years: Math.max(0, retire - age), age, retire, tier, W };
+}
+function band6(s) { return s >= 80 ? ['good', 'Excellent'] : s >= 65 ? ['good', 'Good'] : s >= 50 ? ['', 'Moderate'] : s >= 35 ? ['warn', 'Below average'] : ['bad', 'Needs urgent attention']; }
+const WALLET_NAME = { income: 'Income', expenses: 'Expenses', investment: 'Investment', wealth: 'Wealth' };
+function persona6(S) {
+  if (S.total >= 80) return ['🏛', 'Wealth Architect', 'Every wallet is strong – protect what you’ve built and keep compounding.'];
+  if (S.total < 35) return ['🌱', 'Fresh Starter', 'Start with the basics: a small emergency fund, a spending limit you keep, one SIP.'];
+  if (S.total < 50) return ['🔧', 'Rebuilder', `Your ${WALLET_NAME[S.weakest]} wallet is holding you back – fix that one first.`];
+  return ({ investment: ['🚀', 'Growth Builder', 'You invest well; now make the other wallets as strong.'], income: ['💼', 'Strong Earner', 'Good income – the next step is keeping more of it.'],
+    wealth: ['🛡', 'Safety-First Saver', 'Well protected – put more to work in investments.'], expenses: ['🧭', 'Careful Planner', 'Spending is in control – grow income and investments.'] })[S.dominant];
+}
 function viewWallet() {
   if (!state.data) return '<div class="empty">Sync Excel first.</div>';
-  const W = walletData(), B = walletBand(W.total), NW = needsWants(), k = kpis(), sr = Math.round((n(k.savings_rate) || 0) * 100), xc = excelCover();
+  const S = score6(), B = band6(S.total), P = persona6(S), NW = needsWants(), k = kpis(), sr = Math.round((n(k.savings_rate) || 0) * 100), xc = excelCover(), W = S.W;
   const stage = (state.docs.profile || {}).lifeStage || 'professional', [stName, stTag, stRules] = STAGES[stage];
   const edu = (state.docs.goals || []).filter(g => /educat|school|college|child/i.test(g.name || '')).reduce((x, g) => x + (Number(g.monthly) || 0), 0);
-  const S = { sr, debt: W.emi / (W.net || 1), sipR: W.sip / (W.net || 1), sip: W.sip, efMo: W.efMo, life: Number((state.docs.profile || {}).lifeCover) || (xc && xc.life) || 0, yearly: (W.net || 0) * 12, nw: NW, eduSip: edu, net: W.net || 1 };
+  const St = { sr, debt: W.emi / (W.net || 1), sipR: W.sip / (W.net || 1), sip: W.sip, efMo: W.efMo, life: Number((state.docs.profile || {}).lifeCover) || (xc && xc.life) || 0, yearly: (W.net || 0) * 12, nw: NW, eduSip: edu, net: W.net || 1 };
   const srBand = sr >= 50 ? ['good', 'exceptional'] : sr >= 30 ? ['good', 'strong'] : sr >= 20 ? ['', 'workable'] : ['bad', 'urgent'];
-  const pct = v => Math.round(v / (NW.net || 1) * 100);
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">Wallet Score</p><h2 class="hero-v num ${B[0]}">${W.total}<span class="small">/100</span></h2>
-      <p class="hero-s" style="margin:0">${B[1]} · 75+ is a Wealth Builder · keep every pillar above 70</p></section>
-    <section class="sec box">${cRadar(W.pillars.map(p => [`${p.nm} ${p.score}`, p.score / 100]))}
-      ${W.pillars.map(p => `<div class="sec-h" style="margin-top:10px"><h3>${p.nm}</h3><b class="num ${p.score >= 70 ? 'good' : p.score >= 50 ? 'warn' : 'bad'}">${p.score}</b></div>
-        ${p.ks.map(key => { const x = W.m[key]; return `<div class="kv"><span class="small">${esc(x.lab)}<br><span class="muted">target ${esc(x.want)}</span></span><span class="num small ${x.score >= 70 ? 'good' : x.score >= 40 ? 'warn' : 'bad'}">${esc(x.fmt(x.v))}</span></div>`; }).join('')}`).join('')}</section>
+  const pct = v => Math.round(v / (NW.net || 1) * 100), col = s => s >= 65 ? 'good' : s >= 50 ? '' : s >= 35 ? 'warn' : 'bad';
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Wallet Score</p><h2 class="hero-v num ${B[0]}">${S.total}<span class="small">/100</span></h2>
+      <p class="hero-s" style="margin:0">${B[1]} · bands: under 35 urgent · 35–49 below average · 50–64 moderate · 65–79 good · 80+ excellent</p></section>
+    <section class="sec box"><div class="sec-h"><h3>${P[0]} ${esc(P[1])}</h3></div><p class="small" style="margin:0 0 6px">${esc(P[2])}</p>
+      ${S.badges.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${S.badges.map(b => `<span class="small" style="border:1px solid var(--line,#d9e2ee);border-radius:12px;padding:2px 8px">${b}</span>`).join('')}</div>` : '<p class="small muted" style="margin:0">No badges yet – they come with a 30% savings rate, SIPs at 20%+, a full emergency fund, full cover…</p>'}
+      <div class="kv" style="margin-top:6px"><span class="small">Strongest wallet</span><b class="small">${esc(WALLET_NAME[S.dominant])} (${S.wallets[S.dominant]})</b></div>
+      <div class="kv"><span class="small">Weakest wallet</span><b class="small bad">${esc(WALLET_NAME[S.weakest])} (${S.wallets[S.weakest]})</b></div>
+      <div class="kv"><span class="small">Years of compounding ahead</span><b class="small">${S.years} (age ${S.age} → ${S.retire})</b></div></section>
+    <section class="sec box"><div class="sec-h"><h3>Six parts</h3><span class="small muted">weight</span></div>${cRadar(W6.map(([key, nm]) => [`${nm} ${S.parts[key].score}`, S.parts[key].score / 100]))}
+      ${W6.map(([key, nm, w, ic]) => { const x = S.parts[key]; return `<div style="margin:10px 0 2px"><div class="kv" style="margin:0"><span>${ic} <b>${nm}</b> <span class="small muted">${w}%</span></span><b class="num ${col(x.score)}">${x.score}</b></div>
+        <div class="meter thin"><i style="width:${x.score}%"></i></div>${x.facts.map(f => `<p class="small muted" style="margin:2px 0 0">· ${esc(f)}</p>`).join('')}<p class="small" style="margin:2px 0 0">→ ${esc(x.act)}</p></div>`; }).join('')}
+      <label class="small" style="display:block;margin-top:10px">Your city (sets the health-cover benchmark): <select id="w-tier">${[['metro', 'Metro'], ['tier1', 'Tier-1'], ['tier2', 'Tier-2'], ['rural', 'Rural']].map(([v, l]) => `<option value="${v}" ${S.tier === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></section>
     <section class="sec box"><div class="sec-h"><h3>50 / 30 / 20 – last 3 months</h3><span class="small muted">of take-home ${inr(NW.net)}</span></div>
       ${cStack([['Needs', NW.need, 'var(--blue1)'], ['Wants', NW.want, 'var(--warn)'], ['Card bills (mix)', NW.mixed, '#8a6fd1'], ['Saved', NW.saved, 'var(--good)']])}
       <div class="kv"><span>Needs – rent, bills, EMI, insurance, groceries, family<br><span class="small muted">rule ≤ 50%</span></span><span class="num ${pct(NW.need) <= 50 ? 'good' : 'bad'}">${pct(NW.need)}% · ${inr(NW.need)}</span></div>
       <div class="kv"><span>Wants – food online, shopping, Paytm, subscriptions, friends<br><span class="small muted">rule ≤ 30%</span></span><span class="num ${pct(NW.want) <= 30 ? 'good' : 'bad'}">${pct(NW.want)}% · ${inr(NW.want)}</span></div>
       <div class="kv"><span>Card bills – needs and wants mixed<br><span class="small muted">log swipes to split them</span></span><span class="num">${pct(NW.mixed)}% · ${inr(NW.mixed)}</span></div>
       <div class="kv"><span>Saved and invested<br><span class="small muted">rule ≥ 20%</span></span><span class="num ${pct(NW.saved) >= 20 ? 'good' : 'bad'}">${pct(NW.saved)}% · ${inr(NW.saved)}</span></div>
-      <p class="small muted" style="margin:6px 0 0">${NW.one ? `One-off payments (${inr(NW.one)} a month on average, e.g. loan prepayments) are left out. ` : ''}Over 100% in total means part of the month was paid from bonus, class money or savings, not salary.</p></section>
+      <p class="small muted" style="margin:6px 0 0">${NW.one ? `One-off payments (${inr(NW.one)} a month on average) are left out. ` : ''}Over 100% in total means part of the month was paid from bonus, class money or savings.</p></section>
     <section class="sec box"><div class="sec-h"><h3>Your life stage</h3></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${Object.entries(STAGES).map(([key, v]) => `<button class="chip" data-stage="${key}" style="font-size:12px;padding:4px 10px;border-radius:14px;border:1px solid ${key === stage ? 'var(--blue1)' : 'var(--line,#d9e2ee)'};background:${key === stage ? 'var(--blue1)' : 'none'};color:${key === stage ? '#fff' : 'inherit'}">${v[0]}</button>`).join('')}</div>
-      <p class="small" style="margin:0 0 6px"><b>${esc(stName)} – ${esc(stTag)}.</b> Savings rate this year <b class="${srBand[0]}">${sr}% (${srBand[1]})</b> · bands: under 20% urgent, 20–30% workable, 30%+ strong, 50%+ exceptional.</p>
-      ${stRules(S).map(([t, ok]) => `<div class="kv"><span class="small">${ok === true ? '<b class="good">✓</b>' : ok === false ? '<b class="bad">✗</b>' : '○'} ${esc(t)}</span></div>`).join('')}
-      <p class="small muted" style="margin:8px 0 0">Benchmarks from INDwallet’s LifeStages and Wallet Score guides. ○ = check it yourself. Rules of thumb, not advice.</p></section>`;
+      <p class="small" style="margin:0 0 6px"><b>${esc(stName)} – ${esc(stTag)}.</b> Savings rate this year <b class="${srBand[0]}">${sr}% (${srBand[1]})</b> · under 20% urgent, 20–30% workable, 30%+ strong, 50%+ exceptional.</p>
+      ${stRules(St).map(([t, ok]) => `<div class="kv"><span class="small">${ok === true ? '<b class="good">✓</b>' : ok === false ? '<b class="bad">✗</b>' : '○'} ${esc(t)}</span></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">Model and benchmarks from INDwallet’s Wallet Score and LifeStages guides. ○ = check it yourself. An educational benchmark, not a credit score or advice.</p></section>`;
 }
-document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-stage]'); if (!b) return; e.preventDefault();
-  state.docs.profile = Object.assign({}, state.docs.profile || {}, { lifeStage: b.dataset.stage }); render();
-  try { await saveDoc('profile', 'Life stage'); } catch (er) { toast('Couldn’t save to GitHub – try again'); } });
+document.addEventListener('change', async e => { if (!e.target || e.target.id !== 'w-tier') return;
+  state.docs.profile = Object.assign({}, state.docs.profile || {}, { cityTier: e.target.value }); render();
+  try { await saveDoc('profile', 'City tier'); } catch (er) { toast('Couldn’t save to GitHub – try again'); } });
+
+/* the four wallets: Home grid, and a header on each wallet's main screen */
+function walletFigures() {
+  const S = score6(); if (!S) return null; const w = worthNow(), hv = key => (w.have.find(r => r.k === key) || {}).v || 0, net = netPay(), ym = budgetYm(), lim = spendLimit(net, activePlan()), sp = budgetSpent(ym);
+  const inv = invHoldings().filter(h => h.units > 1e-6), iv = inv.reduce((a, h) => a + (Number(h.value) || 0), 0), ii = inv.reduce((a, h) => a + (Number(h.invested) || 0), 0);
+  return { S, rows: [
+    ['income', '💼', 'Income', 'money in', inr(net), 'take-home a month'],
+    ['money', '🧾', 'Expenses', 'money out', inr(sp), isFinite(lim) ? `of ${inr(lim)} limit` : 'this month'],
+    ['invest', '📈', 'Investment', 'money growing', inr(iv + hv('ppf') + hv('epf')), `${iv - ii >= 0 ? '+' : '−'}${inr(Math.abs(iv - ii))} on funds & stocks`],
+    ['worth', '🏦', 'Wealth', 'money protected', inr(w.net), 'net worth']] };
+}
+const WALLET_KEY = { income: 'income', money: 'expenses', invest: 'investment', worth: 'wealth' };
+function homeWalletGrid() {
+  const F = walletFigures(); if (!F) return ''; const col = s => s >= 65 ? 'good' : s >= 50 ? '' : s >= 35 ? 'warn' : 'bad';
+  return `<section class="sec"><div class="sec-h"><h3>Your four wallets</h3><button class="linkbtn" data-gotab="wallet" style="padding:0">Wallet Score ${F.S.total} ›</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${F.rows.map(([tab, ic, nm, sub, big, small]) => { const s = F.S.wallets[WALLET_KEY[tab]];
+      return `<button class="box" data-gotab="${tab}" style="text-align:left;padding:10px;border-radius:12px;cursor:pointer;font:inherit;color:inherit"><div style="display:flex;justify-content:space-between"><span>${ic} <b>${nm}</b></span><b class="num small ${col(s)}">${s}</b></div>
+        <div class="small muted">${sub}</div><div class="num" style="font-weight:600;margin-top:4px">${big}</div><div class="small muted">${small}</div></button>`; }).join('')}</div></section>`;
+}
+function walletHeader(tab) {
+  const key = WALLET_KEY[tab]; if (!key || !state.data) return ''; const S = score6(); if (!S) return '';
+  const s = S.wallets[key], B = band6(s), parts = key === 'wealth' ? ['liquidity', 'wealth', 'protection'] : [key], low = parts.map(p => [p, S.parts[p]]).sort((a, b) => a[1].score - b[1].score)[0][1];
+  return `<section class="sec box" style="margin-top:6px"><div class="kv" style="margin:0"><span><b>${WALLET_NAME[key]} wallet</b> <span class="small muted">${B[1].toLowerCase()}</span></span><button class="linkbtn num ${B[0]}" data-gotab="wallet" style="padding:0;font-weight:700">${s}/100 ›</button></div>
+    <div class="meter thin"><i style="width:${s}%"></i></div><p class="small" style="margin:4px 0 0">→ ${esc(low.act)}</p></section>`;
+}
+/* Income wallet: salary, side income, bonuses */
+function viewIncome() {
+  if (!state.data) return '<div class="empty">Sync Excel first.</div>';
+  const M6 = lastFullMonths(6).reverse(), a = t => Math.abs(n(t.Amount) || 0), tx = allTx();
+  const side = m => tx.filter(t => t.Type === 'Income' && String(t.Date).startsWith(m) && /Other Income|Side|Rent|Dividend|Interest|Coaching|Freelance/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0);
+  const bonus = m => tx.filter(t => t.Type === 'Income' && String(t.Date).startsWith(m) && /Bonus/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0);
+  const sal = M6.map(m => { const v = netPay(m); return isFinite(v) ? v : 0; }), sd = M6.map(side), bn = M6.map(bonus), S = score6();
+  const avg = l => l.reduce((x, v) => x + v, 0) / (l.length || 1);
+  const row = (t, title, sub) => `<button class="navrow" data-gotab="${t}"><span class="nt">${title}<br><span class="small muted">${sub}</span></span><span class="chev">›</span></button>`;
+  return `<section class="hero"><p class="hero-k" style="margin-top:0">Money in – last 6 months, a month</p><h2 class="hero-v num">${inr(avg(sal) + avg(sd) + avg(bn))}</h2>
+      <p class="hero-s" style="margin:0">salary ${inr(avg(sal))} · side income ${inr(avg(sd))} · bonus ${inr(avg(bn))}</p></section>
+    <section class="sec box"><div class="sec-h"><h3>By month</h3></div>${cBars(M6.map(m => MON[Number(m.slice(5)) - 1]), [['Salary', sal, 'var(--blue1)'], ['Side income', sd, 'var(--good)'], ['Bonus', bn, 'var(--warn)']])}
+      <p class="small muted" style="margin:6px 0 0">Salary is ${S ? Math.round(S.W.m.stability.v * 100) : '–'}% of what comes in. Bonus and side income are kept out of the monthly budget – they go to savings first.</p></section>
+    <section class="sec"><div class="group">${row('salary', 'Salary', 'payslips, take-home, PF')}${row('moneyin', 'Money in', 'every credit, and what to keep for tax / save')}${row('earned', 'Salary to date', 'earned and saved since you started')}
+      ${row('coaching', 'Coaching earnings', 'class money')}${row('extrapat', 'Bonus & class pattern', 'when extra money usually comes')}${row('hike', 'Hike splitter', 'split a raise before it’s spent')}${row('nosalary', 'If salary stops', 'how long your money lasts')}</div></section>`;
+}
 
 /* ======================================================================
    Start-up – kept at the very END so every screen, list and help text above is defined before the first draw
