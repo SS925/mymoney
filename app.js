@@ -1135,8 +1135,7 @@ function viewSalary() {
       <div class="kv"><span class="muted">Paid into</span><span>${esc(r.Bank || '')}</span></div>
       <div class="kv"><span class="muted">Employer PF</span><span class="num">${inr(num(r['PF (Employer)']))}</span></div></section>
     <button class="primary" id="pay-share">Share payslip summary</button>
-    ${fy.length ? `<section class="sec box"><div class="sec-h"><h3>By financial year</h3></div>
-      ${fy.slice().reverse().map(c => `<div class="kv"><span>${esc(c[0])}<br><span class="small muted">${esc(c[1])} payslips</span></span><span class="num" style="text-align:right">${esc(c[3])}<br><span class="small muted">net</span></span></div>`).join('')}</section>` : ''}`;
+`;
 }
 function bindSalary() {
   const sel = document.getElementById('pay-month'); if (!sel) return;
@@ -1790,7 +1789,7 @@ function viewSips() {
     <section class="sec box"><div class="sec-h"><h3>Your SIPs</h3><button data-doc-add="sips">＋ Add</button></div>
       ${list.length ? list.map(({ it, st }) => `<button class="kv rowbtn" data-doc-edit="sips:${esc(it.id)}"><span>${esc(it.name)}<br><span class="small ${st.cls}">${esc(st.txt)}</span></span><span class="num">${inr(it.amount)}<br><span class="small muted">on the ${ord(it.day)}</span></span></button>`).join('')
         : '<p class="small muted">Nothing yet. Tap ＋ Add for each SIP – you get a reminder the day before, and a warning if it doesn’t show up in your bank data.</p>'}
-    </section>${state.sipPlanEdit ? '' : viewStepUp()}${viewSipPlan()}${state.sipPlanEdit ? '' : viewCapMix() + viewVsNifty()}<p class="note">Paid / missed is checked against your bank transactions: same amount, in the month, with the text you gave. Reminders need notifications turned on (More → Notifications).</p>`;
+    </section>${state.sipPlanEdit ? '' : viewStepUp()}${viewSipPlan()}<p class="note">Paid / missed is checked against your bank transactions: same amount, in the month, with the text you gave. Reminders need notifications turned on (More → Notifications).</p>`;
 }
 function ord(d) { d = Number(d) || 0; const s = ['th', 'st', 'nd', 'rd'], v = d % 100; return d + (s[(v - 20) % 10] || s[v] || s[0]); }
 
@@ -4667,7 +4666,7 @@ function mpSpentBy(ym) {
   for (const r of tradeLog()) if (String(r.date).startsWith(ym) && r.side === 'Buy' && !r.empty && !r.deleting && !isFundName(r.name)) stocks += Number(r.amount) || 0;
   return { by, other, saved, stocks };
 }
-function viewMoneyPlan() { return viewSafeToday() + viewCushion(false) + viewWeek() + viewFamCard() + viewMoneyPlan0(); }
+function viewMoneyPlan() { return viewSafeToday() + viewCushion(false) + viewWeek() + (famOver() ? `<section class="sec"><div class="group"><button class="navrow" data-gotab="famtx"><span class="nt bad">Family money is over its limit this month<br><span class="small muted">see who got how much</span></span><span class="chev">›</span></button></div></section>` : '') + viewMoneyPlan0(); }
 function viewMoneyPlan0() {
   const ym = mpMonth(), [y, m] = ym.split('-').map(Number), net = netPay(ym), plan = activePlan(), lim = plan.limits || {}, sv = Number(plan.savings) || 0;
   const s = mpSpentBy(ym), rows = MP_BUCKETS.map(([c, l, i]) => ({ c, l, i, plan: Number(lim[c]) || 0, done: s.by[c] || 0 })).filter(r => r.plan || r.done);
@@ -4692,7 +4691,6 @@ function viewMoneyPlan0() {
       ${s.stocks ? `<p class="small muted" style="margin:6px 0 0">Includes ${inr(s.stocks)} of single stocks – not part of the SIP plan.</p>` : ''}</section>
     ${asideNote(ym)}
     ${viewLastMonth()}
-    ${viewLoanEnds()}
     <p class="note">Salary is last month’s payslip. Rent, insurance, EMI and cards come from your bank data; savings count transactions in the Investments category. Family transfers and part-time income are kept out of this plan.</p>`;
 }
 
@@ -6594,7 +6592,7 @@ const CHARTS = {
     const cat = f.cat && f.cat !== 'All' ? f.cat : null, FIX = /Credit Card Bills|Housing|Loans|Insurance/i; if (cat) title += ` – ${cat}`;
     allTx().forEach(t => { if (t.Type !== 'Expenses' || (cat ? t.Category !== cat : FIX.test(t.Category || ''))) return; const k = String(t.Date).slice(0, 10); days[k] = (days[k] || 0) + Math.abs(n(t.Amount) || 0); });
     return cbox(title, cHeat(days, from, to), cat ? 'Only this category.' : 'Rent, card bills, EMIs and insurance are left out so everyday spending stands out. Follows the year, month and category you pick below.'); },
-  bills: () => CHARTS.paycal(true), paycal: (small) => { const t = new Date(), off = small === true ? 0 : (state.pcOff || 0), b = new Date(t.getFullYear(), t.getMonth() + off, 1), ev = payEvents(b.getFullYear(), b.getMonth()).filter(e => e.amt > 0 && e.kind !== 'in'), dim = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
+  bills: () => `<section class="sec"><div class="group"><button class="navrow" data-gotab="paycal"><span class="nt">Money out by date<br><span class="small muted">every bill, EMI, SIP and card due on the Bill-pay calendar</span></span><span class="chev">›</span></button></div></section>`, paycal: (small) => { const t = new Date(), off = small === true ? 0 : (state.pcOff || 0), b = new Date(t.getFullYear(), t.getMonth() + off, 1), ev = payEvents(b.getFullYear(), b.getMonth()).filter(e => e.amt > 0 && e.kind !== 'in'), dim = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
     if (!ev.length) return ''; const mx = Math.max(...ev.map(e => e.amt)), x = d => 10 + (d - 1) / (dim - 1) * 280, col = { fixed: '#4b7fbf', save: '#3fb68b', bill: '#e0a43a', card: '#e06a6a', loan: '#b07ad9', sub: '#9aa7b8' };
     const dots = ev.map(e => `<circle cx="${x(e.d).toFixed(1)}" cy="40" r="${(3 + Math.sqrt(e.amt / mx) * 13).toFixed(1)}" fill="${col[e.kind] || '#9aa7b8'}" fill-opacity=".75"><title>${e.d} · ${esc(e.name)} ${inr(e.amt)}</title></circle>`).join('');
     return cbox(`${MONF[b.getMonth()]}: money out by date`, `<svg viewBox="0 0 300 78" width="100%"><line x1="10" x2="290" y1="40" y2="40" stroke="currentColor" opacity=".2"/>${[1, 5, 10, 15, 20, 25, dim].map(d => `<text x="${x(d).toFixed(1)}" y="74" text-anchor="middle" font-size="8" fill="currentColor" opacity=".6">${d}</text>`).join('')}${dots}</svg>`, 'Bigger dot = bigger payment. Blue rent · green SIP/PPF · amber bills · purple EMI · grey subscriptions.'); },
@@ -6608,7 +6606,7 @@ const CHARTS = {
       + (act.length ? cbox('Payoff timeline', cBars(monthsBack(Math.max(...act.map(l => l.left)) + 1, ymKey(new Date(new Date().getFullYear(), new Date().getMonth() + Math.max(...act.map(l => l.left)), 1))).map(mLab), act.map((l, j) => [l.name, monthsBack(Math.max(...act.map(x => x.left)) + 1, ymKey(new Date(new Date().getFullYear(), new Date().getMonth() + Math.max(...act.map(x => x.left)), 1))).map((_, i) => Math.max(0, (Number(l.owed) || 0) - l.emi * i)), CPAL[j + 4]]), { stack: true }), 'Still owed at the start of each month if you pay the EMIs.') : ''); },
   ccards: () => { const cs = (state.docs.ccards || []).filter(c => Number(c.limit) > 0); if (!cs.length) return '';
     return cbox('Card use (for your credit score)', `<div style="display:flex;flex-wrap:wrap;justify-content:space-around">${cs.map(c => `<div style="text-align:center;font-size:11px">${cGauge((Number(c.outstanding) || Number(c.budget) || 0) / Number(c.limit), 0.1, Number(c.outstanding) ? 'owed now' : 'if limit spent')}<div>${esc(c.name)}</div></div>`).join('')}</div>`, 'Dot = the 10% line. Green under 10%, amber 10–30%, red over 30%.'); },
-  review: () => CHARTS.report(), report: () => { if (!state.data) return ''; const all = reportMonths(), ym = (state.reportMonth && all.includes(state.reportMonth)) ? state.reportMonth : (all[0] || budgetYm()), prev = ymKey(new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)) - 2, 1));
+  report: () => { if (!state.data) return ''; const all = reportMonths(), ym = (state.reportMonth && all.includes(state.reportMonth)) ? state.reportMonth : (all[0] || budgetYm()), prev = ymKey(new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)) - 2, 1));
     const a = expBy(ym), b = expBy(prev), cats = topN(a, 6).map(x => x[0]).filter(c => c !== 'Other');
     return cbox(`Spending, ${MONF[Number(ym.slice(5)) - 1]}`, cDonut(topN(a, 6), kfmt(Object.values(a).reduce((s2, v) => s2 + v, 0)), 'spent')) + cbox(`${mLab(ym)} vs ${mLab(prev)}`, cBars(cats.map(c => c.split(/[ /]/)[0].slice(0, 8)), [[mLab(prev), cats.map(c => b[c] || 0), '#9aa7b8'], [mLab(ym), cats.map(c => a[c] || 0), 'var(--blue1)']])); },
   invest: () => { if (!state.data) return ''; const w = worthNow(), hv = k => (w.have.find(r => r.k === k) || {}).v || 0;
