@@ -895,11 +895,10 @@ function viewBudget() {
   return seg + netPayCard(true) + `
   <section class="sec box"><div class="sec-h"><h3>Where it went</h3><span class="small muted">${m ? MONF[m.getMonth()] : ''}</span></div>
     ${donut(spendParts(), 'Spent', cr(n(kpis().spending_month)))}</section>
-  <section class="sec box"><div class="sec-h"><h3>Limits</h3><span class="small">${over.length} of ${cats.length} over</span></div>
+  <section class="sec box"><div class="sec-h"><h3>Limits</h3><span class="small">${over.length} of ${cats.length} over · spending is in the chart above</span></div>
     ${state.plan ? '' : `<p class="small muted" style="margin:0 0 6px">Suggested limits that fit your net pay. Edit them to make them yours.</p>`}
-    <div class="rows">${cats.map(c => { const t = Number(p.limits[c]) || 0, s = spentBy[c] || 0, u = t > 0 ? s / t : (s > 0 ? 1.01 : 0);
-      return `<div class="brow"><div class="row"><span>${esc(c)}</span><span class="num"><b class="${s > t ? 'bad' : ''}">${inr(s)}</b> <span class="lim">/ ${inr(t)}</span></span></div>
-      <div class="meter thin ${s > t ? 'over' : ''}"><i style="width:${Math.min(100, u * 100).toFixed(1)}%"></i></div></div>`; }).join('')}</div>
+    <div class="rows">${cats.map(c => { const t = Number(p.limits[c]) || 0, s = spentBy[c] || 0;
+      return `<div class="kv"><span>${esc(c)}${s > t ? ' <span class="small bad">over</span>' : ''}</span><b class="num">${inr(t)}</b></div>`; }).join('')}</div>
     <div class="kv" style="margin-top:6px"><span class="muted">Saved first</span><span class="num">${inr(p.savings || 0)}</span></div>
     <div class="kv"><span class="muted">Limits add up to</span><span class="num">${inr(planTotal(p))} of ${inr(limit)}</span></div>
     <button class="secondary" id="plan-edit">Edit plan</button>
@@ -5950,9 +5949,8 @@ function viewPayCal() {
     <section class="sec box"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px;text-align:center;color:var(--muted,#6b7a90)">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<div>${d}</div>`).join('')}</div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px">${cells.join('')}</div>
       <p class="small muted" style="margin:8px 0 0">${[['fixed', 'rent'], ['save', 'SIP / PPF'], ['bill', 'bills'], ['card', 'card due'], ['loan', 'EMI'], ['sub', 'subscription'], ['in', 'salary']].map(([k, l]) => `<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col[k]}"></i> ${l}`).join(' &nbsp;')}</p></section>
-    <section class="sec box"><div class="sec-h"><h3>Dates</h3></div>
-      ${ev.map(e => `<div class="kv"><span><b>${e.d} ${MON[m]}</b> · ${esc(e.name)}</span><span class="num ${e.kind === 'in' ? 'good' : ''}">${e.kind === 'stmt' ? '<span class="small muted">keep under 10%</span>' : e.amt ? (e.kind === 'in' ? '+' : '') + inr(e.amt) : '<span class="small muted">varies</span>'}</span></div>`).join('')}
-      <p class="small muted" style="margin:8px 0 0">Days come from your SIPs, bills, cards and the last payment seen in the bank. Edit dates in SIPs, Bills and Credit cards.</p></section>`;
+    <section class="sec box">
+      <p class="small muted" style="margin:0">Tap a dot in the chart, or a day above, to see what goes out. Days come from your SIPs, bills, cards and the last payment seen in the bank. Edit dates in SIPs, Bills and Credit cards.</p></section>`;
 }
 function bindPayCal() { const $ = id => document.getElementById(id);
   if ($('pc-prev')) $('pc-prev').onclick = () => { state.pcOff = (state.pcOff || 0) - 1; render(); };
@@ -6594,8 +6592,8 @@ const CHARTS = {
     return cbox(title, cHeat(days, from, to), cat ? 'Only this category.' : 'Rent, card bills, EMIs and insurance are left out so everyday spending stands out. Follows the year, month and category you pick below.'); },
   bills: () => `<section class="sec"><div class="group"><button class="navrow" data-gotab="paycal"><span class="nt">Money out by date<br><span class="small muted">every bill, EMI, SIP and card due on the Bill-pay calendar</span></span><span class="chev">›</span></button></div></section>`, paycal: (small) => { const t = new Date(), off = small === true ? 0 : (state.pcOff || 0), b = new Date(t.getFullYear(), t.getMonth() + off, 1), ev = payEvents(b.getFullYear(), b.getMonth()).filter(e => e.amt > 0 && e.kind !== 'in'), dim = new Date(b.getFullYear(), b.getMonth() + 1, 0).getDate();
     if (!ev.length) return ''; const mx = Math.max(...ev.map(e => e.amt)), x = d => 10 + (d - 1) / (dim - 1) * 280, col = { fixed: '#4b7fbf', save: '#3fb68b', bill: '#e0a43a', card: '#e06a6a', loan: '#b07ad9', sub: '#9aa7b8' };
-    const dots = ev.map(e => `<circle cx="${x(e.d).toFixed(1)}" cy="40" r="${(3 + Math.sqrt(e.amt / mx) * 13).toFixed(1)}" fill="${col[e.kind] || '#9aa7b8'}" fill-opacity=".75"><title>${e.d} · ${esc(e.name)} ${inr(e.amt)}</title></circle>`).join('');
-    return cbox(`${MONF[b.getMonth()]}: money out by date`, `<svg viewBox="0 0 300 78" width="100%"><line x1="10" x2="290" y1="40" y2="40" stroke="currentColor" opacity=".2"/>${[1, 5, 10, 15, 20, 25, dim].map(d => `<text x="${x(d).toFixed(1)}" y="74" text-anchor="middle" font-size="8" fill="currentColor" opacity=".6">${d}</text>`).join('')}${dots}</svg>`, 'Bigger dot = bigger payment. Blue rent · green SIP/PPF · amber bills · purple EMI · grey subscriptions.'); },
+    const dots = ev.map(e => `<circle cx="${x(e.d).toFixed(1)}" cy="40" r="${(3 + Math.sqrt(e.amt / mx) * 13).toFixed(1)}" fill="${col[e.kind] || '#9aa7b8'}" fill-opacity=".75" data-pc="${esc(`${e.d} ${MON[b.getMonth()]} · ${e.name} ${inr(e.amt)}`)}" style="cursor:pointer"><title>${e.d} · ${esc(e.name)} ${inr(e.amt)}</title></circle>`).join('');
+    return cbox(`${MONF[b.getMonth()]}: money out by date`, `<svg viewBox="0 0 300 78" width="100%"><line x1="10" x2="290" y1="40" y2="40" stroke="currentColor" opacity=".2"/>${[1, 5, 10, 15, 20, 25, dim].map(d => `<text x="${x(d).toFixed(1)}" y="74" text-anchor="middle" font-size="8" fill="currentColor" opacity=".6">${d}</text>`).join('')}${dots}</svg>`, 'Tap a dot to see the payment. Bigger dot = bigger payment. Blue rent · green SIP/PPF · amber bills · purple EMI · grey subscriptions.'); },
   subcheck: () => { const l = (state.docs.subplan || []).map(s2 => [s2.name, s2.every === 'Monthly' ? (Number(s2.cost) || 0) * 12 : Number(s2.cost) || 0]); return l.length ? cbox('Subscriptions – cost a year', cDonut(l.sort((a, b) => b[1] - a[1]), kfmt(l.reduce((a, x) => a + x[1], 0)), 'a year')) : ''; },
   famtx: () => { if (!state.data) return ''; const f = famData(), ms = monthsBack(12), a = t => Math.abs(n(t.Amount) || 0), out = allTx().filter(t => t.Type === 'Expenses' && ASIDE_OUT.test(t.Category || ''));
     return cbox('Who received it (6-month average)', cHBars(f.per6)) + cbox('Family money, last 12 months', cBars(ms.map(mLab), [['Sent', ms.map(m => out.filter(t => String(t.Date).startsWith(m)).reduce((s2, t) => s2 + a(t), 0)), '#b07ad9']], { line: f.cap, lineLabel: 'limit' })); },
@@ -6746,6 +6744,7 @@ function viewWhyOver() {
     <section class="sec box"><div class="sec-h"><h3>Biggest regular payments</h3></div>${D.big.map(t => txLine(t, false)).join('') || '<p class="small muted">None.</p>'}
       <p class="small muted" style="margin:6px 0 0">Card bills pay for last month’s swipes, so a big card bill can push this month over.</p></section>`;
 }
+document.addEventListener('click', e => { const d = e.target.closest && e.target.closest('[data-pc]'); if (d) toast(d.dataset.pc); });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-wom]'); if (!b) return; state.woM = b.dataset.wom; render(); });
 
 /* yearly return a goal needs at its monthly amount (+ extra): 0 = saving alone gets there, null = not even at 30% */
