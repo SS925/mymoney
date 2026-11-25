@@ -6348,9 +6348,9 @@ function viewSinking() {
     <button class="primary" id="sk-add">＋ New fund</button>
     ${list.map(f => { const c = sinkCalc(f); return `<section class="sec box"><div class="sec-h"><h3>${esc(f.name)}</h3><button class="edit-btn" data-sk-edit="${esc(f.id)}">Edit</button></div>
       <div class="meter thin ${c.pct >= 1 ? 'inc' : ''}"><i style="width:${(c.pct * 100).toFixed(0)}%"></i></div>
-      <div class="kv"><span>${inr(f.saved || 0)} of ${inr(f.target)}${c.d ? ` · by ${MON[c.d.getMonth()]} ${c.d.getFullYear()}` : ''}${f.yearly ? ' · yearly' : ''}</span><b class="num">${c.left ? inr(c.monthly) + ' / month' : 'ready ✓'}</b></div>
+      <div class="kv"><span>${inr(f.saved || 0)} of ${inr(f.target)}${c.d ? ` · by ${MON[c.d.getMonth()]} ${c.d.getFullYear()}` : ''}${f.every ? ` · every ${f.every} months` : f.yearly ? ' · yearly' : ''}${f.note ? `<br><span class="small muted">${esc(f.note)}</span>` : ''}</span><b class="num">${c.left ? inr(c.monthly) + ' / month' : 'ready ✓'}</b></div>
       <div class="row2"><input class="inp num" data-sk-amt="${esc(f.id)}" inputmode="numeric" placeholder="₹ added"><button class="secondary" data-sk-add="${esc(f.id)}" style="margin:0">Add</button></div>
-      ${c.left === 0 || (c.d && c.d <= new Date()) ? `<button class="linkbtn" data-sk-used="${esc(f.id)}">Spent it – ${f.yearly ? 'start next year' : 'remove'}</button>` : ''}</section>`; }).join('')}
+      ${c.left === 0 || (c.d && c.d <= new Date()) ? `<button class="linkbtn" data-sk-used="${esc(f.id)}">Spent it – ${f.every ? 'start the next one' : f.yearly ? 'start next year' : 'remove'}</button>` : ''}</section>`; }).join('')}
     ${list.length < 3 ? `<section class="sec box"><div class="sec-h"><h3>Ideas</h3></div>${SINK_IDEAS.filter(([n2]) => !list.some(f => f.name === n2)).map(([n2, t, mo]) => `<button class="linkbtn" data-sk-idea="${esc(n2)}|${t}|${mo}" style="display:block;margin:4px 0">＋ ${esc(n2)} – ${inr(t)} by ${MON[mo - 1]}</button>`).join('')}</section>` : ''}
     <p class="note">Pay these from salary like a bill (or from bonus money) into a separate savings pot – then the festival or trip doesn’t break the monthly budget.</p>`;
 }
@@ -6364,7 +6364,8 @@ function bindSinking() {
   document.querySelectorAll('[data-sk-add]').forEach(b => b.onclick = () => { const inp = document.querySelector(`[data-sk-amt="${b.dataset.skAdd}"]`), v = Number(String(inp.value).replace(/\D/g, '')) || 0; if (!v) return;
     const old = list().map(x => ({ ...x })), f = list().find(x => x.id === b.dataset.skAdd); f.saved = (Number(f.saved) || 0) + v; save(`Sinking fund: +${v} ${f.name}`, old); });
   document.querySelectorAll('[data-sk-used]').forEach(b => b.onclick = () => { const old = list().map(x => ({ ...x })), f = list().find(x => x.id === b.dataset.skUsed);
-    if (f.yearly) { const d = pDate(f.due) || new Date(); f.due = `${d.getFullYear() + 1}-${String(d.getMonth() + 1).padStart(2, '0')}`; f.saved = 0; } else state.docs.sinking = list().filter(x => x.id !== f.id); save(`Sinking fund used: ${f.name}`, old); });
+    if (f.every) { const d = pDate(f.due) || new Date(), nd = new Date(d.getFullYear(), d.getMonth() + Number(f.every), 1); f.due = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}`; f.saved = 0; }
+    else if (f.yearly) { const d = pDate(f.due) || new Date(); f.due = `${d.getFullYear() + 1}-${String(d.getMonth() + 1).padStart(2, '0')}`; f.saved = 0; } else state.docs.sinking = list().filter(x => x.id !== f.id); save(`Sinking fund used: ${f.name}`, old); });
   if ($('sk-cancel')) $('sk-cancel').onclick = () => { state.skEdit = null; render(); };
   if ($('sk-save')) $('sk-save').onclick = () => { const e = state.skEdit, it = e.it; it.name = $('sk-name').value.trim(); it.target = Number($('sk-target').value.replace(/\D/g, '')) || 0; it.due = $('sk-due').value; it.saved = Number($('sk-saved').value.replace(/\D/g, '')) || 0; it.yearly = $('sk-yearly').checked;
     if (!it.name || !it.target) { toast('Enter what it’s for and the amount'); return; } const old = list().map(x => ({ ...x })); if (e.isNew) list().push(it); else state.docs.sinking = list().map(x => x.id === it.id ? it : x); state.skEdit = null; save(`Sinking fund: ${it.name}`, old); };
