@@ -109,9 +109,13 @@ const GH = {
     const j = await r.json(); return j.sha;
   },
   async putJson(path, obj, message) {
-    const sha = await this.sha(path);
-    const r = await this.call('PUT', path, { body: { message, branch: state.cfg.branch || 'main', content: b64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) } });
-    if (!r.ok) throw httpError(r.status);
+    for (let i = 0; i < 4; i++) {          // the file changed since we read it (another save, another phone, GitHub catching up): read it again and retry
+      const sha = await this.sha(path);
+      const r = await this.call('PUT', path, { body: { message, branch: state.cfg.branch || 'main', content: b64(JSON.stringify(obj, null, 1)), ...(sha ? { sha } : {}) } });
+      if (r.ok) return;
+      if ((r.status === 409 || r.status === 422) && i < 3) { await new Promise(res => setTimeout(res, 600 * (i + 1))); continue; }
+      throw httpError(r.status);
+    }
   },
   async putMany(files, message) {          // several files in ONE commit: [{path, obj}]
     const c = state.cfg, br = c.branch || 'main', base = `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/git`;
@@ -1658,7 +1662,14 @@ async function loadDocs() {
   }));
   LS.set('docs', state.docs);
 }
-async function saveDoc(k, msg) { await GH.putJson(DOCS[k], state.docs[k], msg || `Update ${k}`); LS.set('docs', state.docs); }
+const _saveQ = {};
+/* saves of the same file run one after another (quick taps can't clash); a save that's still waiting is skipped when a newer one follows – the newest state is what gets saved */
+function saveDoc(k, msg) {
+  LS.set('docs', state.docs);
+  const q = _saveQ[k] || (_saveQ[k] = { run: Promise.resolve(), n: 0 }), my = ++q.n;
+  q.run = q.run.catch(() => {}).then(async () => { if (my !== q.n) return; await GH.putJson(DOCS[k], state.docs[k], msg || `Update ${k}`); });
+  return q.run;
+}
 function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
 const DAY = 864e5;
 function dayOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
