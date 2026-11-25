@@ -4684,6 +4684,7 @@ function viewMoneyPlan0() {
       ${otherPlan || s.other ? line('🧾', 'Other spending (UPI, cash…)', otherPlan, s.other, otherPlan ? '' : 'Planned ₹0 – everything should go on cards', false) : ''}</section>
     <section class="sec box"><div class="sec-h"><h3>Savings</h3><button data-gotab="sips">SIPs</button></div>
       ${line('🔁', 'Mutual fund SIPs', sipTot, mfDone, 'from your buys this month', true)}
+      ${licMonthly() ? line('🛡', 'LIC premium (counts as saving)', licMonthly(), allTx().filter(t => t.Type === 'Expenses' && String(t.Date).startsWith(ym) && isLicTx(t)).reduce((x, t) => x + Math.abs(n(t.Amount) || 0), 0), 'paid from your bank on the 7th', true) : ''}
       ${ppf ? line('🏛', 'PPF (deposit by the 5th)', ppf, ppfSt.some(x => x.st.s === 'paid') ? ppf : 0, ppfSt[0] ? esc(ppfSt[0].st.txt) : '', true) : ''}
       ${ef ? `<div class="kv"><span>🛟 Emergency fund<br><span class="small muted">into the joint account – your wife’s money, not from your pay</span></span><span class="num">${inr(ef)}<br><button class="linkbtn" data-gotab="emergency">Plan</button></span></div>` : ''}
       <div class="kv"><span>All savings from your banks this month</span><b class="num ${s.saved >= sv ? 'good' : ''}">${inr(s.saved)} <span class="small muted">of ${inr(sv)}</span></b></div>
@@ -6997,7 +6998,7 @@ function moneyRules() {
     add('All EMIs under 30% of take-home', emi / net <= 0.3, `${pct(emi / net)} (${inr(emi)})`, '≤ 30%', 'Don’t take a new loan until an old one ends.', 'loans');
     const sip = Object.values(sipPlanGet()).reduce((a, v) => a + (Number(v) || 0), 0) + (state.docs.sips || []).filter(x => /PPF/i.test(x.name)).reduce((a, x) => a + (Number(x.amount) || 0), 0);
     { const nw2 = needsWants(), ex = nw2.need + nw2.want + nw2.mixed; add('Spending under 50% of income (3-month average)', ex / (nw2.net || 1) <= 0.5, `${pct(ex / (nw2.net || 1))} (${inr(ex)})`, '< 50%', 'Cut wants first – food online, shopping, Paytm. See the 50/30/20 split in Wallet Score.', 'wallet'); }
-    add('SIPs + PPF at least 25% of take-home', sip / net >= 0.25, `${pct(sip / net)} (${inr(sip)})`, '≥ 25%', `Add ${inr(Math.max(0, 0.25 * net - sip))} a month – or step up 10% next April.`, 'sips');
+    const sipL = sip + licMonthly(); add('SIPs + PPF + LIC at least 30% of take-home', sipL / net >= 0.3, `${pct(sipL / net)} (${inr(sipL)})`, '≥ 30%', `Add ${inr(Math.max(0, 0.3 * net - sipL))} a month – or step up 10% next April.`, 'sips');
     const xc = excelCover(), life = Number((state.docs.profile || {}).lifeCover) || (xc && xc.life) || 0;
     if (life) add('Life cover at least 10× yearly income', life >= net * 12 * 10, inr(life), inr(net * 120), 'Top up the term plan (not LIC).', 'cover');
     const health = Number((state.docs.profile || {}).healthCover) || (xc && xc.health) || 0;
@@ -7013,7 +7014,7 @@ function moneyRules() {
   add('No shares priced under ₹10', !penny.length, penny.length ? penny.map(h => h.name.split(' ')[0]).join(', ') : 'none', 'none', 'Exit them when you can and move the money to a SIP fund.', 'holdings');
   const funds = hs.filter(h => !isSt(h) && (Number(h.value) || 0) > 0);
   add('At most 6 mutual funds', funds.length <= 6, `${funds.length} funds`, '≤ 6', 'Stop the small one-off funds; keep adding only to your core SIPs.', 'holdings');
-  const k = kpis(), sr = n(k.savings_rate), st = n(k.savings_target) || 0.2;
+  const k = kpis(), sr = savingsRateAdj(), st = n(k.savings_target) || 0.2;
   if (sr) add('Savings rate on target this year', sr >= st, pct(sr), pct(st), 'Keep one-offs and card bills in check – see “Why over the limit?”.', 'whyover');
   const cur = budgetYm(), d0 = pDate(cur + '-01'), prev = ymKey(new Date(d0.getFullYear(), d0.getMonth() - 1, 1)), D = whyOverData(prev);
   if (isFinite(D.limit) && D.limit > 0) add(`Spending within the limit in ${MONF[pDate(prev + '-01').getMonth()]}`, D.spent <= D.limit, inr(D.spent), `≤ ${inr(D.limit)}`, 'Give the ₹0 categories a limit in Plan so the limit is real.', 'whyover');
@@ -7215,7 +7216,7 @@ function yearPlanDefaults(Y) {
 }
 function yearPlanRows(P) {
   const Y = P.year, t = new Date(), j1 = new Date(Y, 0, 1), frac = Math.max(0, Math.min(1, (t - j1) / (365 * DAY))), st = P.start || {};
-  const lin = (from, to) => from + (to - from) * frac, nw = worthNow().net, ef = efHaveNow(), k = kpis(), sr = n(k.savings_rate) * 100;
+  const lin = (from, to) => from + (to - from) * frac, nw = worthNow().net, ef = efHaveNow(), k = kpis(), sr = savingsRateAdj() * 100;
   const months = frac > 0 ? [...Array(Math.max(1, t.getMonth())).keys()].map(i => ymKey(new Date(Y, i, 1))).filter(m => m < ymKey(t)) : [];
   const spendAvg = months.length ? months.reduce((a, m) => a + budgetSpent(m), 0) / months.length : null;
   const held = new Set(invHoldings().filter(h => h.units > 1e-6).map(h => h.name)), left = (P.exits || []).filter(x => held.has(x));
@@ -7332,7 +7333,7 @@ function walletData() {
     expense: { v: exp3 / (inc1 || 1), score: cap(exp3 / (inc1 || 1) <= 0.5 ? 100 : (1 - exp3 / (inc1 || 1)) / 0.5 * 100), lab: 'Spending vs income (3-month average)', want: '< 50%', fmt: x => Math.round(x * 100) + '%' },
     adherence: { v: within, score: cap(within / 6 * 100), lab: 'Months within your limit (last 6)', want: '6 of 6', fmt: x => `${x} of 6` },
     classes: { v: Object.values(classes).filter(Boolean).length, score: cap(Object.values(classes).filter(Boolean).length / 4 * 100), lab: 'Asset classes: ' + Object.entries(classes).map(([k, v]) => (v ? '✓' : '✗') + k).join(' '), want: '4 (equity, debt, gold, FD)', fmt: x => `${x} of 4` },
-    sip: { v: sip / (net || 1), score: cap(sip / (net || 1) / 0.2 * 100), lab: 'SIPs + PPF vs take-home', want: '20–30%', fmt: x => Math.round(x * 100) + '%' },
+    sip: { v: (sip + licMonthly()) / (net || 1), score: cap((sip + licMonthly()) / (net || 1) / 0.2 * 100), lab: 'SIPs + PPF + LIC vs take-home', want: '20–30%', fmt: x => Math.round(x * 100) + '%' },
     ef: { v: efMo, score: cap(efMo / 6 * 100), lab: 'Emergency fund', want: '6 months', fmt: x => x.toFixed(1) + ' months' },
     debt: { v: emi / (net || 1), score: cap(emi / (net || 1) <= 0.3 ? 100 : (0.6 - emi / (net || 1)) / 0.3 * 100), lab: 'EMIs vs take-home', want: '< 30%', fmt: x => Math.round(x * 100) + '%' },
   };
@@ -7344,9 +7345,10 @@ function walletData() {
 function needsWants() {
   const M3 = lastFullMonths(3), a = t => Math.abs(n(t.Amount) || 0), net = M3.reduce((x, m) => { const v = netPay(m); return x + (isFinite(v) ? v : 0); }, 0) / 3 || netPay();
   const oo = oneOffMap(), all3 = allTx().filter(t => t.Type === 'Expenses' && M3.includes(String(t.Date).slice(0, 7))), ex = all3.filter(t => !oo.has(txKey(t))), one = all3.filter(t => oo.has(txKey(t))).reduce((x, t) => x + a(t), 0) / 3;
-  const need = ex.filter(t => NEEDS_RE.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3, mixed = ex.filter(t => MIXED_RE.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3;
+  const lic3 = ex.filter(isLicTx).reduce((x, t) => x + a(t), 0) / 3;
+  const need = ex.filter(t => NEEDS_RE.test(t.Category || '') && !isLicTx(t)).reduce((x, t) => x + a(t), 0) / 3, mixed = ex.filter(t => MIXED_RE.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3;
   const want = ex.filter(t => !NEEDS_RE.test(t.Category || '') && !MIXED_RE.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3;
-  const saved = allTx().filter(t => t.Type === 'Savings' && M3.includes(String(t.Date).slice(0, 7)) && !/^PF/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3;
+  const saved = lic3 + allTx().filter(t => t.Type === 'Savings' && M3.includes(String(t.Date).slice(0, 7)) && !/^PF/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0) / 3;
   return { net, need, want, mixed, saved, one, M3 };
 }
 const STAGES = {
@@ -7371,7 +7373,7 @@ const W6 = [['income', 'Income', 15, '💼'], ['expenses', 'Expenses', 18, '🧾
 const CITY_HEALTH = { metro: 1000000, tier1: 1000000, tier2: 500000, rural: 500000 };
 function score6() {
   if (!state.data) return null;
-  const W = walletData(), NW = needsWants(), k = kpis(), sr = n(k.savings_rate) || 0, net = W.net || 1, annual = net * 12, cap = v => Math.max(0, Math.min(100, Math.round(v))), avg = l => Math.round(l.reduce((a, x) => a + x, 0) / l.length);
+  const W = walletData(), NW = needsWants(), k = kpis(), sr = savingsRateAdj(), net = W.net || 1, annual = net * 12, cap = v => Math.max(0, Math.min(100, Math.round(v))), avg = l => Math.round(l.reduce((a, x) => a + x, 0) / l.length);
   const p = state.docs.profile || {}, xc = excelCover(), life = Number(p.lifeCover) || (xc && xc.life) || 0, health = Number(p.healthCover) || (xc && xc.health) || 0, tier = p.cityTier || 'tier1', hBench = CITY_HEALTH[tier] || 1000000;
   const age = Number(retireInputs().x.age) || 31, retire = Number(retireInputs().x.retire) || 60, nw = worthNow().net, nwBench = annual * age / 10;
   const ess = NW.need / (NW.net || 1), wants = NW.want / (NW.net || 1);
@@ -7382,7 +7384,7 @@ function score6() {
     expenses: { score: avg([cap(ess <= 0.5 ? 100 : (1 - ess) / 0.5 * 100), cap(wants <= 0.3 ? 100 : (0.6 - wants) / 0.3 * 100), W.m.adherence.score]), facts: [`Needs ${Math.round(ess * 100)}% of take-home (≤ 50%)`, `Wants ${Math.round(wants * 100)}% (≤ 30%)`, `${W.m.adherence.v} of 6 months within the limit`],
       act: ess > 0.5 ? 'Keep essentials under 50% – card bills and EMIs are the big ones.' : wants > 0.3 ? 'Wants are over 30% – trim food online, shopping and Paytm.' : 'Stay within the monthly limit.' },
     liquidity: { score: W.m.ef.score, facts: [`Emergency fund ${W.efMo.toFixed(1)} months (6 = full marks)`], act: W.efMo < 6 ? `Build the emergency fund to 6 months – ${inr(Math.max(0, (num(efPlanGet().base) || W.exp3) * 6 - (W.efMo * (num(efPlanGet().base) || W.exp3))))} to go.` : 'Emergency fund is full – invest the extra.' },
-    investment: { score: avg([W.m.sip.score, W.m.classes.score, cap(100 - riskShare * 500)]), facts: [`SIPs + PPF ${Math.round(W.m.sip.v * 100)}% of take-home (20–30%)`, `${W.m.classes.v} of 4 asset classes`, `${Math.round(riskShare * 100)}% in flagged stocks`],
+    investment: { score: avg([W.m.sip.score, W.m.classes.score, cap(100 - riskShare * 500)]), facts: [`SIPs + PPF + LIC ${Math.round(W.m.sip.v * 100)}% of take-home (20–30%)`, `${W.m.classes.v} of 4 asset classes`, `${Math.round(riskShare * 100)}% in flagged stocks`],
       act: riskShare > 0.05 ? 'Exit the flagged stocks and move the money into your SIP funds.' : W.m.classes.v < 4 ? `Add ${Object.entries(W.classes).filter(([, v]) => !v).map(([k2]) => k2).join(' / ')} – e.g. a small gold fund or SGB.` : 'Step SIPs up 10% every April.' },
     wealth: { score: avg([cap(sr / 0.2 * 100), W.m.debt.score, cap(nw / (nwBench || 1) * 100)]), facts: [`Savings rate ${Math.round(sr * 100)}% (≥ 20%)`, `EMIs ${Math.round(W.m.debt.v * 100)}% of take-home (< 30%)`, `Net worth ${inr(nw)} vs ${inr(nwBench)} benchmark (age × yearly income ÷ 10)`],
       act: sr < 0.2 ? 'Raise the savings rate to 20% – save bonuses and class money, not just salary.' : 'Keep the savings rate up as income grows.' },
@@ -7406,7 +7408,7 @@ function persona6(S) {
 }
 function viewWallet() {
   if (!state.data) return '<div class="empty">Sync Excel first.</div>';
-  const S = score6(), B = band6(S.total), P = persona6(S), NW = needsWants(), k = kpis(), sr = Math.round((n(k.savings_rate) || 0) * 100), xc = excelCover(), W = S.W;
+  const S = score6(), B = band6(S.total), P = persona6(S), NW = needsWants(), k = kpis(), sr = Math.round(savingsRateAdj() * 100), xc = excelCover(), W = S.W;
   const stage = (state.docs.profile || {}).lifeStage || 'professional', [stName, stTag, stRules] = STAGES[stage];
   const edu = (state.docs.goals || []).filter(g => /educat|school|college|child/i.test(g.name || '')).reduce((x, g) => x + (Number(g.monthly) || 0), 0);
   const St = { sr, debt: W.emi / (W.net || 1), sipR: W.sip / (W.net || 1), sip: W.sip, efMo: W.efMo, life: Number((state.docs.profile || {}).lifeCover) || (xc && xc.life) || 0, yearly: (W.net || 0) * 12, nw: NW, eduSip: edu, net: W.net || 1 };
@@ -7428,7 +7430,7 @@ function viewWallet() {
       <div class="kv"><span>Needs – rent, bills, EMI, insurance, groceries, family<br><span class="small muted">rule ≤ 50%</span></span><span class="num ${pct(NW.need) <= 50 ? 'good' : 'bad'}">${pct(NW.need)}% · ${inr(NW.need)}</span></div>
       <div class="kv"><span>Wants – food online, shopping, Paytm, subscriptions, friends<br><span class="small muted">rule ≤ 30%</span></span><span class="num ${pct(NW.want) <= 30 ? 'good' : 'bad'}">${pct(NW.want)}% · ${inr(NW.want)}</span></div>
       <div class="kv"><span>Card bills – needs and wants mixed<br><span class="small muted">log swipes to split them</span></span><span class="num">${pct(NW.mixed)}% · ${inr(NW.mixed)}</span></div>
-      <div class="kv"><span>Saved and invested<br><span class="small muted">rule ≥ 20%</span></span><span class="num ${pct(NW.saved) >= 20 ? 'good' : 'bad'}">${pct(NW.saved)}% · ${inr(NW.saved)}</span></div>
+      <div class="kv"><span>Saved and invested<br><span class="small muted">SIPs, PPF, LIC · rule ≥ 20%</span></span><span class="num ${pct(NW.saved) >= 20 ? 'good' : 'bad'}">${pct(NW.saved)}% · ${inr(NW.saved)}</span></div>
       <p class="small muted" style="margin:6px 0 0">${NW.one ? `One-off payments (${inr(NW.one)} a month on average) are left out. ` : ''}Over 100% in total means part of the month was paid from bonus, class money or savings.</p></section>
     <section class="sec box"><div class="sec-h"><h3>Your life stage</h3></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${Object.entries(STAGES).map(([key, v]) => `<button class="chip" data-stage="${key}" style="font-size:12px;padding:4px 10px;border-radius:14px;border:1px solid ${key === stage ? 'var(--blue1)' : 'var(--line,#d9e2ee)'};background:${key === stage ? 'var(--blue1)' : 'none'};color:${key === stage ? '#fff' : 'inherit'}">${v[0]}</button>`).join('')}</div>
@@ -7481,6 +7483,15 @@ function viewIncome() {
       ${row('coaching', 'Coaching earnings', 'class money')}${row('extrapat', 'Bonus & class pattern', 'when extra money usually comes')}${row('hike', 'Hike splitter', 'split a raise before it’s spent')}${row('nosalary', 'If salary stops', 'how long your money lasts')}</div></section>`;
 }
 
+/* LIC premium counts as saving (owner's choice): monthly premium, and the savings rate with LIC added */
+function licMonthly() { const c = sheetRowRaw('LIC', 'Monthly premium'); return c ? num(c[1]) || 0 : 0; }
+const isLicTx = t => /\bLIC\b/i.test(String(t.Details || '')) || /LIC/i.test(String(t.Category || ''));
+function savingsRateAdj() {
+  const k = kpis(), sr = n(k.savings_rate) || 0, y = String(new Date().getFullYear()), a = t => Math.abs(n(t.Amount) || 0), tx = allTx().filter(t => String(t.Date).startsWith(y));
+  const lic = tx.filter(t => t.Type === 'Expenses' && isLicTx(t)).reduce((x, t) => x + a(t), 0);
+  const inc = tx.filter(t => t.Type === 'Income' && !/^(Loan Received|Investment Redemption|Family Support|PF)/i.test(t.Category || '')).reduce((x, t) => x + a(t), 0);
+  return sr + (inc ? lic / inc : 0);
+}
 /* ======================================================================
    Start-up – kept at the very END so every screen, list and help text above is defined before the first draw
    ====================================================================== */
