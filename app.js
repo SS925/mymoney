@@ -1227,7 +1227,9 @@ function priceOf(code) {
 function invHoldings() {
   const x = inv(), list = [];
   const find = nm => list.find(h => h.name.toLowerCase() === String(nm).trim().toLowerCase());
-  for (const h of (x && x.holdings) || []) list.push({ name: h.name, code: h.code || '', type: h.type || '', platform: h.platform || '',
+  // A share listed with an exchange symbol (not a numeric fund code) is a stock, even if Excel's Type says "MF".
+  const fixType = (code, type) => (code && !/^\d+$/.test(String(code)) && /MF|fund|ELSS|index/i.test(type || '')) ? 'Stock' : (type || '');
+  for (const h of (x && x.holdings) || []) list.push({ name: h.name, code: h.code || '', type: fixType(h.code, h.type), platform: h.platform || '',
     units: Number(h.units) || 0, invested: Number(h.invested) || 0, xlValue: Number(h.value) || 0, pending: 0 });
   const inExcel = new Set(((x && x.log) || []).map(r => r[5]));
   for (const p of state.trades.filter(t => !inExcel.has(t.id)).slice().reverse()) {     // oldest first
@@ -1929,7 +1931,7 @@ function viewInvestFds() {
 }
 function fyStart(d) { d = d || new Date(); return new Date(d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1, 3, 1); }
 function capitalGains(from, to) {
-  const types = Object.fromEntries(invHoldings().map(h => [h.name.toLowerCase(), h.type]).concat(((inv() || {}).holdings || []).map(h => [String(h.name).toLowerCase(), h.type])));
+  const types = Object.fromEntries(((inv() || {}).holdings || []).map(h => [String(h.name).toLowerCase(), h.type]).concat(invHoldings().map(h => [h.name.toLowerCase(), h.type])));
   const pools = {}, sells = [];
   for (const r of tradeLog().slice().reverse()) {                   // oldest first
     const k = String(r.name).toLowerCase(), p = pools[k] || (pools[k] = { units: 0, cost: 0, first: r.date });
