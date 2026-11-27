@@ -7659,6 +7659,22 @@ function holGoogleCard() {
 const GCAL_CLIENT = '577415033929-79a1qdfrblo4ggfv781bpqhdii469qp3.apps.googleusercontent.com';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 function gcalOn() { return !!((state.docs.profile || {}).gcalOn); }
+const GCAL_BACK = location.origin + location.pathname.replace(/index\.html$/, '');      // where Google sends you back (iPhone home-screen app)
+const gcalStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+function gcalRedirect(next) {                       // iPhone home-screen app: no pop-up windows, so go to Google and come back
+  const st = Math.random().toString(36).slice(2); LS.set('gcalWait', { st, next, at: Date.now() });
+  const q = new URLSearchParams({ client_id: GCAL_CLIENT, redirect_uri: GCAL_BACK, response_type: 'token', scope: GCAL_SCOPE, include_granted_scopes: 'true', state: st });
+  if (!gcalOn()) q.set('prompt', 'consent');
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
+}
+{ // back from Google: #access_token=…&state=…  → keep the token for its hour, open Holidays and finish the job
+  const h = new URLSearchParams(location.hash.slice(1)), w = LS.get('gcalWait', null);
+  if ((h.get('access_token') || h.get('error')) && w && h.get('state') === w.st) {
+    history.replaceState(null, '', location.pathname); LS.set('gcalWait', null); state.tab = 'holidays';
+    if (h.get('access_token') && /calendar\.events/.test(h.get('scope') || GCAL_SCOPE)) { state.gTok = { t: h.get('access_token'), exp: Date.now() + (Number(h.get('expires_in')) || 3600) * 1000 }; LS.set('gTok', state.gTok); state.gResume = w.next; }
+    else setTimeout(() => toast('Google didn’t allow it' + (h.get('error') ? ` (${h.get('error')})` : '')), 800);
+  } else { const t = LS.get('gTok', null); if (t && t.exp > Date.now() + 60000) state.gTok = t; }
+}
 function gcalTokOk() { return state.gTok && state.gTok.exp > Date.now() + 60000; }
 function gcalLoad() {                               // load Google's sign-in script early, so the tap opens the window straight away
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
@@ -7666,19 +7682,20 @@ function gcalLoad() {                               // load Google's sign-in scr
   state.gLoad = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = ok; sc.onerror = () => { state.gLoad = null; no(new Error('Couldn’t reach Google')); }; document.head.appendChild(sc); });
   return state.gLoad;
 }
-function gcalAuth(then) {                           // must run inside a tap; Google shows its window, then calls back with a 1-hour token
+function gcalAuth(then, next) {                     // must run inside a tap; Google shows its window, then calls back with a 1-hour token
+  if (gcalStandalone()) { gcalRedirect(next || 'sync'); return; }
   if (!(window.google && google.accounts && google.accounts.oauth2)) { toast('Google is still loading – tap again in a second'); gcalLoad().catch(() => {}); return; }
   const tc = google.accounts.oauth2.initTokenClient({ client_id: GCAL_CLIENT, scope: GCAL_SCOPE,
     callback: r => { if (!r || r.error || !r.access_token) { toast('Google didn’t allow it' + (r && r.error ? ` (${r.error})` : '')); return; }
       if (!google.accounts.oauth2.hasGrantedAllScopes(r, GCAL_SCOPE)) { toast('Please allow access to calendar events'); return; }
-      state.gTok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000 }; then && then(); },
-    error_callback: e => toast(e && e.type === 'popup_closed' ? 'Google window closed' : 'Couldn’t open Google sign-in – allow pop-ups') });
+      state.gTok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000 }; LS.set('gTok', state.gTok); then && then(); },
+    error_callback: e => { if (e && e.type === 'popup_closed') toast('Google window closed'); else gcalRedirect(next || 'sync'); } });
   tc.requestAccessToken({ prompt: gcalOn() ? '' : 'consent' });
 }
 const gcalId = date => 'mmhol' + date.replace(/-/g, '');           // fixed id per holiday, so adding twice never makes a copy
 async function gcalApi(method, path, body) {
   const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events' + path, { method, headers: { Authorization: 'Bearer ' + state.gTok.t, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
-  if (r.status === 401) { state.gTok = null; throw new Error('Google sign-in expired'); }
+  if (r.status === 401) { state.gTok = null; LS.set('gTok', null); throw new Error('Google sign-in expired – tap again'); }
   return r;
 }
 function gcalEvent(h) {
@@ -7720,10 +7737,12 @@ function gcalSection() {
 }
 function bindGcal() {
   const $ = id => document.getElementById(id); gcalLoad().catch(() => {});
-  if ($('gc-connect')) $('gc-connect').onclick = () => gcalAuth(async () => { const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { gcalOn: true }); render(); await gcalSync(); });
-  document.querySelectorAll('[data-gcsync]').forEach(b => b.onclick = () => gcalTokOk() ? gcalSync() : gcalAuth(gcalSync));
+  const connect = async () => { const old = state.docs.profile; state.docs.profile = Object.assign({}, Array.isArray(old) ? {} : old || {}, { gcalOn: true }); render(); await gcalSync(); };
+  if (state.gResume && gcalTokOk() && state.docs.profile) { const nx = state.gResume; state.gResume = null; setTimeout(nx === 'connect' ? connect : gcalSync, 300); }
+  if ($('gc-connect')) $('gc-connect').onclick = () => gcalAuth(connect, 'connect');
+  document.querySelectorAll('[data-gcsync]').forEach(b => b.onclick = () => gcalTokOk() ? gcalSync() : gcalAuth(gcalSync, 'sync'));
   if ($('gc-off')) $('gc-off').onclick = async () => { try { if (state.gTok && window.google) google.accounts.oauth2.revoke(state.gTok.t, () => {}); } catch (e) {}
-    state.gTok = null; const old = state.docs.profile, p = Object.assign({}, Array.isArray(old) ? {} : old || {}); p.gcalOn = false; state.docs.profile = p; render();
+    state.gTok = null; LS.set('gTok', null); const old = state.docs.profile, p = Object.assign({}, Array.isArray(old) ? {} : old || {}); p.gcalOn = false; state.docs.profile = p; render();
     try { await saveDoc('profile', 'Google Calendar disconnected'); toast('Disconnected – reminders already in Google stay there'); } catch (e) { state.docs.profile = old; toast(e.message || 'Couldn’t reach GitHub'); render(); } };
 }
 function holIcs(list) {
