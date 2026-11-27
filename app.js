@@ -7693,8 +7693,7 @@ function gcalLoad() {                               // load Google's sign-in scr
   return state.gLoad;
 }
 function gcalAuth(then, next) {                     // must run inside a tap; Google shows its window, then calls back with a 1-hour token
-  if (gcalStandalone()) { gcalRedirect(next || 'sync'); return; }
-  if (!(window.google && google.accounts && google.accounts.oauth2)) { toast('Google is still loading – tap again in a second'); gcalLoad().catch(() => {}); return; }
+  if (!(window.google && google.accounts && google.accounts.oauth2)) { if (gcalStandalone()) { gcalRedirect(next || 'sync'); return; } toast('Google is still loading – tap again in a second'); gcalLoad().catch(() => {}); return; }
   const tc = google.accounts.oauth2.initTokenClient({ client_id: GCAL_CLIENT, scope: GCAL_SCOPE,
     callback: r => { if (!r || r.error || !r.access_token) { toast('Google didn’t allow it' + (r && r.error ? ` (${r.error})` : '')); return; }
       if (!google.accounts.oauth2.hasGrantedAllScopes(r, GCAL_SCOPE)) { toast('Please allow access to calendar events'); return; }
