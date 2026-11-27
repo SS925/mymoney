@@ -2324,6 +2324,11 @@ function bindImport() {
    Lock screen: PIN (+ fingerprint / face where the phone supports it)
    ====================================================================== */
 const LOCK_AFTER = 5 * 60e3;
+const lockAfter = () => { const m = LS.get('lockAfter', 5); return (Number(m) >= 0 ? Number(m) : 5) * 60e3; };   // minutes away before it locks again (0 = every time)
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const BIO = IS_IOS ? 'Face ID / Touch ID' : 'fingerprint / face';
+function lockNow() { if (!lockCfg()) { state.tab = 'lockset'; render(); toast('Set a PIN first'); return; } LS.set('lastActive', 0); showLock(); }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-locknow]'); if (b) { e.preventDefault(); lockNow(); } });
 async function sha256(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
 function lockCfg() { return LS.get('lock', null); }
 function showLock() {
@@ -2333,7 +2338,7 @@ function showLock() {
   state.locked = true; state.pinTry = '';
   el.innerHTML = `<div class="lk"><div class="lk-logo">₹</div><h2>MyMoney is locked</h2><p class="small muted" id="lk-msg">Enter your PIN</p>
     <div class="lk-dots" id="lk-dots">${'<i></i>'.repeat(c.len)}</div>
-    <div class="lk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, c.bio ? 'bio' : '', 0, 'del'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}" aria-label="${k === 'bio' ? 'Use fingerprint' : k === 'del' ? 'Delete' : k}">${k === 'bio' ? '◉' : k === 'del' ? '⌫' : k}</button>`).join('')}</div></div>`;
+    <div class="lk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, c.bio ? 'bio' : '', 0, 'del'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}" aria-label="${k === 'bio' ? 'Use ' + BIO : k === 'del' ? 'Delete' : k}">${k === 'bio' ? '◉' : k === 'del' ? '⌫' : k}</button>`).join('')}</div></div>`;
   el.hidden = false; document.body.classList.add('locked');
   el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => lockKey(b.dataset.k));
   if (c.bio) setTimeout(bioUnlock, 300);
@@ -2367,11 +2372,14 @@ async function addBio() {
 function viewLockSettings() {
   const c = lockCfg(), theme = LS.get('theme', 'dark');
   return `<section class="card"><h2 style="margin-top:0">App lock</h2>
-      <p class="small muted" style="margin:0 0 8px">${c ? `On – asks for your ${c.len}-digit PIN when the app opens and after 5 minutes away${c.bio ? ', or your fingerprint / face' : ''}.` : 'Off. Set a PIN so nobody can open your finances on this phone.'}</p>
+      <p class="small muted" style="margin:0 0 8px">${c ? `On – asks for your ${c.len}-digit PIN${c.bio ? ' or ' + BIO : ''} when the app opens and ${lockAfter() ? `after ${lockAfter() / 60e3} minute${lockAfter() === 60e3 ? '' : 's'} away` : 'every time you come back to it'}.` : 'Off. Set a PIN so nobody can open your finances on this phone.'}${IS_IOS ? ' Set it inside the app you opened from the home screen – Safari keeps its own separate copy.' : ''}</p>
       <label class="f" for="lk-new">${c ? 'New PIN' : 'PIN (4–6 digits)'}</label><input class="inp num" id="lk-new" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
       <label class="f" for="lk-new2">Type it again</label><input class="inp num" id="lk-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
       <button class="primary" id="lk-save">${c ? 'Change PIN' : 'Turn on app lock'}</button>
-      ${c ? `${c.bio ? '<button class="secondary" id="lk-bio-off">Stop using fingerprint / face</button>' : '<button class="secondary" id="lk-bio">Also unlock with fingerprint / face</button>'}
+      ${c ? `${c.bio ? '<button class="secondary" id="lk-bio-off">Stop using ' + BIO + '</button>' : '<button class="secondary" id="lk-bio">Also unlock with ' + BIO + '</button>'}
+        <label class="f" for="lk-after" style="margin-top:10px">Lock again after</label>
+        <select class="inp" id="lk-after">${[[0, 'Every time I leave the app'], [1, '1 minute away'], [5, '5 minutes away'], [15, '15 minutes away'], [60, '1 hour away']].map(([v, l]) => `<option value="${v}" ${lockAfter() === v * 60e3 ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <button class="primary" data-locknow="1" style="margin-top:10px">🔒 Lock now</button>
         <button class="secondary" id="lk-off" style="color:var(--bad)">Turn off app lock</button>` : ''}
     </section>
     ${viewPhoneCheck()}
@@ -2387,8 +2395,9 @@ function bindLockSettings() {
     await setPin(a); toast('App lock on'); render();
   };
   if ($('lk-off')) $('lk-off').onclick = () => { if (!confirmInline($('lk-off'))) return; LS.del('lock'); toast('App lock off'); render(); };
-  if ($('lk-bio')) $('lk-bio').onclick = async () => { try { if (await addBio()) toast('Fingerprint / face unlock on'); } catch (e) { toast('Not set up – ' + (e.name === 'NotAllowedError' ? 'cancelled' : 'not supported here')); } render(); };
+  if ($('lk-bio')) $('lk-bio').onclick = async () => { try { if (await addBio()) toast(BIO + ' unlock on'); } catch (e) { toast('Not set up – ' + (e.name === 'NotAllowedError' ? 'cancelled' : 'not supported here')); } render(); };
   if ($('lk-bio-off')) $('lk-bio-off').onclick = () => { const c = lockCfg(); c.bio = null; LS.set('lock', c); render(); };
+  if ($('lk-after')) $('lk-after').onchange = e => { LS.set('lockAfter', Number(e.target.value)); toast('Saved'); render(); };
 }
 function applyTheme() {
   const t = LS.get('theme', 'dark'), light = t === 'light' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
@@ -5099,7 +5108,8 @@ function viewMore() {
         ${row('data-go="sort"', 'Sort UPI – Other', '')}
         ${row('data-go="family"', 'Family view', isViewer() ? 'This phone is view-only' : '')}
         ${row('data-go="budget"', 'Net-pay plan', '')}
-        ${row('data-go="lockset"', 'Lock, look and this phone', lockCfg() ? 'Lock on' : '')}
+        ${lockCfg() ? row('data-locknow="1"', '🔒 Lock now', '') : ''}
+        ${row('data-go="lockset"', 'Lock, look and this phone', lockCfg() ? 'Lock on' : 'Lock off – set a PIN')}
         ${row('data-go="settings"', 'Notifications and settings', pushStatus() === 'on' ? 'Notifications on' : '')}
       </div></section>
     <section class="sec"><div class="group">${row('data-go="sheets"', 'Excel sheets', list.length ? `All ${list.length} sheets as Excel shows them${at ? `, sent ${fDay(at).replace(/ \d{4}$/, '')}` : ''}` : 'None yet – run AppLinkNow in Excel')}</div></section>`;
@@ -5478,7 +5488,7 @@ window.addEventListener('online', () => sync());
 setInterval(() => { if (state.outbox.length && navigator.onLine !== false && state.cfg) flushOutbox().then(() => render(), () => {}); }, 60000);   // offline entries: keep trying
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { if (!state.locked) LS.set('lastActive', Date.now()); return; }
-  if (lockCfg() && !state.locked && Date.now() - (LS.get('lastActive', 0) || 0) > LOCK_AFTER) showLock();
+  if (lockCfg() && !state.locked && Date.now() - (LS.get('lastActive', 0) || 0) > lockAfter()) showLock();
   if (document.visibilityState === 'visible' && state.cfg && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt) > 5 * 60e3)) sync();
 });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
