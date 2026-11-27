@@ -7632,16 +7632,31 @@ function holTip(iso) {
 function holRemind(iso) { const d = dOf(iso); d.setDate(d.getDate() - 60); return d; }
 function holRemindAt(iso) { const d = holRemind(iso), t = dOf(isoToday()); return d < t ? t : d; }   // for the calendar: today if the 60-day mark has passed
 function holGcal(h) {
-  const r = holRemindAt(h.date), nx = new Date(r), f = d => isoOf(d).replace(/-/g, ''); nx.setDate(nx.getDate() + 1);
-  const q = new URLSearchParams({ action: 'TEMPLATE', text: `Plan leave: ${h.name} (${fDay(dOf(h.date))})`, dates: `${f(r)}/${f(nx)}`, details: `${h.name} is on ${WDAY[dOf(h.date).getDay()]} ${fDay(dOf(h.date))}. ${holTip(h.date)}. Apply for leave and book travel now.` });
+  const r = holRemindAt(h.date), f = d => isoOf(d).replace(/-/g, '');
+  const q = new URLSearchParams({ action: 'TEMPLATE', ctz: 'Asia/Kolkata', text: `Plan leave: ${h.name} (${fDay(dOf(h.date))})`, dates: `${f(r)}T090000/${f(r)}T091500`, details: `${h.name} is on ${WDAY[dOf(h.date).getDay()]} ${fDay(dOf(h.date))}. ${holTip(h.date)}. Apply for leave and book travel now.` });
   return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+function holInG(date) { return (((state.docs.profile || {}).holGcal) || []).includes(date); }
+async function holMarkG(date) {
+  if (holInG(date)) return; const old = state.docs.profile, p = Object.assign({}, Array.isArray(old) ? {} : old || {});
+  p.holGcal = [...(p.holGcal || []).filter(d => d >= isoToday()), date]; state.docs.profile = p; render();
+  try { await saveDoc('profile', 'Holiday reminder added to Google Calendar'); } catch (e) { /* stays on this phone */ }
+}
+function holGoogleCard() {
+  const want = holList().filter(h => h.date > isoToday() && (state.holNew || []).includes(h.date)); if (!want.length) return '';
+  const left = want.filter(h => !holInG(h.date)).length;
+  return `<section class="sec box" style="border:2px solid var(--blue1)"><div class="sec-h"><h3>📅 Set the Google reminders</h3><span class="small muted">${want.length - left} of ${want.length} done</span></div>
+    <p class="small" style="margin:0 0 6px">Tap each one – Google Calendar opens with the reminder filled in (60 days before, 9:00 am). Tap <b>Save</b> there, then come back.</p>
+    ${want.map(h => `<div class="kv"><span>${esc(h.name)}<br><span class="small muted">holiday ${fDay(dOf(h.date))} · reminder ${fDay(holRemindAt(h.date))}</span></span>
+      ${holInG(h.date) ? '<span class="good small">✓ added</span>' : `<a class="secondary" style="margin:0;padding:6px 10px;text-decoration:none" data-holg="${esc(h.date)}" href="${holGcal(h)}" target="_blank" rel="noopener">Add</a>`}</div>`).join('')}
+    <button class="linkbtn" id="hol-gdone" style="margin-top:6px">${left ? 'Skip – the phone notification still comes' : 'Done'}</button></section>`;
 }
 function holIcs(list) {
   const f = d => isoOf(d).replace(/-/g, ''), stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''), esc2 = s => String(s).replace(/([,;\\])/g, '\\$1');
   const ev = list.map(h => { const r = holRemindAt(h.date), nx = new Date(r); nx.setDate(nx.getDate() + 1);
-    return ['BEGIN:VEVENT', `UID:mymoney-hol-${h.date}@mymoney`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${f(r)}`, `DTEND;VALUE=DATE:${f(nx)}`,
+    return ['BEGIN:VEVENT', `UID:mymoney-hol-${h.date}@mymoney`, `DTSTAMP:${stamp}`, `DTSTART:${f(r)}T033000Z`, `DTEND:${f(r)}T034500Z`,
       `SUMMARY:${esc2('Plan leave: ' + h.name + ' (' + fDay(dOf(h.date)) + ')')}`, `DESCRIPTION:${esc2(h.name + ' is on ' + WDAY[dOf(h.date).getDay()] + '. ' + holTip(h.date) + '. Apply for leave and book travel now.')}`,
-      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Plan your leave', 'TRIGGER;RELATED=START:PT9H', 'END:VALARM', 'END:VEVENT'].join('\r\n'); });
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Plan your leave', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT'].join('\r\n'); });
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MyMoney//Holidays//EN', 'CALSCALE:GREGORIAN', ...ev, 'END:VCALENDAR'].join('\r\n');
 }
 const HOL_MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -7686,7 +7701,7 @@ function viewHolidays() {
   const left = next ? Math.round((dOf(next.date) - dOf(today)) / DAY) : 0;
   const row = (r, i) => `<div class="row2" style="align-items:end;margin-top:6px"><div style="flex:0 0 42%"><input class="inp" type="date" data-holr="${i}" data-k="date" value="${esc(r.date)}"></div>
       <div style="display:flex;gap:6px;align-items:center"><input class="inp" data-holr="${i}" data-k="name" value="${esc(r.name)}" placeholder="Holiday name"><input type="checkbox" data-holr="${i}" data-k="keep" ${r.keep ? 'checked' : ''} aria-label="Keep"></div></div>`;
-  return `<section class="hero"><p class="hero-k" style="margin-top:0">Next holiday</p>
+  return `${holGoogleCard()}<section class="hero"><p class="hero-k" style="margin-top:0">Next holiday</p>
       ${next ? `<h2 class="hero-v" style="font-size:1.5rem">${esc(next.name)}</h2><p class="hero-s" style="margin:0">${WDAY[dOf(next.date).getDay()]} ${fDay(dOf(next.date))} · in ${left} days<br>${esc(holTip(next.date))}</p>`
         : `<h2 class="hero-v" style="font-size:1.4rem">No holidays saved</h2><p class="hero-s" style="margin:0">Add your office holiday list from a screenshot below.</p>`}</section>
     <section class="sec box"><div class="sec-h"><h3>Add from a screenshot</h3></div>
@@ -7699,10 +7714,10 @@ function viewHolidays() {
         <div class="row2" style="margin-top:8px"><button class="secondary" id="hol-addrow" style="margin:0">+ Add a row</button><button class="primary" id="hol-save" style="margin:0">Save ${s.rows.filter(r => r.keep && r.date && String(r.name).trim()).length} holidays</button></div>` : `<button class="secondary" id="hol-manual" style="margin-top:8px">Type them in instead</button>`}</section>
     <section class="sec box"><div class="sec-h"><h3>Your holidays</h3><span class="small muted">${l.length}</span></div>
       ${l.length ? l.map(h => { const past = h.date < today, rm = holRemind(h.date); return `<div class="kv" style="${past ? 'opacity:.5' : ''}"><span><b>${esc(h.name)}</b><br><span class="small muted">${WDAY[dOf(h.date).getDay()].slice(0, 3)} ${fDay(dOf(h.date))} · ${esc(holTip(h.date))}${past ? '' : `<br>Reminder ${isoOf(rm) <= today ? 'already passed – plan now' : 'on ' + fDay(rm)}`}</span></span>
-        <span class="num" style="white-space:nowrap">${past ? '' : `<a class="linkbtn" href="${holGcal(h)}" target="_blank" rel="noopener" title="Add the reminder to Google Calendar">📅</a> `}<button class="linkbtn" data-holdel="${esc(h.date)}" aria-label="Delete">✕</button></span></div>`; }).join('') : '<p class="small muted" style="margin:0">Nothing yet.</p>'}</section>
+        <span class="num" style="white-space:nowrap">${past ? '' : holInG(h.date) ? '<span class="small good" title="Reminder is in Google Calendar">📅✓</span> ' : `<a class="linkbtn" data-holg="${esc(h.date)}" href="${holGcal(h)}" target="_blank" rel="noopener" title="Add the reminder to Google Calendar">📅</a> `}<button class="linkbtn" data-holdel="${esc(h.date)}" aria-label="Delete">✕</button></span></div>`; }).join('') : '<p class="small muted" style="margin:0">Nothing yet.</p>'}</section>
     <section class="sec box"><div class="sec-h"><h3>Reminders</h3></div>
       <p class="small" style="margin:0 0 6px">📱 The app notifies this phone <b>60 days before</b> each holiday at 8:30 am (or the next morning, if a holiday you add is closer than that), so you can apply for leave and book tickets early.</p>
-      <p class="small" style="margin:0 0 6px">📅 <b>Google Calendar</b>: tap 📅 next to a holiday to add its reminder, or download all of them at once and import the file in Google Calendar on a computer (Settings → Import & export → Import).</p>
+      <p class="small" style="margin:0 0 6px">📅 <b>Google Calendar</b>: after you save a list, the app asks you to add each reminder (one tap + Save in Google Calendar, 9:00 am, 60 days before). 📅✓ means it’s already there. Or download all at once and import the file on a computer (Settings → Import & export → Import).</p>
       <button class="secondary" id="hol-ics" ${l.some(h => h.date >= today) ? '' : 'disabled'}>Download all reminders (.ics)</button></section>
 `;
 }
@@ -7720,7 +7735,7 @@ async function holSave() {
   try {
     await saveDoc('holidays', `Holidays: ${keep.length} saved`);
     await holDropImgs();
-    state.hol = null; toast(`Saved ${keep.length} holidays`);
+    state.hol = null; state.holNew = keep.map(r => r.date).filter(d => d > isoToday() && !holInG(d)); toast(`Saved ${keep.length} holidays – now set the Google reminders`); window.scrollTo(0, 0);
   } catch (e) { state.docs.holidays = old; state.hol = s; toast(e.message || 'Couldn’t reach GitHub'); }
   render();
 }
@@ -7739,6 +7754,8 @@ function bindHolidays() {
   document.querySelectorAll('[data-holr]').forEach(el => { const i = Number(el.dataset.holr), k = el.dataset.k;
     el.onchange = el.oninput = () => { const r = state.hol && state.hol.rows[i]; if (!r) return; r[k] = k === 'keep' ? el.checked : el.value; if (k === 'keep') render(); }; });
   if ($('hol-save')) $('hol-save').onclick = () => holSave();
+  if ($('hol-gdone')) $('hol-gdone').onclick = () => { state.holNew = null; render(); };
+  document.querySelectorAll('[data-holg]').forEach(a => a.addEventListener('click', () => setTimeout(() => holMarkG(a.dataset.holg), 300)));
   if ($('hol-ics')) $('hol-ics').onclick = () => { const l = holList().filter(h => h.date >= isoToday()), url = URL.createObjectURL(new Blob([holIcs(l)], { type: 'text/calendar' })), a = document.createElement('a');
     a.href = url; a.download = 'holiday-leave-reminders.ics'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); };
   document.querySelectorAll('[data-holdel]').forEach(b => b.onclick = async () => { const d = b.dataset.holdel, old = state.docs.holidays; state.docs.holidays = holList().filter(h => h.date !== d); render();
