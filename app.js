@@ -7630,7 +7630,7 @@ function holTip(iso) {
     4: 'Take Friday off → 4 days (Thu–Sun)', 2: 'Take Monday off → 4 days (Sat–Tue)', 3: 'Take Thu + Fri off → 5 days (Wed–Sun)' })[w];
 }
 function holRemind(iso) { const d = dOf(iso); d.setDate(d.getDate() - 60); return d; }
-function holRemindAt(iso) { const d = holRemind(iso), t = dOf(isoToday()); return d < t ? t : d; }   // for the calendar: today if the 60-day mark has passed
+function holRemindAt(iso) { const d = holRemind(iso), now = new Date(), t = dOf(isoToday()); if (now.getHours() >= 9) t.setDate(t.getDate() + 1); return d < t ? t : d; }   // for the calendar: the next 9:00 am if the 60-day mark has passed
 function holGcal(h) {
   const r = holRemindAt(h.date), f = d => isoOf(d).replace(/-/g, '');
   const q = new URLSearchParams({ action: 'TEMPLATE', ctz: 'Asia/Kolkata', text: `Plan leave: ${h.name} (${fDay(dOf(h.date))})`, dates: `${f(r)}T090000/${f(r)}T091500`, details: `${h.name} is on ${WDAY[dOf(h.date).getDay()]} ${fDay(dOf(h.date))}. ${holTip(h.date)}. Apply for leave and book travel now.` });
